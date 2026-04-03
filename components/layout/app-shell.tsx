@@ -1,0 +1,28 @@
+'use client'
+import { usePathname } from 'next/navigation'
+import Sidebar from './sidebar'
+import BottomTabBar from './bottom-tab-bar'
+import AppHeader from './app-header'
+import { getRoleFromPath } from '@/lib/navigation'
+
+interface Props { children: React.ReactNode; name?: string }
+
+export default function AppShell({ children, name = '사용자' }: Props) {
+  const pathname = usePathname()
+  const role = getRoleFromPath(pathname)
+  return (
+    <div className="flex min-h-dvh bg-slate-50">
+      <Sidebar role={role} name={name} />
+      <div className="flex-1 flex flex-col min-h-dvh lg:ml-60">
+        <AppHeader role={role} name={name} />
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-5xl mx-auto px-4 py-6"
+            style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom,0px))' }}>
+            {children}
+          </div>
+        </main>
+        <BottomTabBar role={role} />
+      </div>
+    </div>
+  )
+}
