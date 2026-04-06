@@ -77,11 +77,17 @@ export async function POST(req: Request) {
     )
   }
 
-  const verCode        = verCodes[0]
-  const employeeRequest = verCode.employee_requests as {
+  const verCode = verCodes[0]
+
+  // Supabase 중첩 select는 배열로 반환됨 → 첫 번째 요소 추출
+  type EmployeeRequestRef = {
     id: number; name: string; email: string; company_id: number
     phone: string | null; department: string | null; position: string | null
-  } | null
+  }
+  const rawRef = verCode.employee_requests
+  const employeeRequest: EmployeeRequestRef | null = Array.isArray(rawRef)
+    ? (rawRef[0] as unknown as EmployeeRequestRef) ?? null
+    : (rawRef as unknown as EmployeeRequestRef) ?? null
 
   // ── 4. 만료 확인 ──────────────────────────────────────────
   if (new Date(verCode.expires_at) < new Date()) {
