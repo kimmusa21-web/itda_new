@@ -1,7 +1,7 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { getCompanies, getColumnMappings } from '@/lib/payroll-upload'
-import { PayrollUploadPage } from '@/components/payroll-upload/payroll-upload-page'
+import { redirect }             from 'next/navigation'
+import { createClient }         from '@/lib/supabase/server'
+import { getCompanies }         from '@/lib/payroll-upload'
+import { PayrollUploadPage }    from '@/components/payroll-upload/payroll-upload-page'
 
 export const metadata = { title: '급여 CSV 업로드 | itda' }
 
@@ -15,7 +15,7 @@ export default async function AdminPayrollUploadPage() {
     .from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'admin') redirect(`/${profile?.role ?? 'employee'}`)
 
-  /* 초기 데이터 SSR fetch */
+  /* SSR: 회사 목록 */
   const companies = await getCompanies()
 
   return (

@@ -1,5 +1,11 @@
 import { cn } from '@/lib/utils'
-import { roleLabels, roleColors, type Role } from '@/lib/navigation'
+import { roleLabels, type Role } from '@/lib/navigation'
+
+const roleColors: Record<Role, string> = {
+  admin:    'bg-indigo-100 text-indigo-700',
+  manager:  'bg-cyan-100 text-cyan-700',
+  employee: 'bg-blue-100 text-blue-700',
+}
 
 interface RoleBadgeProps {
   role: Role

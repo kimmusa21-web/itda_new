@@ -1,7 +1,10 @@
-import { notFound, redirect }  from 'next/navigation'
-import { createClient }        from '@/lib/supabase/server'
-import { getCurrentEmployee, getEmployeePayslipById } from '@/lib/employee-payslips'
-import { PayslipDetailView }   from '@/components/payslip/payslip-detail-v2'
+import { notFound, redirect } from 'next/navigation'
+import { createClient }       from '@/lib/supabase/server'
+import {
+  getCurrentEmployee,
+  getEmployeePayslipById,
+} from '@/lib/employee-payslips'
+import { PayslipDetailView }  from '@/components/payslip/payslip-detail-v2'
 
 interface Props { params: { id: string } }
 
@@ -29,7 +32,7 @@ export default async function EmployeePayslipDetailPage({ params }: Props) {
 
   /* ── 상세 조회 (employee_id 검증 포함) ── */
   const detail = await getEmployeePayslipById(id, employee.id)
-  if (!detail) notFound()
+  if (!detail) notFound()   // 없거나 다른 직원 데이터 → 404
 
   return <PayslipDetailView detail={detail} />
 }

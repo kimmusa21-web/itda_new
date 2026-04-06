@@ -1,5 +1,8 @@
-import type { PayInfo, Employee, Company } from '@/types'
-import { formatKRW, formatMonth, formatDate } from '@/lib/utils'
+import type { PayInfoRow as PayInfo } from '@/lib/supabase/queries/payslip-shared'
+import { formatKRW, formatMonth, formatDateKR as formatDate } from '@/lib/utils'
+
+interface Employee { name?: string; position?: string; department?: string; Date_of_joining?: string | null }
+interface Company { name: string }
 
 interface Props {
   pay: PayInfo
@@ -9,7 +12,7 @@ interface Props {
 
 export default function PayslipCard({ pay, employee, company }: Props) {
   const emp = employee ?? pay.employees as unknown as Employee
-  const compName = company?.name ?? pay.companies?.name ?? ''
+  const compName = company?.name ?? ((pay as any).companies)?.name ?? ''
 
   const earnings = [
     { label: '기본급', value: pay.base_salary },

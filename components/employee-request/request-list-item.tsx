@@ -1,5 +1,5 @@
 import { ChevronRight, Clock, CheckCircle2, XCircle, Building2, CalendarDays } from 'lucide-react'
-import type { EmployeeRequest } from '@/lib/mock-employee-requests'
+import type { EmployeeRequest } from '@/types/employee-request'
 import { formatDateDot, cn } from '@/lib/utils'
 
 interface Props {

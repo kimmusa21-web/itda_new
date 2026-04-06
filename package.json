@@ -1,16 +1,19 @@
 {
-  "name": "payroll-app",
+  "name": "itda-payroll",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "check": "npm run type-check && npm run lint"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.4",
+    "lucide-react": "^0.383.0",
     "next": "14.2.29",
     "papaparse": "^5.4.1",
     "react": "^18",

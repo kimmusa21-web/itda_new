@@ -103,9 +103,9 @@ export function parseAndValidateRows(
       if (v !== 0) deductions[key] = v
     })
 
-    const totalEarnings   = parseCurrency(row['Total_payment']  ?? '') || Object.values(earnings).reduce((s,v)=>s+v,0)
-    const totalDeductions = parseCurrency(row['Total_deductible']?? '') || Object.values(deductions).reduce((s,v)=>s+v,0)
-    const netPay          = parseCurrency(row['net_pay']         ?? '') || totalEarnings - totalDeductions
+    const totalEarnings   = parseCurrency(row["Total_payment"] ?? "") || Object.values(earnings).reduce((s,v)=>s+v,0)
+    const totalDeductions = parseCurrency(row['Total_deductible'] ?? '') || Object.values(deductions).reduce((s, v) => s + v, 0)
+    const netPay          = parseCurrency(row['net_pay']         ?? '') || (totalEarnings - totalDeductions)
 
     return {
       rowIndex: rIdx, email,

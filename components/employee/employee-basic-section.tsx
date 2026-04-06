@@ -100,16 +100,17 @@ export function FormSection({
 }
 
 export function Field({
-  label, required, error, hint, children,
+  label, required, error, hint, children, className,
 }: {
   label: string
   required?: boolean
   error?: string
   hint?: string
   children: React.ReactNode
+  className?: string
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className={`flex flex-col gap-1.5 ${className ?? ''}`}>
       <label className="text-xs font-semibold text-slate-600">
         {label}
         {required && <span className="text-red-400 ml-0.5">*</span>}

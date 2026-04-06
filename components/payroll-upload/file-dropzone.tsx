@@ -1,23 +1,15 @@
 'use client'
-
 import { useRef, useState } from 'react'
 import { Upload, FileText, X, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type DropzoneStatus = 'idle' | 'selected' | 'parsing' | 'done'
+type DropStatus = 'idle' | 'parsing' | 'done'
 
 interface Props {
   fileName:  string
-  status:    DropzoneStatus
+  status:    DropStatus
   onFile:    (file: File) => void
   onClear:   () => void
-}
-
-const STATUS_STYLES: Record<DropzoneStatus, string> = {
-  idle:     'border-slate-200 hover:border-blue-400 hover:bg-blue-50/20',
-  selected: 'border-blue-400 bg-blue-50/20',
-  parsing:  'border-amber-400 bg-amber-50/20',
-  done:     'border-emerald-400 bg-emerald-50/20',
 }
 
 export function FileDropzone({ fileName, status, onFile, onClear }: Props) {
@@ -36,6 +28,12 @@ export function FileDropzone({ fileName, status, onFile, onClear }: Props) {
     if (inputRef.current) inputRef.current.value = ''
   }
 
+  const borderClass =
+    status === 'done'    ? 'border-emerald-400 bg-emerald-50/20' :
+    status === 'parsing' ? 'border-amber-400 bg-amber-50/20' :
+    dragging             ? 'border-blue-500 bg-blue-50/40 scale-[1.01]' :
+    'border-slate-200 hover:border-blue-400 hover:bg-blue-50/20'
+
   return (
     <div className="card p-5 space-y-3">
       <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
@@ -49,29 +47,20 @@ export function FileDropzone({ fileName, status, onFile, onClear }: Props) {
         onDragOver={e => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
-        className={cn(
-          'border-2 border-dashed rounded-2xl p-7 text-center cursor-pointer transition-all',
-          STATUS_STYLES[status],
-          dragging && 'scale-[1.01] border-blue-500 bg-blue-50/40',
-        )}
+        className={cn('border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all', borderClass)}
       >
         <div className="flex flex-col items-center gap-2.5">
-          {status === 'done'
-            ? <CheckCircle2 size={28} className="text-emerald-500" />
-            : status === 'parsing'
-            ? <div className="w-7 h-7 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-            : <FileText size={28} className={fileName ? 'text-blue-400' : 'text-slate-300'} />
-          }
+          {status === 'done'    ? <CheckCircle2 size={28} className="text-emerald-500" /> :
+           status === 'parsing' ? <div className="w-7 h-7 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" /> :
+           <FileText size={28} className={fileName ? 'text-blue-400' : 'text-slate-300'} />}
           <div>
             <p className="text-sm font-medium text-slate-700">
-              {status === 'idle'    ? 'CSV 파일을 드래그하거나 클릭하여 선택' :
-               status === 'parsing' ? 'CSV 파싱 중...' :
-               status === 'done'    ? '파싱 완료' : '파일 선택됨'}
+              {status === 'idle'    ? 'CSV 파일을 드래그하거나 클릭' :
+               status === 'parsing' ? 'CSV 파싱 중...' : '파싱 완료'}
             </p>
             {fileName
               ? <p className="text-xs text-slate-400 mt-1 font-mono">{fileName}</p>
-              : <p className="text-xs text-slate-400 mt-1">UTF-8 CSV 파일</p>
-            }
+              : <p className="text-xs text-slate-400 mt-1">UTF-8 인코딩 CSV 파일</p>}
           </div>
         </div>
         <input ref={inputRef} type="file" accept=".csv" className="sr-only" onChange={handleChange} />

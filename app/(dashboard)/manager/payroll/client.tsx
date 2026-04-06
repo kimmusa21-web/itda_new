@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { mapRowToPayslip, type PayInfoRow } from '@/lib/supabase/queries/payslip'
+import { mapRowToPayslip, type PayInfoRow } from '@/lib/supabase/queries/payslip-shared'
 import { formatKRW, formatAccrualMonth } from '@/lib/payslip-utils'
 import { PayslipDetailView } from '@/components/payslip/payslip-detail'
 import { BarChart3 } from 'lucide-react'
@@ -120,8 +120,8 @@ export default function ManagerPayrollClient({
                         <p className="text-xs text-slate-400">{emp?.email}</p>
                       </td>
                       <td className="px-4 py-3.5 text-slate-600 text-xs">{emp?.department ?? '-'}</td>
-                      <td className="px-4 py-3.5 text-slate-700">{formatKRW(row.Total_payment ?? 0)}</td>
-                      <td className="px-4 py-3.5 font-semibold text-blue-600">{formatKRW(row.net_pay ?? 0)}</td>
+                      <td className="px-4 py-3.5 text-slate-700">{formatKRW(Number(row.Total_payment) || 0)}</td>
+                      <td className="px-4 py-3.5 font-semibold text-blue-600">{formatKRW(Number(row.net_pay) || 0)}</td>
                       <td className="px-4 py-3.5">
                         <button onClick={() => setDetailRow(row)}
                           className="text-xs text-blue-600 hover:underline whitespace-nowrap">

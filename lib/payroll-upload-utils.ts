@@ -1,95 +1,135 @@
 /* ================================================================
-   itda — CSV 업로드 순수 유틸리티 함수 (Supabase 의존 없음)
+   itda — CSV 업로드 순수 유틸 함수 (Supabase 의존 없음)
+   클라이언트 + 서버 양쪽에서 사용 가능
 ================================================================ */
 
 import type {
-  CsvRow, ColumnMapping, MappingGroup,
-  ValidationResult, ValidationError,
-  PayInfoPayload, PreviewRow, EmployeeMaster,
+  CsvRow,
+  ColumnMapping,
+  EmployeeMaster,
+  ValidationResult,
+  ValidationError,
+  PayInfoPayload,
+  PreviewRow,
 } from '@/types/payroll-upload'
 
-/* ── 1. 숫자 파싱 ─────────────────────────────────────
-   "3,000,000" | "3000000" | "-51,635" → number
-────────────────────────────────────────────────────── */
-export function parseCurrency(value: string): number {
-  if (!value || value.trim() === '') return 0
-  const cleaned = value.replace(/[,\s₩원]/g, '').trim()
+/* ────────────────────────────────────────────────────────
+   parseCurrency
+   "3,000,000" | "-51,635" | "3000000" | null | undefined → number
+   NaN, 빈값, null 모두 0 반환
+──────────────────────────────────────────────────────── */
+export function parseCurrency(value: string | undefined | null): number {
+  if (value == null) return 0
+  const trimmed = value.trim()
+  if (trimmed === '') return 0
+  const cleaned = trimmed.replace(/[,\s₩원]/g, '')
   const n = parseFloat(cleaned)
   return isNaN(n) ? 0 : n
 }
 
-/* ── 2. 날짜 형식 확인 ─────────────────────────────── */
-export function isValidDate(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value))
+/* ────────────────────────────────────────────────────────
+   날짜 유효성 검사
+──────────────────────────────────────────────────────── */
+export function isValidDate(v: string): boolean {
+  if (!v || typeof v !== 'string') return false
+  return /^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(Date.parse(v))
 }
 
-export function isValidMonth(value: string): boolean {
-  return /^\d{4}-\d{2}$/.test(value)
+export function isValidMonth(v: string): boolean {
+  if (!v || typeof v !== 'string') return false
+  return /^\d{4}-\d{2}$/.test(v)
 }
 
-/* ── 3. CSV 행 검증 ────────────────────────────────────
-   도메인 규칙:
-   - 미등록 직원 이메일 → severity:'error' → canUpload:false
-   - 다른 회사 직원    → severity:'warning' (무시 행)
-   - 이메일 누락       → error
-   - 날짜 형식 오류    → error
-────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────
+   안전한 문자열 trim
+   null / undefined 도 안전하게 처리
+──────────────────────────────────────────────────────── */
+function safeTrim(value: string | undefined | null): string {
+  return (value ?? '').trim()
+}
+
+/* ────────────────────────────────────────────────────────
+   validateCsvRows
+   ★ 핵심 도메인 규칙:
+     - 시스템 미등록 이메일 → severity:'error' → canUpload:false → 전체 중단
+     - 다른 회사 직원      → severity:'warning' → 해당 행만 무시
+──────────────────────────────────────────────────────── */
 export function validateCsvRows(
-  rows: CsvRow[],
+  rows:      CsvRow[],
   employees: EmployeeMaster[],
-  mappings: ColumnMapping[],
+  mappings:  ColumnMapping[],
   companyId: number,
 ): ValidationResult {
   const errors: ValidationError[] = []
 
-  const emailCol  = mappings.find(m => m.db_key === 'email')?.csv_column_name    ?? 'email'
-  const monthCol  = mappings.find(m => m.db_key === 'accrual_month')?.csv_column_name ?? 'accrual_month'
-  const dateCol   = mappings.find(m => m.db_key === 'payment_date')?.csv_column_name  ?? 'payment_date'
+  const emailKey = mappings.find(m => m.db_key === 'email')?.csv_column_name ?? 'email'
+  const monthKey = mappings.find(m => m.db_key === 'accrual_month')?.csv_column_name ?? 'accrual_month'
+  const dateKey  = mappings.find(m => m.db_key === 'payment_date')?.csv_column_name  ?? 'payment_date'
 
-  // 이 회사 직원 이메일 Set
-  const companyEmails = new Set(
-    employees.filter(e => e.company_id === companyId).map(e => e.email.toLowerCase()),
+  const companyEmailSet = new Set(
+    employees
+      .filter(e => e.company_id === companyId)
+      .map(e => e.email.toLowerCase()),
   )
-  // 전체 직원 이메일 Set (다른 회사 포함)
-  const allEmails = new Set(employees.map(e => e.email.toLowerCase()))
+  const allEmailSet = new Set(employees.map(e => e.email.toLowerCase()))
 
-  let validRows   = 0
+  let validRows = 0
   let ignoredRows = 0
 
   for (let i = 0; i < rows.length; i++) {
-    const row    = rows[i]
-    const rIdx   = i + 2           // 헤더 제외 1-based
-    const email  = (row[emailCol] ?? '').trim().toLowerCase()
-    let rowOk    = true
+    const row  = rows[i]
+    const rIdx = i + 2   // 헤더 제외, 1-based
+    const email = safeTrim(row[emailKey]).toLowerCase()
+    let rowOk = true
 
     // 이메일 누락
     if (!email) {
-      errors.push({ rowIndex: rIdx, reason: '이메일 값이 비어 있습니다', severity: 'error' })
+      errors.push({ rowIndex: rIdx, reason: '이메일이 비어 있습니다', severity: 'error' })
       rowOk = false
-    }
-    // ★ 핵심 도메인 규칙: 시스템 미등록 이메일 → 전체 업로드 중단
-    else if (!allEmails.has(email)) {
-      errors.push({ rowIndex: rIdx, email, reason: '시스템에 등록되지 않은 직원 이메일입니다', severity: 'error' })
+
+    // ★ 핵심: 시스템 미등록 이메일 → 전체 업로드 중단
+    } else if (!allEmailSet.has(email)) {
+      errors.push({
+        rowIndex: rIdx,
+        email,
+        reason: '시스템에 등록되지 않은 직원 이메일입니다',
+        severity: 'error',
+      })
       rowOk = false
-    }
-    // 다른 회사 직원 → 무시(warning)
-    else if (!companyEmails.has(email)) {
-      errors.push({ rowIndex: rIdx, email, reason: '선택한 회사 소속이 아닌 직원입니다 (행 무시)', severity: 'warning' })
+
+    // 다른 회사 직원 → 경고 + 무시
+    } else if (!companyEmailSet.has(email)) {
+      errors.push({
+        rowIndex: rIdx,
+        email,
+        reason: '선택한 회사 소속 직원이 아닙니다 (행 무시)',
+        severity: 'warning',
+      })
       ignoredRows++
       rowOk = false
     }
 
-    // 귀속월 형식
-    const month = (row[monthCol] ?? '').trim()
+    // 귀속월 형식 검사
+    const month = safeTrim(row[monthKey])
     if (month && !isValidMonth(month)) {
-      errors.push({ rowIndex: rIdx, email: email || undefined, reason: `귀속월 형식 오류: "${month}" (YYYY-MM 필요)`, severity: 'error' })
+      errors.push({
+        rowIndex: rIdx,
+        email: email || undefined,
+        reason: `귀속월 형식 오류: "${month}" (YYYY-MM 필요)`,
+        severity: 'error',
+      })
       rowOk = false
     }
 
-    // 지급일 형식
-    const pd = (row[dateCol] ?? '').trim()
+    // 지급일 형식 검사
+    const pd = safeTrim(row[dateKey])
     if (pd && !isValidDate(pd)) {
-      errors.push({ rowIndex: rIdx, email: email || undefined, reason: `지급일 형식 오류: "${pd}" (YYYY-MM-DD 필요)`, severity: 'error' })
+      errors.push({
+        rowIndex: rIdx,
+        email: email || undefined,
+        reason: `지급일 형식 오류: "${pd}" (YYYY-MM-DD 필요)`,
+        severity: 'error',
+      })
       rowOk = false
     }
 
@@ -97,6 +137,7 @@ export function validateCsvRows(
   }
 
   const errorCount = errors.filter(e => e.severity === 'error').length
+
   return {
     totalRows:   rows.length,
     validRows,
@@ -107,28 +148,35 @@ export function validateCsvRows(
   }
 }
 
-/* ── 4. CSV 행 → PayInfoPayload 변환 ──────────────────
-   mappings 기준으로 earnings / deductions JSONB 빌드
-────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────
+   transformCsvRows: CSV rows → PreviewRow[]
+   column_mappings 기준으로 earnings/deductions JSONB 빌드
+──────────────────────────────────────────────────────── */
 export function transformCsvRows(
-  rows: CsvRow[],
-  mappings: ColumnMapping[],
-  employees: EmployeeMaster[],
-  companyId: number,
-  defaultMonth: string,
+  rows:           CsvRow[],
+  employees:      EmployeeMaster[],
+  mappings:       ColumnMapping[],
+  companyId:      number,
+  defaultMonth:   string,
   defaultPayDate: string | null,
 ): PreviewRow[] {
-  const emailCol   = mappings.find(m => m.db_key === 'email')?.csv_column_name ?? 'email'
-  const monthCol   = mappings.find(m => m.db_key === 'accrual_month')?.csv_column_name ?? 'accrual_month'
-  const dateCol    = mappings.find(m => m.db_key === 'payment_date')?.csv_column_name  ?? 'payment_date'
-  const workDaysCol = mappings.find(m => m.db_key === 'work_days')?.csv_column_name
-  const otCol      = mappings.find(m => m.db_key === 'overtime_hours')?.csv_column_name
-  const totalPayCol = mappings.find(m => m.db_key === 'Total_payment')?.csv_column_name
-  const totalDeCol  = mappings.find(m => m.db_key === 'Total_deductible')?.csv_column_name
-  const netPayCol   = mappings.find(m => m.db_key === 'net_pay')?.csv_column_name
+  const emailKey    = mappings.find(m => m.db_key === 'email')?.csv_column_name          ?? 'email'
+  const monthKey    = mappings.find(m => m.db_key === 'accrual_month')?.csv_column_name  ?? 'accrual_month'
+  const dateKey     = mappings.find(m => m.db_key === 'payment_date')?.csv_column_name   ?? 'payment_date'
+  const totalPayKey = mappings.find(m => m.db_key === 'Total_payment')?.csv_column_name
+  const totalDeKey  = mappings.find(m => m.db_key === 'Total_deductible')?.csv_column_name
+  const netPayKey   = mappings.find(m => m.db_key === 'net_pay')?.csv_column_name
 
-  const earningsMaps    = mappings.filter(m => m.group_type === 'earnings' && !['Total_payment'].includes(m.db_key))
-  const deductionsMaps  = mappings.filter(m => m.group_type === 'deductions' && !['Total_deductible','net_pay'].includes(m.db_key))
+  // ★ workDayKey, otKey는 현재 미사용이므로 제거 (빌드 경고 방지)
+
+  const earningMaps   = mappings.filter(m =>
+    m.group_type === 'earnings' && m.db_key !== 'Total_payment'
+  )
+  const deductionMaps = mappings.filter(m =>
+    m.group_type === 'deductions' &&
+    m.db_key !== 'Total_deductible' &&
+    m.db_key !== 'net_pay'
+  )
 
   const companyEmails = new Set(
     employees.filter(e => e.company_id === companyId).map(e => e.email.toLowerCase()),
@@ -136,61 +184,94 @@ export function transformCsvRows(
   const empMap = new Map(employees.map(e => [e.email.toLowerCase(), e]))
 
   return rows.map((row, i) => {
-    const rIdx = i + 2
-    const email = (row[emailCol] ?? '').trim().toLowerCase()
+    const rIdx  = i + 2
+    const email = safeTrim(row[emailKey]).toLowerCase()
     const emp   = empMap.get(email)
 
-    // 오류/무시 행
+    // 무효/무시 행 — 빠른 반환
     if (!email || !emp || !companyEmails.has(email)) {
+      const status: PreviewRow['status'] = !email || !emp ? 'error' : 'ignored'
+      const errorReason = !email
+        ? '이메일 없음'
+        : !emp
+        ? '미등록 직원'
+        : '다른 회사 직원'
+
       return {
-        rowIndex: rIdx, email,
-        employeeName: emp?.name ?? '—',
-        accrualMonth: '', paymentDate: '',
-        earnings: {}, deductions: {},
-        totalEarnings: 0, totalDeductions: 0, netPay: 0,
-        status: !email ? 'error' : !emp ? 'error' : 'ignored',
-        errorReason: !email ? '이메일 없음' : !emp ? '미등록 직원' : '다른 회사',
-      } as PreviewRow
+        rowIndex:        rIdx,
+        email,
+        employeeName:    emp?.name ?? '—',
+        accrualMonth:    '',
+        paymentDate:     '',
+        earnings:        {},
+        deductions:      {},
+        totalEarnings:   0,
+        totalDeductions: 0,
+        netPay:          0,
+        status,
+        errorReason,
+      } satisfies PreviewRow
     }
 
-    // earnings JSON 빌드
+    // ── earnings JSONB 빌드 ──────────────────────────────
     const earnings: Record<string, number> = {}
-    for (const m of earningsMaps) {
-      const v = parseCurrency(row[m.csv_column_name] ?? '')
+    for (const m of earningMaps) {
+      const v = parseCurrency(row[m.csv_column_name])
       if (v !== 0) earnings[m.db_key] = v
     }
 
-    // deductions JSON 빌드
+    // ── deductions JSONB 빌드 ────────────────────────────
     const deductions: Record<string, number> = {}
-    for (const m of deductionsMaps) {
-      const v = parseCurrency(row[m.csv_column_name] ?? '')
+    for (const m of deductionMaps) {
+      const v = parseCurrency(row[m.csv_column_name])
       if (v !== 0) deductions[m.db_key] = v
     }
 
-    // 합계 계산
-    const totalEarnings   = totalPayCol  ? parseCurrency(row[totalPayCol] ?? '') : Object.values(earnings).reduce((s,v)=>s+v,0)
-    const totalDeductions = totalDeCol   ? parseCurrency(row[totalDeCol]  ?? '') : Object.values(deductions).reduce((s,v)=>s+v,0)
-    const netPay          = netPayCol    ? parseCurrency(row[netPayCol]   ?? '') : totalEarnings - totalDeductions
+    // ── 합계 계산 ─────────────────────────────────────────
+    const totalEarnings =
+      totalPayKey != null
+        ? parseCurrency(row[totalPayKey])
+        : Object.values(earnings).reduce((s, v) => s + v, 0)
+
+    const totalDeductions =
+      totalDeKey != null
+        ? parseCurrency(row[totalDeKey])
+        : Object.values(deductions).reduce((s, v) => s + v, 0)
+
+    const netPay =
+      netPayKey != null
+        ? parseCurrency(row[netPayKey])
+        : totalEarnings - totalDeductions
+
+    // ── ★ 핵심 수정: || 와 ?? 혼용 방지 ──────────────────
+    //   수정 전 (Syntax Error):
+    //     (row[dateKey] ?? '').trim() || defaultPayDate ?? ''
+    //   수정 후 (정상):
+    //     safeTrim(row[dateKey]) || (defaultPayDate ?? '')
+    const accrualMonth = safeTrim(row[monthKey]) || defaultMonth
+    const paymentDate  = safeTrim(row[dateKey])  || (defaultPayDate ?? '')
 
     return {
-      rowIndex:      rIdx,
+      rowIndex:        rIdx,
       email,
-      employeeName:  emp.name,
-      accrualMonth:  (row[monthCol] ?? '').trim() || defaultMonth,
-      paymentDate:   (row[dateCol]  ?? '').trim() || defaultPayDate ?? '',
+      employeeName:    emp.name,
+      accrualMonth,
+      paymentDate,
       earnings,
       deductions,
       totalEarnings,
       totalDeductions,
       netPay,
-      status: 'valid',
-    } as PreviewRow
+      status:          'valid',
+    } satisfies PreviewRow
   })
 }
 
-/* ── 5. PreviewRow[] → PayInfoPayload[] ─────────────── */
+/* ────────────────────────────────────────────────────────
+   toPayInfoPayloads: PreviewRow[] → PayInfoPayload[]
+──────────────────────────────────────────────────────── */
 export function toPayInfoPayloads(
-  previews: PreviewRow[],
+  previews:  PreviewRow[],
   employees: EmployeeMaster[],
   companyId: number,
 ): PayInfoPayload[] {
@@ -198,21 +279,24 @@ export function toPayInfoPayloads(
 
   return previews
     .filter(p => p.status === 'valid')
-    .map(p => {
-      const emp = empMap.get(p.email)!
-      return {
-        company_id:       companyId,
-        employee_id:      emp.id,
-        accrual_month:    p.accrualMonth,
-        payment_date:     p.paymentDate || null,
-        work_days:        null,
-        overtime_hours:   null,
-        earnings:         p.earnings,
-        deductions:       p.deductions,
-        total_earnings:   p.totalEarnings,
-        total_deductions: p.totalDeductions,
-        net_pay:          p.netPay,
+    .flatMap(p => {
+      // ★ null assertion(!) 제거 — 안전하게 처리
+      const emp = empMap.get(p.email)
+      if (!emp) return []   // 매핑 실패 시 조용히 건너뜀
+
+      return [{
+        company_id:        companyId,
+        employee_id:       emp.id,
+        accrual_month:     p.accrualMonth,
+        payment_date:      p.paymentDate || null,
+        work_days:         null,
+        overtime_hours:    null,
+        earnings:          p.earnings,
+        deductions:        p.deductions,
+        total_earnings:    p.totalEarnings,
+        total_deductions:  p.totalDeductions,
+        net_pay:           p.netPay,
         calculation_notes: [],
-      }
+      } satisfies PayInfoPayload]
     })
 }

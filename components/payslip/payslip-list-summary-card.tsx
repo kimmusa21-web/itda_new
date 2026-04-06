@@ -1,7 +1,16 @@
 import Link from 'next/link'
 import { ArrowRight, CalendarDays, TrendingUp } from 'lucide-react'
-import type { PayslipListItem } from '@/lib/mock-payslip-list'
 import { formatKRW, formatAccrualMonth, formatDateDot } from '@/lib/payslip-utils'
+
+interface PayslipListItem {
+  id: string
+  accrualMonth: string
+  paymentDate: string
+  status: 'paid' | 'pending'
+  netPay: number
+  totalEarnings: number
+  totalDeductions: number
+}
 
 interface Props {
   item: PayslipListItem

@@ -1,5 +1,5 @@
 import { UserPlus } from 'lucide-react'
-import type { EmployeeRequest } from '@/lib/mock-employee-requests'
+import type { EmployeeRequest } from '@/types/employee-request'
 import { RequestListItem } from './request-list-item'
 
 interface Props {

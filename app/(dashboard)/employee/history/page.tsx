@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { CalendarDays, Wallet } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getMyPayslips, mapRowToPayslip } from '@/lib/supabase/queries/payslip'
+import { getMyPayslips } from '@/lib/supabase/queries/payslip'
+import { mapRowToPayslip } from '@/lib/supabase/queries/payslip-shared'
 import { formatKRW, formatAccrualMonth, formatDateDot } from '@/lib/payslip-utils'
 
 export default async function EmployeeHistoryPage() {

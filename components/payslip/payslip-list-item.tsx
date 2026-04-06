@@ -30,7 +30,7 @@ export function PayslipListItem({ id, accrualMonth, paymentDate, status }: Props
         <span className="text-[9px] font-semibold text-slate-400 leading-none">월</span>
       </div>
 
-      {/* 정보 */}
+      {/* 정보 — 금액 없음 */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-sm font-semibold text-slate-900">

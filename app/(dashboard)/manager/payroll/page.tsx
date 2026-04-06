@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getCompanyPayroll, getAvailableMonths, mapRowToPayslip } from '@/lib/supabase/queries/payslip'
+import { getCompanyPayroll, getAvailableMonths } from '@/lib/supabase/queries/payslip'
+import { mapRowToPayslip } from '@/lib/supabase/queries/payslip-shared'
 import ManagerPayrollClient from './client'
 
 export default async function ManagerPayrollPage() {

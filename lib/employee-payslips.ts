@@ -1,9 +1,10 @@
+'use server'
 /* ================================================================
    itda — 직원 급여명세서 Supabase 쿼리 함수
    실제 테이블: pay_info_v2 (earnings/deductions JSONB)
 ================================================================ */
 
-import { createClient }    from '@/lib/supabase/server'
+import { createClient }        from '@/lib/supabase/server'
 import { mapEarnings, mapDeductions } from '@/lib/payroll-labels'
 import {
   rowToListItem,
@@ -12,17 +13,18 @@ import {
   type PayslipDetail,
 } from '@/types/payslip'
 
-/* ── 현재 로그인 직원 정보 ─────────────────────────────────
-   1. auth.getUser() → uid
-   2. employees WHERE user_id = uid  (초대 수락 시 자동 연결)
-   3. fallback: email 매칭 (개발 환경 / 초대 미수락)
-──────────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────
+   getCurrentEmployee
+   우선순위:
+     1. employees.user_id = auth.uid()       (초대 수락 완료)
+     2. employees.email  = auth.user.email   (개발/fallback)
+──────────────────────────────────────────────────────── */
 export async function getCurrentEmployee() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  // user_id로 직접 매칭
+  // 1순위: user_id 매칭
   const { data: byUid } = await supabase
     .from('employees')
     .select('id, name, email, company_id, department, position, Date_of_joining, birthdate')
@@ -32,8 +34,9 @@ export async function getCurrentEmployee() {
 
   if (byUid) return byUid
 
-  // fallback: 이메일 매칭 (초대 미수락 상태)
+  // 2순위: email 매칭 (user_id=null인 개발 환경 fallback)
   if (!user.email) return null
+
   const { data: byEmail } = await supabase
     .from('employees')
     .select('id, name, email, company_id, department, position, Date_of_joining, birthdate')
@@ -44,9 +47,10 @@ export async function getCurrentEmployee() {
   return byEmail ?? null
 }
 
-/* ── 급여 목록 조회 (금액 필드 완전 제외) ────────────────────
-   ★ SELECT에서 earnings/deductions/net_pay 등 금액 필드 절대 포함 금지
-──────────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────
+   getEmployeePayslips — 목록 조회
+   ★★★ SELECT에 earnings/deductions/금액 필드 절대 포함 금지 ★★★
+──────────────────────────────────────────────────────── */
 export async function getEmployeePayslips(
   employeeId: number,
 ): Promise<PayslipListItem[]> {
@@ -54,7 +58,8 @@ export async function getEmployeePayslips(
 
   const { data, error } = await supabase
     .from('pay_info_v2')
-    .select('id, accrual_month, payment_date')   // ★ 금액 필드 제외
+    // ★ 금액 필드(earnings, deductions, total_*, net_pay) 제외
+    .select('id, accrual_month, payment_date')
     .eq('employee_id', employeeId)
     .order('accrual_month', { ascending: false })
 
@@ -66,11 +71,12 @@ export async function getEmployeePayslips(
   return (data ?? []).map(rowToListItem)
 }
 
-/* ── 급여명세서 상세 조회 ─────────────────────────────────────
-   반드시 employee_id 검증 → 타인 데이터 접근 차단
-──────────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────
+   getEmployeePayslipById — 상세 조회
+   ★ .eq('employee_id', employeeId) 로 본인 데이터 강제 검증
+──────────────────────────────────────────────────────── */
 export async function getEmployeePayslipById(
-  id: number,
+  id:         number,
   employeeId: number,
 ): Promise<PayslipDetail | null> {
   const supabase = createClient()
@@ -79,36 +85,43 @@ export async function getEmployeePayslipById(
     .from('pay_info_v2')
     .select(`
       *,
-      employees ( name, email, department, position, Date_of_joining, birthdate, company_id ),
+      employees (
+        name, email, department, position,
+        Date_of_joining, birthdate, company_id
+      ),
       companies ( name )
     `)
     .eq('id', id)
-    .eq('employee_id', employeeId)   // ★ 본인 검증 (RLS 보완)
+    .eq('employee_id', employeeId)   // ★ 본인 검증 — 다른 직원 id면 null 반환
     .maybeSingle()
 
   if (error || !data) return null
 
   const row = data as PayInfoV2Row
 
-  // total_deductions는 음수일 수 있음 → Math.abs로 표시용 절댓값
+  // total_deductions는 음수(환급 포함)일 수 있음 → abs로 표시
   const totalEarnings   = Math.round(Number(row.total_earnings))
   const totalDeductions = Math.abs(Math.round(Number(row.total_deductions)))
   const netPay          = Math.round(Number(row.net_pay))
 
   return {
-    id:            row.id,
-    accrualMonth:  row.accrual_month,
-    paymentDate:   row.payment_date ?? null,
-    workDays:      row.work_days != null ? Number(row.work_days) : null,
+    id:           row.id,
+    accrualMonth: row.accrual_month,
+    paymentDate:  row.payment_date ?? null,
+    workDays:     row.work_days != null ? Number(row.work_days) : null,
     overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : null,
-    earnings:      mapEarnings(row.earnings ?? {}),
-    deductions:    mapDeductions(row.deductions ?? {}),
+
+    // 금액 (상세에서만 노출)
+    earnings:     mapEarnings(row.earnings ?? {}),
+    deductions:   mapDeductions(row.deductions ?? {}),
     totalEarnings,
     totalDeductions,
     netPay,
+
     calculationNotes: Array.isArray(row.calculation_notes)
       ? row.calculation_notes.filter(Boolean)
       : [],
+
     employee: {
       name:       row.employees?.name       ?? '',
       email:      row.employees?.email      ?? '',
@@ -120,20 +133,4 @@ export async function getEmployeePayslipById(
     },
     companyName: row.companies?.name ?? '',
   }
-}
-
-/* ── 회사 월별 전체 조회 (어드민/담당자용) ────────────────── */
-export async function getCompanyPayrollV2(companyId: number, accrualMonth?: string) {
-  const supabase = createClient()
-
-  let q = supabase
-    .from('pay_info_v2')
-    .select('*, employees(name,email,department,position)')
-    .eq('company_id', companyId)
-    .order('accrual_month', { ascending: false })
-
-  if (accrualMonth) q = q.eq('accrual_month', accrualMonth)
-
-  const { data } = await q
-  return data ?? []
 }

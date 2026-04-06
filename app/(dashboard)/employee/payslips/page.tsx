@@ -1,9 +1,12 @@
-import { redirect }              from 'next/navigation'
-import { Wallet }                from 'lucide-react'
-import { createClient }          from '@/lib/supabase/server'
-import { getCurrentEmployee, getEmployeePayslips } from '@/lib/employee-payslips'
-import { PayslipCurrentCard }    from '@/components/payslip/payslip-current-card'
-import { PayslipListItem }       from '@/components/payslip/payslip-list-item'
+import { redirect }          from 'next/navigation'
+import { Wallet }            from 'lucide-react'
+import { createClient }      from '@/lib/supabase/server'
+import {
+  getCurrentEmployee,
+  getEmployeePayslips,
+} from '@/lib/employee-payslips'
+import { PayslipCurrentCard } from '@/components/payslip/payslip-current-card'
+import { PayslipListItem }   from '@/components/payslip/payslip-list-item'
 
 export const metadata = { title: '내 급여 | itda' }
 
@@ -18,16 +21,14 @@ export default async function EmployeePayslipsPage() {
     .select('role, name, companies(name)')
     .eq('id', user.id)
     .single()
-
   if (profile?.role !== 'employee') redirect(`/${profile?.role ?? 'admin'}`)
 
-  const employeeName = profile?.name ?? user.email ?? ''
-  const companyName  = (profile?.companies as any)?.name ?? ''
+  const companyName = (profile?.companies as any)?.name ?? ''
 
-  /* ── 직원 row 조회 ── */
+  /* ── 직원 row 확보 ── */
   const employee = await getCurrentEmployee()
 
-  /* ── 급여 목록 조회 (금액 없음) ── */
+  /* ── 급여 목록 (금액 없음) ── */
   const payslips       = employee ? await getEmployeePayslips(employee.id) : []
   const currentPayslip = payslips[0] ?? null
   const history        = payslips.slice(1)
@@ -53,8 +54,12 @@ export default async function EmployeePayslipsPage() {
             <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
               <Wallet size={28} className="text-slate-400" />
             </div>
-            <p className="text-sm font-semibold text-slate-700 mb-1">직원 계정이 연결되지 않았습니다</p>
-            <p className="text-xs text-slate-400">어드민이 초대 이메일을 발송했는지 확인하거나 관리자에게 문의하세요</p>
+            <p className="text-sm font-semibold text-slate-700 mb-1">
+              직원 계정이 연결되지 않았습니다
+            </p>
+            <p className="text-xs text-slate-400">
+              관리자가 초대 이메일을 발송했는지 확인하거나 담당자에게 문의하세요
+            </p>
           </div>
         )}
 
@@ -64,12 +69,16 @@ export default async function EmployeePayslipsPage() {
             <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
               <Wallet size={28} className="text-slate-400" />
             </div>
-            <p className="text-sm font-semibold text-slate-700 mb-1">등록된 급여명세서가 없습니다</p>
-            <p className="text-xs text-slate-400">급여가 등록되면 이곳에서 확인할 수 있어요</p>
+            <p className="text-sm font-semibold text-slate-700 mb-1">
+              등록된 급여명세서가 없습니다
+            </p>
+            <p className="text-xs text-slate-400">
+              급여가 등록되면 이곳에서 확인할 수 있어요
+            </p>
           </div>
         )}
 
-        {/* 이번 달 카드 */}
+        {/* 최근 급여 카드 */}
         {currentPayslip && (
           <section>
             <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">

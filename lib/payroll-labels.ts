@@ -1,5 +1,6 @@
 /* ================================================================
-   itda — 급여 항목 영어 키 → 한글 레이블 매핑
+   itda — 급여 항목 영어 키 → 한글 레이블 매핑 (최종본)
+   pay_info_v2 실제 earnings/deductions JSONB 키 기반
 ================================================================ */
 
 export const EARNINGS_LABELS: Record<string, string> = {
@@ -24,6 +25,7 @@ export const DEDUCTIONS_LABELS: Record<string, string> = {
   employment_insurance:        '고용보험',
   income_tax:                  '소득세',
   resident_tax:                '지방소득세',
+  local_income_tax:            '지방소득세',
   income_tax_refund:           '소득세환급',
   resident_tax_refund:         '지방소득세환급',
   health_insurance_adjustment: '건강보험료정산',
@@ -35,22 +37,24 @@ export const DEDUCTIONS_LABELS: Record<string, string> = {
 export function getEarningLabel(key: string)  { return EARNINGS_LABELS[key]   ?? key }
 export function getDeductionLabel(key: string) { return DEDUCTIONS_LABELS[key] ?? key }
 
-/** earnings JSONB → {key, label, amount}[] — 0원 항목 포함 (옵션으로 필터) */
-export function mapEarnings(
-  json: Record<string, number>,
-  excludeZero = true,
-) {
+/** earnings JSONB → 표시용 배열 (0원 제외) */
+export function mapEarnings(json: Record<string, number>, excludeZero = true) {
   return Object.entries(json)
-    .map(([key, amount]) => ({ key, label: getEarningLabel(key), amount: Math.round(Number(amount)) }))
+    .map(([key, amount]) => ({
+      key,
+      label:  getEarningLabel(key),
+      amount: Math.round(Number(amount)),
+    }))
     .filter(e => !excludeZero || e.amount !== 0)
 }
 
-/** deductions JSONB → {key, label, amount}[] */
-export function mapDeductions(
-  json: Record<string, number>,
-  excludeZero = true,
-) {
+/** deductions JSONB → 표시용 배열 (0원 제외) */
+export function mapDeductions(json: Record<string, number>, excludeZero = true) {
   return Object.entries(json)
-    .map(([key, amount]) => ({ key, label: getDeductionLabel(key), amount: Math.round(Number(amount)) }))
+    .map(([key, amount]) => ({
+      key,
+      label:  getDeductionLabel(key),
+      amount: Math.round(Number(amount)),
+    }))
     .filter(d => !excludeZero || d.amount !== 0)
 }

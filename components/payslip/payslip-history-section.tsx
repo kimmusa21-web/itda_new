@@ -1,8 +1,14 @@
-import type { PayslipListItem } from '@/lib/mock-payslip-list'
-import { PayslipListItemCard } from './payslip-list-item'
+import { PayslipListItem } from './payslip-list-item'
+
+interface HistoryItem {
+  id: number
+  accrualMonth: string
+  paymentDate: string | null
+  status: 'paid' | 'pending'
+}
 
 interface PayslipHistorySectionProps {
-  items: PayslipListItem[]
+  items: HistoryItem[]
 }
 
 export function PayslipHistorySection({ items }: PayslipHistorySectionProps) {
@@ -16,7 +22,7 @@ export function PayslipHistorySection({ items }: PayslipHistorySectionProps) {
       </div>
       <div className="space-y-2.5">
         {items.map(item => (
-          <PayslipListItemCard key={item.id} item={item} />
+          <PayslipListItem key={item.id} {...item} />
         ))}
       </div>
     </section>

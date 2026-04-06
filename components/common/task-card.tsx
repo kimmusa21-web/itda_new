@@ -1,6 +1,11 @@
 import { ChevronRight, AlertCircle, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { PendingTask } from '@/lib/mock-data'
+interface PendingTask {
+  urgency: 'high' | 'medium' | 'low'
+  type: string
+  count: number
+  description: string
+}
 
 interface TaskCardProps {
   task: PendingTask

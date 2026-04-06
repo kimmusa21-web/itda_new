@@ -1,48 +1,49 @@
 /* ================================================================
-   itda — CSV 업로드 타입 정의 (pay_info_v2 JSON 구조 기반)
+   itda — CSV 업로드 타입 정의 (pay_info_v2 구조 기반)
 ================================================================ */
 
-/* ── 컬럼 매핑 ─────────────────────────────────────── */
 export type MappingGroup = 'meta' | 'earnings' | 'deductions'
 
+/** column_mappings DB Row */
 export interface ColumnMapping {
   id:              number
   company_id:      number
-  csv_column_name: string    // CSV 헤더명
-  db_key:          string    // earnings/deductions JSON 키
+  csv_column_name: string        // CSV 헤더명
+  db_key:          string        // pay_info_v2 earnings/deductions JSON 키
   group_type:      MappingGroup
-  label_ko:        string
+  label_ko:        string | null
   is_required:     boolean
   sort_order:      number
 }
 
-/* ── CSV 파싱 결과 ──────────────────────────────────── */
+/** papaparse가 파싱한 CSV 1행 */
 export type CsvRow = Record<string, string>
 
-/* ── 검증 결과 ──────────────────────────────────────── */
+/** 검증 오류 1건 */
 export type ValidationSeverity = 'error' | 'warning'
 
 export interface ValidationError {
-  rowIndex:  number          // 1-based (헤더 제외)
-  email?:    string
-  reason:    string
-  severity:  ValidationSeverity
+  rowIndex: number               // 1-based (헤더 제외)
+  email?:   string
+  reason:   string
+  severity: ValidationSeverity
 }
 
+/** 검증 결과 전체 */
 export interface ValidationResult {
   totalRows:   number
   validRows:   number
   ignoredRows: number
   errorRows:   number
-  canUpload:   boolean       // error가 없으면 true
+  canUpload:   boolean           // severity=error가 없어야 true
   errors:      ValidationError[]
 }
 
-/* ── pay_info_v2 저장 Payload ───────────────────────── */
+/** pay_info_v2 upsert용 페이로드 */
 export interface PayInfoPayload {
   company_id:       number
   employee_id:      number
-  accrual_month:    string   // YYYY-MM
+  accrual_month:    string       // YYYY-MM
   payment_date:     string | null
   work_days:        number | null
   overtime_hours:   number | null
@@ -55,7 +56,15 @@ export interface PayInfoPayload {
   upload_log_id?:   number | null
 }
 
-/* ── 미리보기 행 ─────────────────────────────────────── */
+/** 직원 마스터 (이메일 매핑용) */
+export interface EmployeeMaster {
+  id:         number
+  email:      string
+  name:       string
+  company_id: number
+}
+
+/** 미리보기 행 */
 export type PreviewStatus = 'valid' | 'error' | 'ignored'
 
 export interface PreviewRow {
@@ -73,15 +82,7 @@ export interface PreviewRow {
   errorReason?:    string
 }
 
-/* ── 직원 마스터 (이메일 매핑용) ─────────────────────── */
-export interface EmployeeMaster {
-  id:         number
-  email:      string
-  name:       string
-  company_id: number
-}
-
-/* ── upload_logs 저장 파라미터 ─────────────────────── */
+/** upload_logs INSERT 파라미터 */
 export interface UploadLogParams {
   company_id:    number
   accrual_month: string

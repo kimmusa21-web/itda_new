@@ -1,7 +1,14 @@
 import Link from 'next/link'
 import { ArrowRight, CalendarDays } from 'lucide-react'
-import type { Payslip } from '@/lib/mock-data'
 import { formatKRW, formatMonth, formatDateShort } from '@/lib/utils'
+
+interface Payslip {
+  month: string
+  netPay: number
+  paymentDate: string
+  totalPay: number
+  totalDeduction: number
+}
 
 interface PayslipSummaryCardProps {
   payslip: Payslip

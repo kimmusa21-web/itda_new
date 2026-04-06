@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Check, X, ChevronDown, ChevronUp } from 'lucide-react'
-import { pendingTasks } from '@/lib/mock-data'
 import { cn } from '@/lib/utils'
 
 type Status = 'pending' | 'approved' | 'rejected'
