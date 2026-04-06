@@ -7,7 +7,7 @@ import { EmployeeBasicSection } from './employee-basic-section'
 import { EmployeeOrgSection }   from './employee-org-section'
 import { EmployeeWorkSection }  from './employee-work-section'
 import { EmployeeSalarySection } from './employee-salary-section'
-import { createClient } from '@/lib/supabase/client'
+import { createEmployeeRegistrationRequest } from '@/lib/employee-requests'
 import {
   validateRequired, validateEmail, validatePhone,
   validateBirthdate, validateDate, validateSalaryAmount,
@@ -44,51 +44,39 @@ const INITIAL: EmployeeCreateInput = {
 
 type SubmitState = 'idle' | 'loading' | 'success' | 'error'
 
-/* ── Mock API (실제 Supabase 연동 전) ─────────────────── */
-async function mockCreateEmployeeRequest(_data: EmployeeCreateInput): Promise<{ success: boolean; error?: string }> {
-  await new Promise(r => setTimeout(r, 1200))
-  // 테스트: 이미 등록된 이메일 시뮬레이션
-  if (_data.email.includes('duplicate')) return { success: false, error: '이미 등록된 이메일입니다' }
-  return { success: true }
-}
-
-/* ── 실제 Supabase 연동 함수 (추후 교체) ───────────────── */
+/* ── 서버 액션 래퍼 (알림 포함) ──────────────────────── */
 async function realCreateEmployeeRequest(
   data: EmployeeCreateInput,
-  companyId: number
+  companyId: number,
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = createClient()
-  const { error } = await supabase.from('employee_requests').insert({
-    name:         data.name,
-    email:        data.email,
-    birthdate:    data.birthdate || null,
-    gender:       data.gender,
-    phone:        data.phone || null,
-    department:   data.department || null,
-    position:     data.position || null,
-    job:          data.job || null,
-    grade:        data.grade || null,
-    role_title:   data.jobTitle || null,
-    work_details: data.jobDescription || null,
-    work_location:data.workLocation || null,
-    join_date:    data.joinDate || null,
-    salary_type:  data.salaryType,
-    salary_amount:data.salaryAmount || null,
-    salary_basis: data.salaryBasis,
-    company_id:   companyId,
+  return createEmployeeRegistrationRequest(companyId, {
+    name:          data.name,
+    email:         data.email,
+    birthdate:     data.birthdate || undefined,
+    gender:        data.gender,
+    phone:         data.phone || undefined,
+    department:    data.department || undefined,
+    position:      data.position || undefined,
+    job:           data.job || undefined,
+    grade:         data.grade || undefined,
+    role_title:    data.jobTitle || undefined,
+    work_details:  data.jobDescription || undefined,
+    work_location: data.workLocation || undefined,
+    join_date:     data.joinDate || undefined,
+    salary_type:   data.salaryType,
+    salary_amount: data.salaryAmount ? Number(data.salaryAmount) : undefined,
+    salary_basis:  data.salaryBasis,
   })
-  if (error) return { success: false, error: error.message }
-  return { success: true }
 }
 
 /* ── 메인 폼 컴포넌트 ─────────────────────────────────── */
 interface Props {
   companyId: number
   companyName: string
-  useMock?: boolean  // true면 mock API, false면 실제 Supabase
+  useMock?: boolean  // deprecated — 항상 실제 Supabase 사용
 }
 
-export function EmployeeForm({ companyId, companyName, useMock = true }: Props) {
+export function EmployeeForm({ companyId, companyName }: Props) {
   const router = useRouter()
   const [form, setForm]     = useState<EmployeeCreateInput>(INITIAL)
   const [errors, setErrors] = useState<FormErrors<EmployeeCreateInput>>({})
@@ -125,9 +113,7 @@ export function EmployeeForm({ companyId, companyName, useMock = true }: Props) 
     setSubmit('loading')
     setApiErr('')
 
-    const result = useMock
-      ? await mockCreateEmployeeRequest(form)
-      : await realCreateEmployeeRequest(form, companyId)
+    const result = await realCreateEmployeeRequest(form, companyId)
 
     if (result.success) {
       setSubmit('success')

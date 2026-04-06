@@ -25,7 +25,13 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
 
   // 비로그인 → /login으로
-  if (!user && !path.startsWith('/login') && !path.startsWith('/register')) {
+  // /auth/* 는 공개 접근 허용 (직원 인증번호 입력 등)
+  if (
+    !user &&
+    !path.startsWith('/login') &&
+    !path.startsWith('/register') &&
+    !path.startsWith('/auth')
+  ) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 

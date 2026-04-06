@@ -1,78 +1,54 @@
-'use client'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { Plus } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import { getCompanyEmployees } from '@/lib/supabase/queries/employee'
+import { ManagerEmployeesClient } from './client'
 
-import { useState } from 'react'
-import { Plus, Search } from 'lucide-react'
-import EmployeeCard from '@/components/common/employee-card'
-import EmptyState from '@/components/common/empty-state'
-import { mockEmployees, mockUsers } from '@/lib/mock-data'
-import { cn } from '@/lib/utils'
-import { Users } from 'lucide-react'
+export const metadata = { title: '직원관리 | itda' }
 
-type Filter = 'active' | 'inactive' | 'all'
+export default async function ManagerEmployeesPage() {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-export default function ManagerEmployeesPage() {
-  const user = mockUsers.manager
-  const [filter, setFilter] = useState<Filter>('active')
-  const [search, setSearch] = useState('')
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, company_id, companies(name)')
+    .eq('id', user.id)
+    .single()
 
-  const base = mockEmployees.filter(e => e.company === user.company)
-  const filtered = base.filter(e => {
-    const matchStatus =
-      filter === 'all' ? true :
-      filter === 'active' ? e.status === 'active' : e.status === 'inactive'
-    const matchSearch =
-      !search ||
-      e.name.includes(search) ||
-      e.email.includes(search) ||
-      e.department.includes(search)
-    return matchStatus && matchSearch
-  })
+  if (!['admin', 'manager'].includes(profile?.role ?? '')) redirect('/employee')
+
+  const companyId   = profile?.company_id
+  const companyName = (profile?.companies as any)?.name ?? ''
+
+  if (!companyId) {
+    return (
+      <div className="card p-10 text-center text-slate-400">
+        <p className="text-sm">회사 정보가 연결되지 않았습니다. 어드민에게 문의해주세요.</p>
+      </div>
+    )
+  }
+
+  const employees = await getCompanyEmployees(companyId)
 
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">직원 관리</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{user.company} · {base.filter(e=>e.status==='active').length}명 재직</p>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {companyName} · 재직 {employees.filter(e => e.is_active).length}명
+          </p>
         </div>
-        <button className="btn-primary flex-shrink-0">
+        <Link href="/manager/employees/create" className="btn-primary flex-shrink-0">
           <Plus size={16} />
           등록 요청
-        </button>
+        </Link>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          className="input pl-9"
-          placeholder="이름, 이메일, 부서 검색"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-      </div>
-
-      {/* Tab filter */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
-        {([['active','재직중'],['inactive','퇴사'],['all','전체']] as [Filter,string][]).map(([v,l]) => (
-          <button key={v} onClick={() => setFilter(v)}
-            className={cn('px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
-              filter === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
-            {l}
-          </button>
-        ))}
-      </div>
-
-      {/* List */}
-      {filtered.length === 0 ? (
-        <EmptyState icon={Users} title="직원이 없습니다" description="조건에 맞는 직원을 찾을 수 없습니다" />
-      ) : (
-        <div className="space-y-2.5">
-          {filtered.map(emp => (
-            <EmployeeCard key={emp.id} employee={emp} onClick={() => {}} />
-          ))}
-        </div>
-      )}
+      <ManagerEmployeesClient initialEmployees={employees} companyName={companyName} />
     </div>
   )
 }

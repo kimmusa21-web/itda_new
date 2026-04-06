@@ -31,6 +31,34 @@ export interface Company {
   Telephone: string | null
   address: string | null
   'tax invoice email': string | null
+  // 신규 추가 (migration 20260406)
+  status: 'active' | 'inactive'
+  contact_name: string | null
+  contact_email: string | null
+  deleted_at: string | null
+}
+
+// ── 알림 ─────────────────────────────────────────────────────
+export interface Notification {
+  id: number
+  user_id: string
+  type: string
+  title: string
+  message: string | null
+  target_id: string | null
+  is_read: boolean
+  created_at: string
+}
+
+// ── 직원 인증코드 ────────────────────────────────────────────
+export interface VerificationCode {
+  id: number
+  request_id: number
+  email: string
+  code_hash: string
+  expires_at: string
+  verified_at: string | null
+  created_at: string
 }
 
 // ── 직원 ─────────────────────────────────────────────────────

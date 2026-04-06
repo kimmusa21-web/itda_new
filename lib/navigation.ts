@@ -43,6 +43,8 @@ export function getPageTitle(pathname: string): string {
     '/admin': '대시보드', '/admin/requests': '기업신청', '/admin/companies': '기업관리',
     '/admin/employees': '직원관리', '/admin/payroll/upload': '급여 CSV 업로드',
     '/admin/employee-requests': '직원 가입신청',
+    '/admin/companies/new': '회사 등록',
+    '/auth/verify': '가입 인증',
     '/manager': '홈', '/manager/employees': '직원관리', '/manager/payroll': '급여조회',
     '/manager/employees/create': '직원 등록',
     '/employee': '내 급여', '/employee/payslips': '급여목록',

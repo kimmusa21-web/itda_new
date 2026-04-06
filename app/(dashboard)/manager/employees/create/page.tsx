@@ -35,7 +35,6 @@ export default async function ManagerEmployeeCreatePage() {
       <EmployeeForm
         companyId={companyId}
         companyName={companyName}
-        useMock={false}   // 실제 Supabase 연동
       />
     </div>
   )
