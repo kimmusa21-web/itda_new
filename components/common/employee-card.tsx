@@ -1,3 +1,4 @@
+'use client'
 import { CalendarDays, ChevronRight } from 'lucide-react'
 import type { MockEmployee } from '@/lib/mock-data'
 import { formatDateShort, cn } from '@/lib/utils'

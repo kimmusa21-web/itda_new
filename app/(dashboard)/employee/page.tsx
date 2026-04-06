@@ -139,7 +139,7 @@ export default async function EmployeeDashboard() {
         </div>
         <div className="space-y-2.5">
           {mockNotices.slice(0, 2).map(n => (
-            <NoticeCard key={n.id} notice={n} onClick={() => {}} />
+            <NoticeCard key={n.id} notice={n} />
           ))}
         </div>
       </section>

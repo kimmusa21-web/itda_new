@@ -122,7 +122,7 @@ export default async function AdminDashboard() {
           <h2 className="section-title">공지사항</h2>
         </div>
         <div className="space-y-2.5">
-          {mockNotices.map(n => <NoticeCard key={n.id} notice={n} onClick={() => {}} />)}
+          {mockNotices.map(n => <NoticeCard key={n.id} notice={n} />)}
         </div>
       </section>
     </div>
