@@ -66,9 +66,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL(`/${role}`, request.url))
       }
       // role이 없으면 no-access로
-      if (path !== '/no-access') {
-        return NextResponse.redirect(new URL('/no-access', request.url))
-      }
+      return NextResponse.redirect(new URL('/no-access', request.url))
     }
 
     /* ── 역할 기반 경로 보호 ── */
