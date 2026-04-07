@@ -52,7 +52,7 @@ export async function sendPayslipEmails(params: {
 
   /* 3. manager: company_id 일치 검증 */
   if (role === 'manager') {
-    if (!profile.company_id || profile.company_id !== params.companyId) {
+    if (!profile?.company_id || profile.company_id !== params.companyId) {
       return { ...empty, authError: '본인 회사의 급여명세서만 발송할 수 있습니다' }
     }
   }
