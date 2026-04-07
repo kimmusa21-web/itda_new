@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Plus, Search, Mail } from 'lucide-react'
+import { Plus, Search, Mail, Upload } from 'lucide-react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { EmployeeRow } from '@/lib/supabase/queries/employee'
 import { formatDateShort, cn } from '@/lib/utils'
@@ -97,10 +98,16 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
           <h1 className="text-xl font-semibold text-slate-900">사용자 관리</h1>
           <p className="text-sm text-slate-500 mt-0.5">전체 기업 직원 {employees.length}명</p>
         </div>
-        <button onClick={() => { setForm({ is_active: true }); setModal('add') }}
-          className="btn-primary flex-shrink-0">
-          <Plus size={16} />직원 등록
-        </button>
+        <div className="flex gap-2 flex-shrink-0">
+          <Link href="/admin/employees/upload" className="btn-secondary">
+            <Upload size={15} />
+            CSV 대량 등록
+          </Link>
+          <button onClick={() => { setForm({ is_active: true }); setModal('add') }}
+            className="btn-primary">
+            <Plus size={16} />직원 등록
+          </button>
+        </div>
       </div>
 
       {/* Filters */}

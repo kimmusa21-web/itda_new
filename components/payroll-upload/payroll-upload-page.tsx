@@ -19,6 +19,7 @@ import { ColumnMappingCard }     from './column-mapping-card'
 import { ValidationSummaryCard } from './validation-summary-card'
 import { ValidationErrorList }   from './validation-error-list'
 import { PayrollPreviewList }    from './payroll-preview-list'
+import { SendPayslipButton }     from '@/components/payroll/send-payslip-button'
 import {
   getColumnMappings,
   getEmployeesByCompany,
@@ -205,9 +206,18 @@ export function PayrollUploadPage({ companies, currentUserId: _currentUserId }: 
               </p>
             )}
           </div>
-          <button onClick={handleReset} className="text-white/80 hover:text-white text-xs underline flex-shrink-0">
-            {phase === 'done' ? '새 파일 업로드' : '다시 시도'}
-          </button>
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            {phase === 'done' && companyId > 0 && accrualMonth && (
+              <SendPayslipButton
+                companyId={companyId}
+                accrualMonth={accrualMonth}
+                className="bg-white/15 hover:bg-white/25 !text-white !border-white/40 text-xs"
+              />
+            )}
+            <button onClick={handleReset} className="text-white/80 hover:text-white text-xs underline">
+              {phase === 'done' ? '새 파일 업로드' : '다시 시도'}
+            </button>
+          </div>
         </div>
       )}
 

@@ -7,6 +7,7 @@ export interface EmployeeRow {
   email: string
   birthdate: string | null
   company_id: number
+  employee_number: string | null
   user_id: string | null
   is_active: boolean
   Date_of_joining: string | null

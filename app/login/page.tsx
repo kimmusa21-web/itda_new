@@ -1,13 +1,23 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
-  const router  = useRouter()
-  const supabase = createClient()
+  return (
+    <Suspense>
+      <LoginPageInner />
+    </Suspense>
+  )
+}
+
+function LoginPageInner() {
+  const router        = useRouter()
+  const searchParams  = useSearchParams()
+  const redirectPath  = searchParams.get('redirect')
+  const supabase      = createClient()
 
   const [tab,      setTab]      = useState<'login' | 'register'>('login')
   const [email,    setEmail]    = useState('')
@@ -25,6 +35,12 @@ export default function LoginPage() {
     if (error) {
       setMessage({ type: 'error', text: '이메일 또는 비밀번호가 올바르지 않습니다.' })
       setLoading(false); return
+    }
+
+    /* redirect 파라미터가 있고 안전한 내부 경로면 그쪽으로 이동 */
+    if (redirectPath && redirectPath.startsWith('/')) {
+      router.push(redirectPath)
+      return
     }
 
     /* 역할 조회 후 리다이렉트 */

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { mapRowToPayslip, type PayInfoRow } from '@/lib/supabase/queries/payslip-shared'
 import { formatKRW, formatAccrualMonth } from '@/lib/payslip-utils'
 import { PayslipDetailView } from '@/components/payslip/payslip-detail'
+import { SendPayslipButton } from '@/components/payroll/send-payslip-button'
 import { BarChart3 } from 'lucide-react'
 
 interface Props {
@@ -66,13 +67,20 @@ export default function ManagerPayrollClient({
         <h1 className="text-xl font-semibold text-slate-900 mt-0.5">급여 조회</h1>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <select className="input w-44" value={month} onChange={e => onMonthChange(e.target.value)}>
           {initialMonths.map(m => (
             <option key={m} value={m}>{formatAccrualMonth(m)}</option>
           ))}
         </select>
         <span className="text-sm text-slate-500">{rows.length}명</span>
+        {month && rows.length > 0 && (
+          <SendPayslipButton
+            companyId={companyId}
+            accrualMonth={month}
+            employeeCount={rows.length}
+          />
+        )}
       </div>
 
       {rows.length > 0 && (

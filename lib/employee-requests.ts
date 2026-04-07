@@ -39,7 +39,31 @@ export async function getCurrentUserProfile() {
   return data ?? null
 }
 
-/* ── 목록 조회 ─────────────────────────────────────────── */
+/* ── manager 본인 신청 목록 조회 ────────────────────────── */
+export async function getManagerRequests(): Promise<EmployeeRequest[]> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, company_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!['admin', 'manager'].includes(profile?.role ?? '')) return []
+
+  const { data, error } = await supabase
+    .from('employee_requests')
+    .select('*, companies(name)')
+    .eq('requested_by', user.id)
+    .order('created_at', { ascending: false })
+
+  if (error) { console.error('[getManagerRequests]', error.message); return [] }
+  return (data as EmployeeRequestRow[]).map(mapRowToRequest)
+}
+
+/* ── 목록 조회 (admin용) ────────────────────────────────── */
 export async function getEmployeeRequests(options?: {
   status?: EmployeeRequestStatus | 'all'
   search?: string

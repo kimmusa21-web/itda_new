@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getCompanyEmployees } from '@/lib/supabase/queries/employee'
 import { ManagerEmployeesClient } from './client'
@@ -42,10 +42,16 @@ export default async function ManagerEmployeesPage() {
             {companyName} · 재직 {employees.filter(e => e.is_active).length}명
           </p>
         </div>
-        <Link href="/manager/employees/create" className="btn-primary flex-shrink-0">
-          <Plus size={16} />
-          등록 요청
-        </Link>
+        <div className="flex gap-2 flex-shrink-0">
+          <Link href="/manager/employees/upload" className="btn-secondary">
+            <Upload size={15} />
+            CSV 대량 등록
+          </Link>
+          <Link href="/manager/employees/create" className="btn-primary">
+            <Plus size={16} />
+            등록 요청
+          </Link>
+        </div>
       </div>
 
       <ManagerEmployeesClient initialEmployees={employees} companyName={companyName} />

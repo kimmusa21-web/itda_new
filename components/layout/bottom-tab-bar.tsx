@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 
 export default function BottomTabBar({ role }: { role: Role }) {
   const pathname = usePathname()
-  const navItems = roleNavMap[role]
+  const navItems = roleNavMap[role].slice(0, 5)
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200"
       style={{ paddingBottom: 'env(safe-area-inset-bottom,0px)' }}>
