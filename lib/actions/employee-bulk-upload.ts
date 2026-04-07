@@ -58,7 +58,7 @@ export async function uploadEmployeesCsv(
 
   /* 3. manager면 company_id 일치 확인 (클라이언트 조작 차단) */
   if (role === 'manager') {
-    if (!profile.company_id || profile.company_id !== params.companyId) {
+    if (!profile?.company_id || profile.company_id !== params.companyId) {
       return { authError: '본인 회사 직원만 등록할 수 있습니다', totalCount: 0, successCount: 0, failureCount: 0, successes: [], failures: [] }
     }
   }
