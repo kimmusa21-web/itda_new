@@ -94,7 +94,7 @@ export async function sendPayslipEmails(params: {
 
   /* 6. 직원별 이메일 발송 */
   for (const row of payslips) {
-    const emp  = row.employees as { id: number; name: string; email: string } | null
+    const emp  = row.employees as unknown as { id: number; name: string; email: string } | null
     const name = emp?.name  ?? '직원'
     const email = emp?.email ?? ''
 
