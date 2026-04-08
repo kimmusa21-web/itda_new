@@ -38,13 +38,17 @@ export async function getColumnMappings(companyId: number): Promise<ColumnMappin
   return (data ?? []) as ColumnMapping[]
 }
 
-/* ── 회사 직원 목록 (전체 — 다른 회사 검증용) ─────────────── */
+/* ── 회사 직원 목록 ─────────────────────────────────────────── */
 export async function getEmployeesByCompany(companyId: number): Promise<EmployeeMaster[]> {
   const supabase = createClient()
-  // 전체 활성 직원을 가져와야 "다른 회사 직원" 경고 vs "미등록" 에러를 구분 가능
+  // RLS 적용 후: employees 테이블은 각 역할의 범위만 조회됨
+  //   - admin: 전체 직원 (companyId 필터로 특정 회사만)
+  //   - manager: 자기 회사 직원만 (RLS가 company_id 범위를 강제)
+  // "다른 회사 직원" vs "미등록" 구분은 불가하나, 보안상 의도된 동작
   const { data } = await supabase
     .from('employees')
     .select('id, email, name, company_id')
+    .eq('company_id', companyId)
     .eq('is_active', true)
   return (data ?? []) as EmployeeMaster[]
 }
