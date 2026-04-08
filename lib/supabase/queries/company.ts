@@ -12,6 +12,7 @@ export interface CompanyRow {
   Fax: string | null
   address: string | null
   'tax invoice email': string | null
+  payslip_note: string | null
 }
 
 export async function getAllCompanies(): Promise<CompanyRow[]> {

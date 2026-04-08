@@ -214,34 +214,34 @@ export function PayslipDetailView({ detail: d }: Props) {
         </div>
 
         {/* ── 산출 근거 아코디언 ── */}
-        {d.calculationNotes.length > 0 && (
-          <div className="card overflow-hidden">
-            <button
-              onClick={() => setNotesOpen(!notesOpen)}
-              className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors focus:outline-none"
-            >
-              <div className="flex items-center gap-2">
-                <CalendarDays size={14} className="text-slate-400" />
-                <span className="text-sm font-semibold text-slate-700">산출 근거</span>
-                <span className="text-xs text-slate-400">({d.calculationNotes.length}개)</span>
-              </div>
-              {notesOpen
-                ? <ChevronUp size={16} className="text-slate-400" />
-                : <ChevronDown size={16} className="text-slate-400" />
-              }
-            </button>
-            {notesOpen && (
-              <div className="border-t border-slate-100 px-5 py-4 space-y-2">
-                {d.calculationNotes.map((note, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <span className="text-[10px] font-bold text-blue-500 mt-0.5 flex-shrink-0">{i + 1}</span>
-                    <p className="text-sm text-slate-600 leading-relaxed">{note}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        <div className="card overflow-hidden">
+          <button
+            onClick={() => setNotesOpen(!notesOpen)}
+            aria-expanded={notesOpen}
+            className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset"
+          >
+            <div className="flex items-center gap-2">
+              <CalendarDays size={14} className="text-slate-400" />
+              <span className="text-sm font-semibold text-slate-700">
+                {notesOpen ? '산출 근거 숨기기' : '산출 근거 보기'}
+              </span>
+            </div>
+            {notesOpen
+              ? <ChevronUp size={16} className="text-slate-400" />
+              : <ChevronDown size={16} className="text-slate-400" />
+            }
+          </button>
+          {notesOpen && (
+            <div className="border-t border-slate-100 px-5 py-4 space-y-2.5">
+              {d.calculationNotes.map((note, i) => (
+                <div key={i} className="flex items-start gap-2.5">
+                  <span className="text-blue-400 text-xs mt-0.5 shrink-0 font-bold select-none">·</span>
+                  <p className="text-sm text-slate-600 leading-relaxed">{note}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -155,6 +155,20 @@ export function PayslipInlineDetail({ payslip }: Props) {
           <span className="text-xl font-bold text-blue-600 tabular-nums">{formatKRW(payslip.netPay)}</span>
         </div>
       </div>
+
+      {/* 산출 근거 */}
+      {payslip.calculationNotes && payslip.calculationNotes.length > 0 && (
+        <AccordionSection title="산출 근거" accent="blue" defaultOpen={false}>
+          <div className="pt-2 space-y-2">
+            {payslip.calculationNotes.map((note, i) => (
+              <div key={i} className="flex items-start gap-2.5">
+                <span className="text-blue-400 text-xs mt-0.5 shrink-0 font-bold select-none">·</span>
+                <p className="text-sm text-slate-600 leading-relaxed">{note}</p>
+              </div>
+            ))}
+          </div>
+        </AccordionSection>
+      )}
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import type { PayslipDetail, EarningItem, DeductionItem } from '@/lib/mock-payslip'
+import { parsePayslipNote } from '@/lib/payslip-defaults'
 
 export interface PayInfoRow {
   id: number
@@ -49,7 +50,7 @@ export interface PayInfoRow {
     department: string | null
     position: string | null
     company_id: number
-    companies?: { name: string } | null
+    companies?: { name: string; payslip_note?: string | null } | null
   } | null
 }
 
@@ -131,14 +132,8 @@ export function mapRowToPayslip(row: PayInfoRow): PayslipDetail {
     totalEarnings,
     totalDeductions: Math.abs(totalDeductions),
     netPay,
-    calculationNotes: [
-      '월급제: 기본급 + 고정수당으로 산정됩니다.',
-      '국민연금: 기준소득월액 × 4.5% (2026년 기준)',
-      '건강보험: 기준소득월액 × 3.545% (2026년 기준)',
-      '장기요양보험: 건강보험료 × 12.95%',
-      '고용보험: 과세급여 × 0.9%',
-      '소득세: 간이세액표 기준 (부양가족 수 반영)',
-      '지방소득세: 소득세 × 10%',
-    ],
+    calculationNotes: parsePayslipNote(
+      (emp?.companies as any)?.payslip_note ?? null
+    ),
   }
 }

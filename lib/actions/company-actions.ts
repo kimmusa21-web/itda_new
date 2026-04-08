@@ -33,6 +33,7 @@ export interface CompanyInput {
   address?: string
   'tax invoice email'?: string
   status?: 'active' | 'inactive'
+  payslip_note?: string | null
 }
 
 /* ── 결과 타입 ──────────────────────────────────────────────── */
@@ -54,6 +55,7 @@ function normalizeInput(input: CompanyInput) {
     address:            input.address?.trim() || null,
     'tax invoice email': input['tax invoice email']?.trim() || null,
     status:             input.status ?? 'active',
+    payslip_note:       input.payslip_note?.trim() || null,
   }
 }
 

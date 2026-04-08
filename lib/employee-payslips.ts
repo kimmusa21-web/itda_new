@@ -6,6 +6,7 @@
 
 import { createClient }        from '@/lib/supabase/server'
 import { mapEarnings, mapDeductions } from '@/lib/payroll-labels'
+import { parsePayslipNote }   from '@/lib/payslip-defaults'
 import {
   rowToListItem,
   type PayInfoV2Row,
@@ -89,7 +90,7 @@ export async function getEmployeePayslipById(
         name, email, department, position,
         Date_of_joining, birthdate, company_id
       ),
-      companies ( name )
+      companies ( name, payslip_note )
     `)
     .eq('id', id)
     .eq('employee_id', employeeId)   // ★ 본인 검증 — 다른 직원 id면 null 반환
@@ -118,9 +119,9 @@ export async function getEmployeePayslipById(
     totalDeductions,
     netPay,
 
-    calculationNotes: Array.isArray(row.calculation_notes)
-      ? row.calculation_notes.filter(Boolean)
-      : [],
+    calculationNotes: parsePayslipNote(
+      (row.companies as any)?.payslip_note ?? null
+    ),
 
     employee: {
       name:       row.employees?.name       ?? '',

@@ -30,7 +30,7 @@ export interface PayInfoV2Row {
     Date_of_joining: string | null
     company_id:      number
   } | null
-  companies?: { name: string } | null
+  companies?: { name: string; payslip_note?: string | null } | null
 }
 
 /* ── 목록용 — 금액 없음 ─────────────────────────────────── */

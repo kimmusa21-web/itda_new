@@ -34,7 +34,7 @@ export default function ManagerPayrollClient({
     setSearch('')
     const { data } = await supabase
       .from('pay_info')
-      .select('*, employees(name,email,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name))')
+      .select('*, employees(name,email,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note))')
       .eq('company_id', companyId)
       .eq('accrual_month', m)
       .order('employee_id')
