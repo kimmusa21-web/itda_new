@@ -1,25 +1,60 @@
-import { Building2, Phone, Mail } from 'lucide-react'
-import { mockUsers } from '@/lib/mock-data'
+import { redirect } from 'next/navigation'
+import { Building2, Phone, Mail, FileText } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import { PayslipNoteEditor } from './payslip-note-editor'
 
-export default function ManagerMorePage() {
-  const user = mockUsers.manager
+export const metadata = { title: '더보기 | itda' }
+
+export default async function ManagerMorePage() {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, company_id')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'manager') redirect(`/${profile?.role ?? 'employee'}`)
+
+  const { data: company } = profile?.company_id
+    ? await supabase
+        .from('companies')
+        .select('name, Telephone, "tax invoice email", contact_name, contact_email, payslip_note')
+        .eq('id', profile.company_id)
+        .single()
+    : { data: null }
+
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-semibold text-slate-900">더보기</h1>
-        <p className="text-sm text-slate-500 mt-0.5">{user.company}</p>
+        <p className="text-sm text-slate-500 mt-0.5">{company?.name ?? '소속 회사 없음'}</p>
       </div>
+
       <div className="card divide-y divide-slate-100">
         <Section title="회사 정보">
-          <Row icon={Building2} label="회사명"           value={user.company ?? '-'} />
-          <Row icon={Phone}     label="전화번호"          value="02-1234-5678" />
-          <Row icon={Mail}      label="세금계산서 이메일" value="tax@va.kr" />
+          <Row icon={Building2} label="회사명"           value={company?.name ?? '-'} />
+          <Row icon={Phone}     label="전화번호"          value={(company as any)?.Telephone ?? '-'} />
+          <Row icon={Mail}      label="세금계산서 이메일" value={(company as any)?.['tax invoice email'] ?? '-'} />
         </Section>
-        <Section title="세무 담당">
-          <Row icon={Building2} label="세무법인"      value="우리세무법인" />
-          <Row icon={Phone}     label="세무사 연락처" value="02-9876-5432" />
-          <Row icon={Mail}      label="이메일"        value="cpa@wuri.kr" />
-        </Section>
+
+        {(company?.contact_name || company?.contact_email) && (
+          <Section title="담당자">
+            {company.contact_name  && <Row icon={Building2} label="담당자 이름" value={company.contact_name} />}
+            {company.contact_email && <Row icon={Mail}      label="담당자 이메일" value={company.contact_email} />}
+          </Section>
+        )}
+      </div>
+
+      {/* 급여명세서 산출 근거 편집 */}
+      <div className="card p-5 space-y-3">
+        <div className="flex items-center gap-2 pb-1 border-b border-slate-100">
+          <FileText size={15} className="text-slate-500" />
+          <h3 className="text-sm font-semibold text-slate-700">급여명세서 산출 근거</h3>
+        </div>
+        <PayslipNoteEditor initialNote={(company as any)?.payslip_note ?? null} />
       </div>
     </div>
   )

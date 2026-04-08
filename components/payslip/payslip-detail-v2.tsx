@@ -7,12 +7,13 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import {
-  ChevronLeft, ChevronDown, ChevronUp,
+  ChevronLeft,
   Printer, CheckCircle2, Clock,
   User, CalendarDays, Banknote, EyeOff, Eye,
 } from 'lucide-react'
 import type { PayslipDetail } from '@/types/payslip'
 import { formatKRW, formatMonth, formatDateDot, formatDateKR, cn } from '@/lib/utils'
+import { PayrollNoteAccordion } from '@/components/payslip/payroll-note-accordion'
 
 interface Props { detail: PayslipDetail }
 
@@ -43,7 +44,6 @@ function AmountText({
 }
 
 export function PayslipDetailView({ detail: d }: Props) {
-  const [notesOpen,  setNotesOpen]  = useState(false)
   const [revealed,   setRevealed]   = useState(false)
 
   const today     = new Date().toISOString().slice(0, 10)
@@ -214,34 +214,7 @@ export function PayslipDetailView({ detail: d }: Props) {
         </div>
 
         {/* ── 산출 근거 아코디언 ── */}
-        <div className="card overflow-hidden">
-          <button
-            onClick={() => setNotesOpen(!notesOpen)}
-            aria-expanded={notesOpen}
-            className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset"
-          >
-            <div className="flex items-center gap-2">
-              <CalendarDays size={14} className="text-slate-400" />
-              <span className="text-sm font-semibold text-slate-700">
-                {notesOpen ? '산출 근거 숨기기' : '산출 근거 보기'}
-              </span>
-            </div>
-            {notesOpen
-              ? <ChevronUp size={16} className="text-slate-400" />
-              : <ChevronDown size={16} className="text-slate-400" />
-            }
-          </button>
-          {notesOpen && (
-            <div className="border-t border-slate-100 px-5 py-4 space-y-2.5">
-              {d.calculationNotes.map((note, i) => (
-                <div key={i} className="flex items-start gap-2.5">
-                  <span className="text-blue-400 text-xs mt-0.5 shrink-0 font-bold select-none">·</span>
-                  <p className="text-sm text-slate-600 leading-relaxed">{note}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <PayrollNoteAccordion notes={d.calculationNotes} />
       </div>
     </div>
   )

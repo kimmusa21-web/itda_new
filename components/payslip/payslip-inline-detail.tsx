@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 import type { PayslipDetail } from '@/lib/mock-payslip'
 import { formatKRW, formatAccrualMonth } from '@/lib/payslip-utils'
 import { cn } from '@/lib/utils'
+import { PayrollNoteAccordion } from '@/components/payslip/payroll-note-accordion'
 
 /* ── 접힘/펼침 섹션 ── */
 function AccordionSection({
@@ -158,16 +159,7 @@ export function PayslipInlineDetail({ payslip }: Props) {
 
       {/* 산출 근거 */}
       {payslip.calculationNotes && payslip.calculationNotes.length > 0 && (
-        <AccordionSection title="산출 근거" accent="blue" defaultOpen={false}>
-          <div className="pt-2 space-y-2">
-            {payslip.calculationNotes.map((note, i) => (
-              <div key={i} className="flex items-start gap-2.5">
-                <span className="text-blue-400 text-xs mt-0.5 shrink-0 font-bold select-none">·</span>
-                <p className="text-sm text-slate-600 leading-relaxed">{note}</p>
-              </div>
-            ))}
-          </div>
-        </AccordionSection>
+        <PayrollNoteAccordion notes={payslip.calculationNotes} defaultOpen={false} />
       )}
     </div>
   )

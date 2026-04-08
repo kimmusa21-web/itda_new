@@ -188,3 +188,42 @@ export async function getCompanyForEdit(id: number) {
   if (error) return null
   return data
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   매니저 전용: 자기 회사의 급여명세서 산출 근거 수정
+   매니저는 자신이 속한 company_id의 payslip_note만 수정 가능
+═══════════════════════════════════════════════════════════════ */
+export async function updateCompanyPayslipNote(
+  payslipNote: string | null,
+): Promise<ActionResult> {
+  try {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: '인증이 필요합니다' }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile || (profile.role !== 'manager' && profile.role !== 'admin')) {
+      return { success: false, error: '매니저 권한이 필요합니다' }
+    }
+    if (!profile.company_id) {
+      return { success: false, error: '소속 회사 정보가 없습니다' }
+    }
+
+    const { error } = await supabase
+      .from('companies')
+      .update({ payslip_note: payslipNote?.trim() || null })
+      .eq('id', profile.company_id)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/manager/more')
+    return { success: true }
+  } catch (e: any) {
+    return { success: false, error: e.message }
+  }
+}
