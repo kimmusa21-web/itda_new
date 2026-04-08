@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Bell, Plus, ChevronRight, Building2, Users, Upload } from 'lucide-react'
+import { Bell, Plus, Building2, Users, Upload, BarChart3 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getRequests } from '@/lib/supabase/queries/company'
 import { getAllBatches } from '@/lib/supabase/queries/payslip'
@@ -76,20 +76,29 @@ export default async function AdminDashboard() {
         </Link>
       </div>
 
-      {/* CSV CTA */}
-      <Link href="/admin/payroll"
-        className="flex items-center justify-between bg-[#0f172a] rounded-2xl px-5 py-4 hover:bg-[#1e293b] transition-colors group">
-        <div className="flex items-center gap-3">
+      {/* 빠른 이동 CTA */}
+      <div className="grid grid-cols-2 gap-3">
+        <Link href="/admin/payroll/upload"
+          className="flex items-center gap-3 bg-[#0f172a] rounded-2xl px-4 py-4 hover:bg-[#1e293b] transition-colors group">
           <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
             <Upload size={17} className="text-white" />
           </div>
-          <div>
-            <p className="text-sm font-medium text-white">급여 CSV 업로드</p>
-            <p className="text-xs text-slate-400 mt-0.5">엑셀 작업 후 바로 업로드 →</p>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-white truncate">급여 업로드</p>
+            <p className="text-xs text-slate-400 mt-0.5">CSV 파일 등록</p>
           </div>
-        </div>
-        <ChevronRight size={18} className="text-slate-500 group-hover:text-slate-300 transition-colors" />
-      </Link>
+        </Link>
+        <Link href="/admin/payroll"
+          className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-4 hover:bg-slate-50 transition-colors group">
+          <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+            <BarChart3 size={17} className="text-slate-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-slate-800 truncate">급여 조회</p>
+            <p className="text-xs text-slate-400 mt-0.5">월별 내역 확인</p>
+          </div>
+        </Link>
+      </div>
 
       {/* Recent batches */}
       {recentBatches.length > 0 && (

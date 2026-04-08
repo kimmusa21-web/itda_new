@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Plus, Search, Mail, Upload } from 'lucide-react'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
-import type { EmployeeRow } from '@/lib/supabase/queries/employee'
-import { formatDateShort, cn } from '@/lib/utils'
+import { Plus, Search, Mail, Upload, X }        from 'lucide-react'
+import Link                                      from 'next/link'
+import { createClient }                          from '@/lib/supabase/client'
+import type { EmployeeRow }                      from '@/lib/supabase/queries/employee'
+import { formatDateShort, cn }                   from '@/lib/utils'
 
 type Filter = 'active' | 'inactive' | 'all'
 
@@ -16,16 +16,16 @@ interface Props {
 
 export default function AdminEmployeesClient({ initialEmployees, companies }: Props) {
   const supabase = createClient()
-  const [employees, setEmployees] = useState(initialEmployees)
-  const [filter, setFilter]       = useState<Filter>('active')
-  const [search, setSearch]       = useState('')
-  const [company, setCompany]     = useState('')
-  const [modal, setModal]         = useState<'add' | 'edit' | 'quit' | 'invite' | null>(null)
-  const [selected, setSelected]   = useState<EmployeeRow | null>(null)
-  const [form, setForm]           = useState<Partial<EmployeeRow>>({})
-  const [saving, setSaving]       = useState(false)
-  const [inviting, setInviting]   = useState<number | null>(null)
-  const [isPending, startTransition] = useTransition()
+  const [employees, setEmployees]       = useState(initialEmployees)
+  const [filter, setFilter]             = useState<Filter>('active')
+  const [search, setSearch]             = useState('')
+  const [company, setCompany]           = useState('')
+  const [modal, setModal]               = useState<'add' | 'edit' | 'quit' | null>(null)
+  const [selected, setSelected]         = useState<EmployeeRow | null>(null)
+  const [form, setForm]                 = useState<Partial<EmployeeRow>>({})
+  const [saving, setSaving]             = useState(false)
+  const [inviting, setInviting]         = useState<number | null>(null)
+  const [, startTransition]             = useTransition()
 
   async function reload() {
     const { data } = await supabase
@@ -33,9 +33,14 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
     setEmployees(data ?? [])
   }
 
+  /* ── 클라이언트 사이드 필터링 (빠른 UX) ── */
   const filtered = employees.filter(e => {
     const matchStatus  = filter === 'all' ? true : filter === 'active' ? e.is_active : !e.is_active
-    const matchSearch  = !search || e.name?.includes(search) || e.email?.includes(search)
+    const s            = search.toLowerCase()
+    const matchSearch  = !search ||
+      (e.name ?? '').toLowerCase().includes(s) ||
+      (e.email ?? '').toLowerCase().includes(s) ||
+      (e.employee_number ?? '').toLowerCase().includes(s)
     const matchCompany = !company || String(e.company_id) === company
     return matchStatus && matchSearch && matchCompany
   })
@@ -47,6 +52,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
         await supabase.from('employees').insert({
           name: form.name, email: form.email, birthdate: form.birthdate,
           company_id: form.company_id, department: form.department, position: form.position,
+          employee_number: form.employee_number,
           job: form.job, Date_of_joining: form.Date_of_joining,
           Tel: form.Tel, Sex: form.Sex, Grade: form.Grade, Role: form.Role,
           'Working place': form['Working place'], 'Work details': form['Work details'],
@@ -56,6 +62,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
         await supabase.from('employees').update({
           name: form.name, email: form.email, birthdate: form.birthdate,
           department: form.department, position: form.position, job: form.job,
+          employee_number: form.employee_number,
           Date_of_joining: form.Date_of_joining, Tel: form.Tel, Sex: form.Sex,
           Grade: form.Grade, Role: form.Role,
           'Working place': form['Working place'], 'Work details': form['Work details'],
@@ -67,7 +74,9 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
       }
       setModal(null)
       startTransition(reload)
-    } catch (e: any) { alert('오류: ' + e.message) }
+    } catch (e: unknown) {
+      alert('오류: ' + (e instanceof Error ? e.message : String(e)))
+    }
     setSaving(false)
   }
 
@@ -83,7 +92,9 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
       if (data.error) throw new Error(data.error)
       alert(`${emp.name}에게 초대 이메일을 발송했습니다.\n이메일: ${emp.email}`)
       startTransition(reload)
-    } catch (e: any) { alert('초대 실패: ' + e.message) }
+    } catch (e: unknown) {
+      alert('초대 실패: ' + (e instanceof Error ? e.message : String(e)))
+    }
     setInviting(null)
   }
 
@@ -93,122 +104,231 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">사용자 관리</h1>
+          <h1 className="text-xl font-semibold text-slate-900">직원 관리</h1>
           <p className="text-sm text-slate-500 mt-0.5">전체 기업 직원 {employees.length}명</p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <Link href="/admin/employees/upload" className="btn-secondary">
             <Upload size={15} />
-            CSV 대량 등록
+            <span className="hidden sm:inline">CSV 대량 등록</span>
+            <span className="sm:hidden">CSV</span>
           </Link>
-          <button onClick={() => { setForm({ is_active: true }); setModal('add') }}
-            className="btn-primary">
-            <Plus size={16} />직원 등록
+          <button onClick={() => { setForm({ is_active: true }); setModal('add') }} className="btn-primary">
+            <Plus size={16} />
+            <span className="hidden sm:inline">직원 등록</span>
           </button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2">
-        <div className="relative flex-1 min-w-48">
+      {/* 필터 */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1 min-w-0">
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input className="input pl-9" placeholder="이름·이메일 검색" value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-        <select className="input w-40" value={company} onChange={e => setCompany(e.target.value)}>
-          <option value="">전체 기업</option>
-          {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
-          {(['active', 'inactive', 'all'] as Filter[]).map(v => (
-            <button key={v} onClick={() => setFilter(v)}
-              className={cn('px-3 py-1 rounded-lg text-xs font-medium transition-all',
-                filter === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500')}>
-              {v === 'active' ? '재직' : v === 'inactive' ? '퇴사' : '전체'}
+          <input
+            className="input pl-9"
+            placeholder="이름·이메일·사번 검색"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <button
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              onClick={() => setSearch('')}
+            >
+              <X size={14} />
             </button>
-          ))}
+          )}
+        </div>
+        <div className="flex gap-2">
+          <select className="input flex-1 sm:w-36" value={company} onChange={e => setCompany(e.target.value)}>
+            <option value="">전체 기업</option>
+            {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <div className="flex gap-1 bg-slate-100 p-1 rounded-xl flex-shrink-0">
+            {(['active', 'inactive', 'all'] as Filter[]).map(v => (
+              <button key={v} onClick={() => setFilter(v)}
+                className={cn('px-3 py-1 rounded-lg text-xs font-medium transition-all',
+                  filter === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500')}>
+                {v === 'active' ? '재직' : v === 'inactive' ? '퇴사' : '전체'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm" style={{ minWidth: '680px' }}>
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                {['이름', '회사', '부서/직위', '입사일', '계정연결', '상태', ''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500">{h}</th>
+      {/* ── 빈 상태 ── */}
+      {filtered.length === 0 && (
+        <div className="card p-10 text-center text-slate-400 text-sm">
+          {search || company || filter !== 'active' ? '검색 결과가 없습니다' : '직원이 없습니다'}
+        </div>
+      )}
+
+      {/* ── 데스크톱 테이블 (md 이상) ── */}
+      {filtered.length > 0 && (
+        <div className="hidden md:block card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm" style={{ minWidth: '780px' }}>
+              <thead className="bg-slate-50 border-b border-slate-100">
+                <tr>
+                  {['이름', '사번', '회사', '부서/직위', '입사일', '계정연결', '상태', ''].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filtered.map(emp => (
+                  <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-slate-900">{emp.name}</p>
+                      <p className="text-xs text-slate-400">{emp.email}</p>
+                    </td>
+                    <td className="px-4 py-3 text-slate-500 text-xs font-mono">
+                      {emp.employee_number ?? '-'}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 text-xs">
+                      {(emp.companies as { name?: string } | null)?.name ?? '-'}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      <p className="text-xs">{emp.department ?? '-'}</p>
+                      <p className="text-xs text-slate-400">{emp.position ?? '-'}</p>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 text-xs whitespace-nowrap">
+                      {formatDateShort(emp.Date_of_joining)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {emp.user_id ? (
+                        <span className="badge badge-green">연결됨</span>
+                      ) : (
+                        <button
+                          onClick={() => sendInvite(emp)}
+                          disabled={inviting === emp.id}
+                          className="flex items-center gap-1 text-xs text-blue-600 hover:underline disabled:opacity-50"
+                        >
+                          <Mail size={12} />
+                          {inviting === emp.id ? '발송중...' : '초대 발송'}
+                        </button>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`badge ${emp.is_active ? 'badge-green' : 'badge-gray'}`}>
+                        {emp.is_active ? '재직' : '퇴사'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setSelected(emp); setForm({ ...emp }); setModal('edit') }}
+                          className="text-xs text-blue-600 hover:underline"
+                        >
+                          수정
+                        </button>
+                        {emp.is_active && (
+                          <button
+                            onClick={() => { setSelected(emp); setForm({ quit_date: new Date().toISOString().slice(0, 10) }); setModal('quit') }}
+                            className="text-xs text-red-500 hover:underline"
+                          >
+                            퇴사
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
                 ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {filtered.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400 text-sm">직원이 없습니다</td></tr>
-              ) : filtered.map(emp => (
-                <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-slate-900">{emp.name}</p>
-                    <p className="text-xs text-slate-400">{emp.email}</p>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 text-xs">{(emp.companies as any)?.name}</td>
-                  <td className="px-4 py-3 text-slate-600">
-                    <p className="text-xs">{emp.department ?? '-'}</p>
-                    <p className="text-xs text-slate-400">{emp.position ?? '-'}</p>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 text-xs whitespace-nowrap">
-                    {formatDateShort(emp.Date_of_joining)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {emp.user_id ? (
-                      <span className="badge badge-green">연결됨</span>
-                    ) : (
-                      <button
-                        onClick={() => sendInvite(emp)}
-                        disabled={inviting === emp.id}
-                        className="flex items-center gap-1 text-xs text-blue-600 hover:underline disabled:opacity-50"
-                      >
-                        <Mail size={12} />
-                        {inviting === emp.id ? '발송중...' : '초대 발송'}
-                      </button>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── 모바일 카드 (md 미만) ── */}
+      {filtered.length > 0 && (
+        <div className="md:hidden space-y-2.5">
+          {filtered.map(emp => {
+            const companyName = (emp.companies as { name?: string } | null)?.name
+            return (
+              <div key={emp.id} className="card p-4 space-y-3">
+                {/* 상단: 이름 + 상태 */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900 truncate">{emp.name}</p>
+                    <p className="text-xs text-slate-400 truncate mt-0.5">{emp.email}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <span className={`badge ${emp.is_active ? 'badge-green' : 'badge-gray'}`}>
                       {emp.is_active ? '재직' : '퇴사'}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <button onClick={() => { setSelected(emp); setForm({...emp}); setModal('edit') }}
-                        className="text-xs text-blue-600 hover:underline">수정</button>
-                      {emp.is_active && (
-                        <button onClick={() => { setSelected(emp); setForm({ quit_date: new Date().toISOString().slice(0,10) }); setModal('quit') }}
-                          className="text-xs text-red-500 hover:underline">퇴사</button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    {emp.user_id
+                      ? <span className="badge badge-blue">계정연결</span>
+                      : <span className="badge badge-yellow">미연결</span>
+                    }
+                  </div>
+                </div>
+                {/* 정보 그리드 */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs border-t border-slate-100 pt-3">
+                  <InfoPair label="사번" value={emp.employee_number ?? '-'} mono />
+                  <InfoPair label="회사" value={companyName ?? '-'} />
+                  <InfoPair label="부서" value={emp.department ?? '-'} />
+                  <InfoPair label="직위" value={emp.position ?? '-'} />
+                  <InfoPair label="입사일" value={formatDateShort(emp.Date_of_joining)} />
+                </div>
+                {/* 액션 */}
+                <div className="flex gap-2 pt-1 border-t border-slate-100">
+                  <button
+                    onClick={() => { setSelected(emp); setForm({ ...emp }); setModal('edit') }}
+                    className="flex-1 text-xs text-blue-600 hover:underline py-1"
+                  >
+                    정보 수정
+                  </button>
+                  {!emp.user_id && (
+                    <button
+                      onClick={() => sendInvite(emp)}
+                      disabled={inviting === emp.id}
+                      className="flex-1 text-xs text-slate-600 hover:text-blue-600 disabled:opacity-50 py-1"
+                    >
+                      {inviting === emp.id ? '발송중...' : '초대 발송'}
+                    </button>
+                  )}
+                  {emp.is_active && (
+                    <button
+                      onClick={() => { setSelected(emp); setForm({ quit_date: new Date().toISOString().slice(0, 10) }); setModal('quit') }}
+                      className="flex-1 text-xs text-red-500 hover:underline py-1"
+                    >
+                      퇴사 처리
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
         </div>
-      </div>
+      )}
 
-      {/* Add/Edit Modal */}
+      {/* 직원 등록/수정 모달 */}
       {(modal === 'add' || modal === 'edit') && (
         <Modal title={modal === 'add' ? '직원 등록' : '직원 수정'} onClose={() => setModal(null)}>
           <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto pr-1">
-            {[
-              ['이름 *', 'name', 'text'], ['이메일 *', 'email', 'email'],
-              ['생년월일 6자리', 'birthdate', 'text'], ['부서', 'department', 'text'],
-              ['직위', 'position', 'text'], ['직급', 'Grade', 'text'],
-              ['직책', 'Role', 'text'], ['직무', 'job', 'text'],
-              ['전화번호', 'Tel', 'tel'],
-            ].map(([label, key, type]) => (
+            {([
+              ['이름 *',       'name',            'text'],
+              ['이메일 *',     'email',           'email'],
+              ['사번',         'employee_number', 'text'],
+              ['생년월일 6자리','birthdate',       'text'],
+              ['부서',         'department',      'text'],
+              ['직위',         'position',        'text'],
+              ['직급',         'Grade',           'text'],
+              ['직책',         'Role',            'text'],
+              ['직무',         'job',             'text'],
+              ['전화번호',     'Tel',             'tel'],
+            ] as [string, keyof EmployeeRow, string][]).map(([label, key, type]) => (
               <div key={key}>
                 <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
-                <input className="input" type={type} value={(form as any)[key] ?? ''} onChange={f(key as keyof EmployeeRow)} />
+                <input
+                  className="input"
+                  type={type}
+                  value={(form as Record<string, unknown>)[key] as string ?? ''}
+                  onChange={f(key)}
+                />
               </div>
             ))}
             <div>
@@ -225,7 +345,9 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">성별</label>
               <select className="input" value={form.Sex ?? ''} onChange={f('Sex')}>
-                <option value="">선택</option><option value="남">남</option><option value="여">여</option>
+                <option value="">선택</option>
+                <option value="남">남</option>
+                <option value="여">여</option>
               </select>
             </div>
           </div>
@@ -238,7 +360,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
         </Modal>
       )}
 
-      {/* Quit modal */}
+      {/* 퇴사 처리 모달 */}
       {modal === 'quit' && selected && (
         <Modal title="퇴사 처리" onClose={() => setModal(null)}>
           <p className="text-sm text-slate-600 mb-4">{selected.name}을 퇴사 처리합니다.</p>
@@ -255,6 +377,15 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
           </div>
         </Modal>
       )}
+    </div>
+  )
+}
+
+function InfoPair({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div>
+      <p className="text-slate-400">{label}</p>
+      <p className={cn('text-slate-700 mt-0.5 font-medium', mono && 'font-mono')}>{value}</p>
     </div>
   )
 }

@@ -6,6 +6,7 @@ export type { Role }
 export type NavItem = { label: string; href: string; icon: LucideIcon }
 export type RoleNavMap = Record<Role, NavItem[]>
 
+/** 데스크톱 사이드바 전체 메뉴 */
 export const roleNavMap: RoleNavMap = {
   admin: [
     { label: '대시보드',  href: '/admin',                         icon: Home       },
@@ -13,6 +14,7 @@ export const roleNavMap: RoleNavMap = {
     { label: '기업관리',  href: '/admin/companies',               icon: Building2  },
     { label: '직원관리',  href: '/admin/employees',               icon: Users      },
     { label: '직원등록',  href: '/admin/employees/upload',        icon: Upload     },
+    { label: '급여조회',  href: '/admin/payroll',                 icon: BarChart3  },
     { label: '급여업로드',href: '/admin/payroll/upload',          icon: Upload     },
     { label: '급여입력',  href: '/admin/payments/upload',         icon: Upload     },
     { label: '가입신청',  href: '/admin/employee-requests',       icon: FileText   },
@@ -33,6 +35,29 @@ export const roleNavMap: RoleNavMap = {
   ],
 }
 
+/** 모바일 하단 탭바 전용 — 핵심 항목만 (최대 5개) */
+export const mobileNavMap: RoleNavMap = {
+  admin: [
+    { label: '대시보드', href: '/admin',                   icon: Home      },
+    { label: '직원',     href: '/admin/employees',         icon: Users     },
+    { label: '급여조회', href: '/admin/payroll',           icon: BarChart3 },
+    { label: '업로드',   href: '/admin/payroll/upload',   icon: Upload    },
+    { label: '기업',     href: '/admin/companies',         icon: Building2 },
+  ],
+  manager: [
+    { label: '홈',       href: '/manager',                 icon: Home      },
+    { label: '직원',     href: '/manager/employees',       icon: Users     },
+    { label: '급여조회', href: '/manager/payroll',         icon: BarChart3 },
+    { label: '업로드',   href: '/manager/payments/upload', icon: Upload    },
+    { label: '신청',     href: '/manager/requests',        icon: ClipboardList },
+  ],
+  employee: [
+    { label: '홈',      href: '/employee',          icon: Home   },
+    { label: '급여',    href: '/employee/payslips', icon: Wallet },
+    { label: '내 정보', href: '/employee/profile',  icon: User   },
+  ],
+}
+
 export const roleLabels: Record<Role, string> = {
   admin: '시스템 관리자', manager: '기업담당자', employee: '직원',
 }
@@ -47,6 +72,7 @@ export function getPageTitle(pathname: string): string {
   const map: Record<string, string> = {
     '/admin': '대시보드', '/admin/requests': '기업신청', '/admin/companies': '기업관리',
     '/admin/employees': '직원관리', '/admin/employees/upload': '직원 CSV 대량 등록',
+    '/admin/payroll':           '급여 조회',
     '/admin/payroll/upload':   '급여 CSV 업로드 (고급)',
     '/admin/payments/upload':  '급여 입력',
     '/admin/employee-requests': '직원 가입신청',

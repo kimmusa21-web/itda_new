@@ -1,4 +1,3 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 
 export interface EmployeeRow {
@@ -24,7 +23,7 @@ export interface EmployeeRow {
   companies?: { name: string } | null
 }
 
-/** 어드민: 전체 직원 */
+/** 어드민: 전체 직원 (이름·이메일·사번 서버 검색 지원) */
 export async function getAllEmployees(filters?: {
   companyId?: number
   isActive?: boolean
@@ -39,15 +38,21 @@ export async function getAllEmployees(filters?: {
   if (filters?.companyId) q = q.eq('company_id', filters.companyId)
   if (filters?.isActive !== undefined) q = q.eq('is_active', filters.isActive)
   if (filters?.search) {
-    q = q.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`)
+    const s = filters.search.trim()
+    q = q.or(
+      `name.ilike.%${s}%,email.ilike.%${s}%,employee_number.ilike.%${s}%`
+    )
   }
 
   const { data } = await q
   return (data ?? []) as EmployeeRow[]
 }
 
-/** 기업담당자: 본인 회사 직원 */
-export async function getCompanyEmployees(companyId: number, isActive?: boolean): Promise<EmployeeRow[]> {
+/** 기업담당자: 본인 회사 직원 (이름·이메일·사번 서버 검색 지원) */
+export async function getCompanyEmployees(
+  companyId: number,
+  filters?: { isActive?: boolean; search?: string }
+): Promise<EmployeeRow[]> {
   const supabase = createClient()
   let q = supabase
     .from('employees')
@@ -55,7 +60,14 @@ export async function getCompanyEmployees(companyId: number, isActive?: boolean)
     .eq('company_id', companyId)
     .order('name')
 
-  if (isActive !== undefined) q = q.eq('is_active', isActive)
+  if (filters?.isActive !== undefined) q = q.eq('is_active', filters.isActive)
+  if (filters?.search) {
+    const s = filters.search.trim()
+    q = q.or(
+      `name.ilike.%${s}%,email.ilike.%${s}%,employee_number.ilike.%${s}%`
+    )
+  }
+
   const { data } = await q
   return (data ?? []) as EmployeeRow[]
 }

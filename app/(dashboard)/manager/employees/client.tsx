@@ -1,12 +1,12 @@
 'use client'
 /* ================================================================
    Manager 직원 목록 — 클라이언트 컴포넌트
-   실제 Supabase 데이터 기반 (mock-data 제거)
+   실제 Supabase 데이터 기반 (사번 검색 포함)
 ================================================================ */
 
-import { useState } from 'react'
-import { Search, Users, Mail, CalendarDays, ChevronRight } from 'lucide-react'
-import type { EmployeeRow } from '@/lib/supabase/queries/employee'
+import { useState }             from 'react'
+import { Search, Users, Mail, CalendarDays, Hash, X } from 'lucide-react'
+import type { EmployeeRow }     from '@/lib/supabase/queries/employee'
 import { formatDateShort, cn, getInitials } from '@/lib/utils'
 
 type Filter = 'active' | 'inactive' | 'all'
@@ -28,36 +28,46 @@ interface Props {
 }
 
 export function ManagerEmployeesClient({ initialEmployees, companyName }: Props) {
-  const [filter, setFilter] = useState<Filter>('active')
-  const [search, setSearch] = useState('')
+  const [filter, setFilter]   = useState<Filter>('active')
+  const [search, setSearch]   = useState('')
 
   const filtered = initialEmployees.filter(e => {
     const matchStatus =
-      filter === 'all' ? true :
-      filter === 'active' ? e.is_active : !e.is_active
+      filter === 'all'      ? true :
+      filter === 'active'   ? e.is_active : !e.is_active
+    const s = search.toLowerCase()
     const matchSearch =
       !search ||
-      (e.name ?? '').toLowerCase().includes(search.toLowerCase()) ||
-      (e.email ?? '').toLowerCase().includes(search.toLowerCase()) ||
-      (e.department ?? '').includes(search)
+      (e.name            ?? '').toLowerCase().includes(s) ||
+      (e.email           ?? '').toLowerCase().includes(s) ||
+      (e.employee_number ?? '').toLowerCase().includes(s) ||
+      (e.department      ?? '').includes(search)
     return matchStatus && matchSearch
   })
 
   return (
     <>
-      {/* 검색 */}
-      <div className="relative">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          className="input pl-9"
-          placeholder="이름, 이메일, 부서 검색"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-      </div>
-
-      {/* 탭 */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+      {/* 검색 + 탭 */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            className="input pl-9"
+            placeholder="이름, 이메일, 사번, 부서 검색"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <button
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              onClick={() => setSearch('')}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        {/* 재직/퇴사 탭 */}
+        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl self-start">
         {([['active', '재직중'], ['inactive', '퇴사'], ['all', '전체']] as [Filter, string][]).map(([v, l]) => (
           <button
             key={v}
@@ -72,6 +82,7 @@ export function ManagerEmployeesClient({ initialEmployees, companyName }: Props)
             {l}
           </button>
         ))}
+        </div>
       </div>
 
       {/* 목록 */}
@@ -99,7 +110,7 @@ export function ManagerEmployeesClient({ initialEmployees, companyName }: Props)
 }
 
 function EmployeeListItem({ emp }: { emp: EmployeeRow }) {
-  const bg = avatarBg(emp.name ?? '?')
+  const bg       = avatarBg(emp.name ?? '?')
   const initials = getInitials(emp.name ?? '?')
   const isLinked = !!emp.user_id
 
@@ -117,6 +128,13 @@ function EmployeeListItem({ emp }: { emp: EmployeeRow }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium text-slate-900">{emp.name}</span>
+          {/* 사번 */}
+          {emp.employee_number && (
+            <span className="flex items-center gap-0.5 text-xs text-slate-400 font-mono">
+              <Hash size={10} />
+              {emp.employee_number}
+            </span>
+          )}
           <span className={cn(
             'text-xs px-2 py-0.5 rounded-full font-medium',
             emp.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500',
@@ -151,8 +169,6 @@ function EmployeeListItem({ emp }: { emp: EmployeeRow }) {
           )}
         </div>
       </div>
-
-      <ChevronRight size={15} className="text-slate-400 flex-shrink-0" />
     </div>
   )
 }
