@@ -213,6 +213,76 @@ export async function sendPayslipNotificationEmail(
   })
 }
 
+/* ── 직원 초대 링크 이메일 ───────────────────────────────────── */
+export async function sendInviteEmail(
+  to: string,
+  name: string,
+  token: string,
+  expiresInHours = 24,
+): Promise<{ success: boolean; error?: string }> {
+  const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const inviteUrl = `${appUrl}/auth/invite?token=${encodeURIComponent(token)}`
+
+  return sendRawEmail({
+    to,
+    subject: '[itda] 급여관리 서비스 초대 안내',
+    text: [
+      `안녕하세요, ${name}님.`,
+      ``,
+      `itda 급여관리 서비스에 초대되었습니다.`,
+      `아래 링크를 클릭하여 비밀번호를 설정하고 가입을 완료해주세요.`,
+      ``,
+      inviteUrl,
+      ``,
+      `링크는 ${expiresInHours}시간 동안 유효합니다.`,
+      `본인이 요청하지 않은 경우 이 이메일을 무시하세요.`,
+    ].join('\n'),
+    html: `
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 16px">
+  <div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
+    <div style="background:#2563eb;padding:28px 32px">
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <p style="color:#bfdbfe;margin:4px 0 0;font-size:13px">급여관리 서비스</p>
+    </div>
+    <div style="padding:32px">
+      <p style="color:#0f172a;font-size:16px;margin:0 0 6px">안녕하세요, <strong>${name}</strong>님.</p>
+      <p style="color:#475569;font-size:14px;margin:0 0 28px;line-height:1.6">
+        itda 급여관리 서비스에 초대되었습니다.<br>
+        아래 버튼을 클릭하여 비밀번호를 설정하고 가입을 완료해주세요.
+      </p>
+
+      <a href="${inviteUrl}"
+         style="display:block;background:#2563eb;color:white;text-align:center;padding:15px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;margin-bottom:24px;letter-spacing:-0.01em">
+        가입 완료하기 →
+      </a>
+
+      <div style="background:#f1f5f9;border-radius:10px;padding:14px 16px;margin-bottom:20px">
+        <p style="color:#64748b;font-size:12px;margin:0;line-height:1.7">
+          버튼이 작동하지 않으면 아래 URL을 복사하여 브라우저에 붙여넣으세요.<br>
+          <span style="color:#2563eb;word-break:break-all;font-size:11px">${inviteUrl}</span>
+        </p>
+      </div>
+
+      <p style="color:#94a3b8;font-size:12px;margin:0;line-height:1.7">
+        이 링크는 <strong>${expiresInHours}시간</strong> 동안 유효합니다.<br>
+        본인이 요청하지 않은 경우 이 이메일을 무시하세요.<br>
+        링크를 타인에게 공유하지 마세요.
+      </p>
+    </div>
+    <div style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0">
+      <p style="color:#94a3b8;font-size:11px;margin:0">
+        © itda 급여관리 · 본 메일은 발신 전용입니다.
+      </p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
 /* ── 초대 완료 알림 이메일 (선택적) ─────────────────────────── */
 export async function sendWelcomeEmail(
   to: string,

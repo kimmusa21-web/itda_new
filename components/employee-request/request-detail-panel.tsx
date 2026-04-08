@@ -8,11 +8,12 @@ import { useState } from 'react'
 import {
   ChevronLeft, CheckCircle2, XCircle, Clock,
   User, Building2, CalendarDays, Banknote,
-  Mail, Loader2, DatabaseZap, UserPlus,
+  Mail, Loader2, DatabaseZap, UserPlus, SendHorizonal,
 } from 'lucide-react'
 import type { EmployeeRequest } from '@/types/employee-request'
 import { formatKRW, formatDateDot, cn } from '@/lib/utils'
 import { RejectDialog } from './reject-dialog'
+import { resendEmployeeInvite } from '@/lib/employee-requests'
 
 interface Props {
   request: EmployeeRequest
@@ -32,6 +33,8 @@ export function RequestDetailPanel({ request: r, onBack, onApprove, onReject }: 
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [rejectOpen,  setRejectOpen]  = useState(false)
   const [showDbInfo,  setShowDbInfo]  = useState(false)
+  const [resending,   setResending]   = useState(false)
+  const [resendMsg,   setResendMsg]   = useState<{ ok: boolean; text: string } | null>(null)
 
   const sui  = STATUS_UI[r.status]
   const Icon = sui.Icon
@@ -46,6 +49,17 @@ export function RequestDetailPanel({ request: r, onBack, onApprove, onReject }: 
   async function handleReject(reason: string) {
     await onReject(r.id, reason)
     setRejectOpen(false)
+  }
+
+  async function handleResend() {
+    setResending(true)
+    setResendMsg(null)
+    const result = await resendEmployeeInvite(Number(r.id))
+    setResendMsg(result.success
+      ? { ok: true,  text: '초대 링크를 재발송했습니다' }
+      : { ok: false, text: result.error ?? '발송 실패' },
+    )
+    setResending(false)
   }
 
   return (
@@ -99,15 +113,37 @@ export function RequestDetailPanel({ request: r, onBack, onApprove, onReject }: 
 
           {/* 승인 완료 */}
           {r.status === 'approved' && (
-            <div className="flex items-start gap-2.5 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
-              <UserPlus size={15} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-emerald-700">승인 완료 — 직원 등록됨</p>
-                <p className="text-xs text-emerald-600 mt-0.5">
-                  employees 테이블에 직원 정보가 생성되었습니다.<br />
-                  초대 이메일 발송 후 직원이 비밀번호를 설정하면 계정이 활성화됩니다.
-                </p>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 space-y-2.5">
+              <div className="flex items-start gap-2.5">
+                <UserPlus size={15} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-emerald-700">승인 완료 — 직원 등록됨</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">
+                    초대 이메일이 발송되었습니다. 직원이 링크를 클릭해 비밀번호를 설정하면 계정이 활성화됩니다.
+                  </p>
+                </div>
               </div>
+              {/* 재발송 */}
+              {resendMsg && (
+                <p className={cn(
+                  'text-xs font-medium px-3 py-2 rounded-lg',
+                  resendMsg.ok
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-red-100 text-red-700',
+                )}>
+                  {resendMsg.text}
+                </p>
+              )}
+              <button
+                onClick={handleResend}
+                disabled={resending}
+                className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 disabled:opacity-60 transition-colors"
+              >
+                {resending
+                  ? <><Loader2 size={12} className="animate-spin" />발송 중...</>
+                  : <><SendHorizonal size={12} />초대 링크 재발송</>
+                }
+              </button>
             </div>
           )}
 

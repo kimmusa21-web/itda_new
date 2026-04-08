@@ -4,9 +4,9 @@
    승인 시 employees 생성 + 인증번호 이메일 발송
 ================================================================ */
 
-import { createHash, randomInt } from 'crypto'
+import { createHash, randomInt, randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
-import { sendVerificationEmail } from '@/lib/email'
+import { sendVerificationEmail, sendInviteEmail } from '@/lib/email'
 import { notifyAllAdmins, createNotification } from '@/lib/supabase/queries/notifications'
 import {
   mapRowToRequest,
@@ -260,24 +260,42 @@ export async function approveEmployeeRequestWithEmployeeCreate(
     }
   }
 
-  /* Step 5: 인증번호 생성 및 저장 */
+  /* Step 5a: 초대 토큰 생성 (링크 기반, 24시간 유효) */
+  const inviteToken = randomUUID()
+  const inviteExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+
+  const { error: inviteInsertError } = await supabase
+    .from('employee_invites')
+    .insert({
+      company_id:          req.company_id,
+      employee_request_id: requestId,
+      email:               req.email,
+      name:                req.name,
+      token:               inviteToken,
+      expires_at:          inviteExpiresAt.toISOString(),
+    })
+
+  if (inviteInsertError) {
+    console.error('[approveEmployeeRequest] 초대 토큰 저장 실패:', inviteInsertError.message)
+  }
+
+  /* Step 5b: OTP 인증번호 생성 및 저장 (기존 /auth/verify fallback 유지) */
   const otp = generateOtp()
   const saved = await saveVerificationCode(requestId, req.email, otp)
   if (!saved) {
     console.error('[approveEmployeeRequest] 인증번호 저장 실패')
-    // 인증번호 저장 실패해도 승인 자체는 성공으로 처리 (재발송 가능)
   }
 
-  /* Step 6: 이메일 발송 */
-  const { success: mailOk, error: mailError } = await sendVerificationEmail(
+  /* Step 6: 초대 링크 이메일 발송 (링크 기반 — OTP 대체) */
+  const { success: inviteMailOk, error: inviteMailError } = await sendInviteEmail(
     req.email,
     req.name,
-    otp,
-    30,
+    inviteToken,
+    24,
   )
-  if (!mailOk) {
-    console.error('[approveEmployeeRequest] 이메일 발송 실패:', mailError)
-    // MVP: 이메일 실패해도 승인 성공 처리 (개발환경에서 콘솔 확인)
+  if (!inviteMailOk) {
+    console.error('[approveEmployeeRequest] 초대 이메일 발송 실패:', inviteMailError)
+    // 이메일 실패해도 승인 성공 처리 (개발환경에서 콘솔에서 토큰 확인 가능)
   }
 
   /* Step 7: 요청자(manager)에게 알림 */
@@ -446,5 +464,83 @@ export async function createEmployeeRegistrationRequest(
     console.error('[createEmployeeRegistrationRequest] 알림 실패:', e)
   }
 
+  return { success: true }
+}
+
+/* ── 초대 이메일 재발송 ─────────────────────────────────── */
+/**
+ * 승인 완료된 직원에게 새 초대 링크를 발송합니다.
+ * - 기존 미사용 초대 토큰을 즉시 만료 처리 후 새 토큰 생성
+ * - admin 전용
+ */
+export async function resendEmployeeInvite(
+  requestId: number,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: '인증이 필요합니다' }
+
+  const { data: profile } = await supabase
+    .from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return { success: false, error: '어드민 권한이 필요합니다' }
+
+  /* 신청 조회 */
+  const req = await getEmployeeRequestById(requestId)
+  if (!req) return { success: false, error: '신청 건을 찾을 수 없습니다' }
+  if (req.status !== 'approved') return { success: false, error: '승인 완료된 신청 건에만 재발송 가능합니다' }
+
+  /* 이미 가입 완료된 직원인지 확인 */
+  const { data: existingEmployee } = await supabase
+    .from('employees')
+    .select('id, user_id, is_active')
+    .eq('company_id', req.company_id)
+    .ilike('email', req.email)
+    .maybeSingle()
+
+  if (existingEmployee?.user_id && existingEmployee?.is_active) {
+    return { success: false, error: '이미 가입이 완료된 직원입니다' }
+  }
+
+  /* 기존 미사용 초대 토큰 즉시 만료 처리 */
+  await supabase
+    .from('employee_invites')
+    .update({ expires_at: new Date().toISOString() })
+    .eq('employee_request_id', requestId)
+    .is('used_at', null)
+
+  /* 새 초대 토큰 생성 */
+  const newToken = randomUUID()
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+
+  const { error: insertErr } = await supabase
+    .from('employee_invites')
+    .insert({
+      company_id:          req.company_id,
+      employee_request_id: requestId,
+      email:               req.email,
+      name:                req.name,
+      token:               newToken,
+      expires_at:          expiresAt.toISOString(),
+    })
+
+  if (insertErr) {
+    console.error('[resendEmployeeInvite] 토큰 생성 실패:', insertErr.message)
+    return { success: false, error: '초대 토큰 생성 중 오류가 발생했습니다' }
+  }
+
+  /* 이메일 발송 */
+  const { success: mailOk, error: mailError } = await sendInviteEmail(
+    req.email,
+    req.name,
+    newToken,
+    24,
+  )
+
+  if (!mailOk) {
+    console.error('[resendEmployeeInvite] 이메일 발송 실패:', mailError)
+    return { success: false, error: '이메일 발송 중 오류가 발생했습니다' }
+  }
+
+  console.log(`[resendEmployeeInvite] 재발송 완료: ${req.email}`)
   return { success: true }
 }
