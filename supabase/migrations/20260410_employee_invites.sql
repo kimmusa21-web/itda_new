@@ -6,6 +6,18 @@
 -- 이메일로 초대 링크가 발송됩니다.
 -- ═══════════════════════════════════════════════════════════════════
 
+-- ── is_admin() 헬퍼 (없으면 생성, 있으면 교체 — 멱등) ────────────────
+-- 이전 마이그레이션에서 생성된 함수지만 독립 실행 보장을 위해 재선언
+CREATE OR REPLACE FUNCTION is_admin()
+  RETURNS BOOLEAN
+  LANGUAGE sql STABLE SECURITY DEFINER
+  SET search_path = public, auth
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'
+  )
+$$;
+
 CREATE TABLE IF NOT EXISTS employee_invites (
   id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id           INTEGER     NOT NULL,
