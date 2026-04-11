@@ -94,14 +94,14 @@ export interface PayInfoV2 {
   payment_date: string | null
   work_days: number | null
   overtime_hours: number | null
-  // 정산기간
-  start_date: string | null       // DATE (YYYY-MM-DD)
-  end_date: string | null         // DATE (YYYY-MM-DD)
-  // 근로시간/연차
-  Over_time: number | null
-  Holiday_working_hours: number | null
-  night_work_hours: number | null
-  Remaining_annual_leave_hours: number | null
+  // 정산기간 (선택)
+  start_date?: string | null       // DATE (YYYY-MM-DD)
+  end_date?: string | null         // DATE (YYYY-MM-DD)
+  // 근로시간/연차 (선택)
+  Over_time?: number | null
+  Holiday_working_hours?: number | null
+  night_work_hours?: number | null
+  Remaining_annual_leave_hours?: number | null
   earnings: Record<string, number>
   deductions: Record<string, number>
   total_earnings: number
