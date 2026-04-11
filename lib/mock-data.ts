@@ -75,6 +75,7 @@ export const mockCompanies: Company[] = [
     Telephone: '02-1234-5678', address: '서울시 강남구',
     'tax invoice email': 'tax@va.kr',
     status: 'active', contact_name: null, contact_email: null, deleted_at: null,
+    payroll_day: null, payroll_start_day: null,
   },
   {
     id: 2, name: '브이에이뷰티랩', biz_number: '234-56-78901',
@@ -82,6 +83,7 @@ export const mockCompanies: Company[] = [
     Telephone: '02-2345-6789', address: '서울시 강남구',
     'tax invoice email': 'tax@vabeauty.kr',
     status: 'active', contact_name: null, contact_email: null, deleted_at: null,
+    payroll_day: null, payroll_start_day: null,
   },
   {
     id: 3, name: '핏에이치알', biz_number: '345-67-89012',
@@ -89,6 +91,7 @@ export const mockCompanies: Company[] = [
     Telephone: '02-3456-7890', address: '서울시 서초구',
     'tax invoice email': 'tax@fithr.kr',
     status: 'active', contact_name: null, contact_email: null, deleted_at: null,
+    payroll_day: null, payroll_start_day: null,
   },
 ]
 
