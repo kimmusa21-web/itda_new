@@ -32,6 +32,7 @@ const EMPTY: CompanyInput = {
   'tax invoice email': '',
   status:              'active',
   payslip_note:        null,
+  payroll_day:         null,
 }
 
 /* ── 메인 컴포넌트 ─────────────────────────────────────────── */
@@ -142,6 +143,28 @@ export function CompanyForm({ mode, initialData }: CompanyFormProps) {
               <option value="inactive">비활성</option>
             </select>
           </FieldWrap>
+        </Row2>
+        <Row2>
+          <FieldWrap label="매월 급여일">
+            <div className="relative">
+              <input
+                type="number"
+                min={1}
+                max={31}
+                className={cls(false)}
+                placeholder="예: 25"
+                value={form.payroll_day ?? ''}
+                onChange={e => {
+                  const v = e.target.value === '' ? null : Math.min(31, Math.max(1, Number(e.target.value)))
+                  setForm(p => ({ ...p, payroll_day: v }))
+                }}
+              />
+              {form.payroll_day && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">일</span>
+              )}
+            </div>
+          </FieldWrap>
+          <div /> {/* spacer */}
         </Row2>
         <Row2>
           <FieldWrap label="업태">

@@ -6,7 +6,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Search, Edit2, Trash2, Users } from 'lucide-react'
+import { Building2, Search, Edit2, Trash2, Users, ChevronRight } from 'lucide-react'
 import { deleteCompany } from '@/lib/actions/company-actions'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +22,7 @@ interface CompanyRow {
   Telephone: string | null
   address: string | null
   status: string
+  payroll_day: number | null
   employees?: { count: number }[]
 }
 
@@ -114,7 +115,11 @@ export function CompanyListClient({ initialCompanies }: Props) {
           {filtered.map(c => {
             const empCount = c.employees?.[0]?.count ?? 0
             return (
-              <div key={c.id} className="card p-5">
+              <div
+                key={c.id}
+                className="card p-5 cursor-pointer hover:shadow-md hover:border-blue-100 transition-all"
+                onClick={() => router.push(`/admin/companies/${c.id}`)}
+              >
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
@@ -130,23 +135,28 @@ export function CompanyListClient({ initialCompanies }: Props) {
                           {c.status === 'active' ? '운영중' : '비활성'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Users size={11} className="text-slate-400" />
-                        <span className="text-xs text-slate-400">직원 {empCount}명</span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex items-center gap-1">
+                          <Users size={11} className="text-slate-400" />
+                          <span className="text-xs text-slate-400">직원 {empCount}명</span>
+                        </div>
+                        {c.payroll_day && (
+                          <span className="text-xs text-slate-400">· 매월 {c.payroll_day}일 지급</span>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  {/* 액션 버튼 */}
+                  {/* 액션 버튼 — stopPropagation 필수 */}
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button
-                      onClick={() => router.push(`/admin/companies/${c.id}/edit`)}
+                      onClick={e => { e.stopPropagation(); router.push(`/admin/companies/${c.id}/edit`) }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
                     >
                       <Edit2 size={12} />수정
                     </button>
                     <button
-                      onClick={() => { setDeleteTarget(c); setDeleteError('') }}
+                      onClick={e => { e.stopPropagation(); setDeleteTarget(c); setDeleteError('') }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
                     >
                       <Trash2 size={12} />삭제
@@ -164,6 +174,11 @@ export function CompanyListClient({ initialCompanies }: Props) {
                   {c.Industry       && <InfoRow label="종목"         value={c.Industry} />}
                   {c.Telephone      && <InfoRow label="전화"         value={c.Telephone} />}
                   {c.address        && <InfoRow label="주소"         value={c.address} />}
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between">
+                  <span className="text-xs text-slate-400">클릭하여 급여대장 및 직원 조회</span>
+                  <ChevronRight size={14} className="text-slate-300" />
                 </div>
               </div>
             )

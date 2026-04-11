@@ -34,6 +34,7 @@ export interface CompanyInput {
   'tax invoice email'?: string
   status?: 'active' | 'inactive'
   payslip_note?: string | null
+  payroll_day?: number | null
 }
 
 /* ── 결과 타입 ──────────────────────────────────────────────── */
@@ -56,6 +57,9 @@ function normalizeInput(input: CompanyInput) {
     'tax invoice email': input['tax invoice email']?.trim() || null,
     status:             input.status ?? 'active',
     payslip_note:       input.payslip_note?.trim() || null,
+    payroll_day:        input.payroll_day != null
+                          ? Math.min(31, Math.max(1, Math.round(input.payroll_day)))
+                          : null,
   }
 }
 
@@ -128,6 +132,7 @@ export async function updateCompany(
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/admin/companies')
+    revalidatePath(`/admin/companies/${id}`)
     revalidatePath(`/admin/companies/${id}/edit`)
     return { success: true }
   } catch (e: any) {

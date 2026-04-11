@@ -82,7 +82,7 @@ export default function AdminPayrollClient({
       setAllRows([])
       return
     }
-    const select = '*, employees(name,email,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note))'
+    const select = '*, employees(name,email,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))'
     const { data } = cid
       ? await supabase.from('pay_info').select(select).eq('company_id', cid).eq('accrual_month', m).order('employee_id')
       : await supabase.from('pay_info').select(select).eq('accrual_month', m).order('employee_id')

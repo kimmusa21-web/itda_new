@@ -1,7 +1,8 @@
 'use client'
 
 import { useState }                   from 'react'
-import { Search, X, BarChart3 }       from 'lucide-react'
+import { useRouter }                  from 'next/navigation'
+import { Search, X, BarChart3, ChevronRight } from 'lucide-react'
 import { createClient }               from '@/lib/supabase/client'
 import { mapRowToPayslip, type PayInfoRow } from '@/lib/supabase/queries/payslip-shared'
 import { formatKRW, formatAccrualMonth }    from '@/lib/payslip-utils'
@@ -21,6 +22,7 @@ export default function ManagerPayrollClient({
   companyId, companyName, initialMonths, initialMonth, initialRows,
 }: Props) {
   const supabase                      = createClient()
+  const router                        = useRouter()
   const [month, setMonth]             = useState(initialMonth)
   const [allRows, setAllRows]         = useState(initialRows)
   const [search, setSearch]           = useState('')
@@ -34,7 +36,7 @@ export default function ManagerPayrollClient({
     setSearch('')
     const { data } = await supabase
       .from('pay_info')
-      .select('*, employees(name,email,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note))')
+      .select('*, employees(name,email,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))')
       .eq('company_id', companyId)
       .eq('accrual_month', m)
       .order('employee_id')
@@ -116,6 +118,16 @@ export default function ManagerPayrollClient({
         </div>
 
         <span className="text-sm text-slate-500">{rows.length}명</span>
+
+        {/* 상세 급여대장 페이지 이동 */}
+        {month && (
+          <button
+            onClick={() => router.push(`/manager/payroll/${month}`)}
+            className="flex items-center gap-1 text-xs text-blue-600 hover:underline whitespace-nowrap"
+          >
+            상세 급여대장 <ChevronRight size={12} />
+          </button>
+        )}
 
         {month && allRows.length > 0 && (
           <SendPayslipButton

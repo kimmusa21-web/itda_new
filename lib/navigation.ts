@@ -77,6 +77,7 @@ export function getPageTitle(pathname: string): string {
     '/admin/payments/upload':  '급여 입력',
     '/admin/employee-requests': '직원 가입신청',
     '/admin/companies/new': '회사 등록',
+    // 기업 상세/급여대장/명세서는 동적 경로라 runtime에서 처리
     '/auth/verify': '가입 인증',
     '/manager': '홈', '/manager/employees': '직원관리', '/manager/payroll': '급여조회',
     '/manager/employees/create': '직원 등록 신청',

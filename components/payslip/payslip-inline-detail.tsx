@@ -98,11 +98,21 @@ export function PayslipInlineDetail({ payslip }: Props) {
 
       {/* 직원 기본 정보 */}
       <div className="card px-4 py-3 space-y-0.5">
-        <InfoRow label="성명" value={payslip.employee.name} />
-        <InfoRow label="부서" value={payslip.employee.department} />
-        <InfoRow label="직책" value={payslip.employee.position} />
-        <InfoRow label="입사일" value={payslip.employee.joinDate} />
+        <InfoRow label="성명"     value={payslip.employee.name} />
+        <InfoRow label="부서"     value={payslip.employee.department} />
+        <InfoRow label="직책"     value={payslip.employee.position} />
+        <InfoRow label="입사일"   value={payslip.employee.joinDate} />
         <InfoRow label="근무형태" value={payslip.employee.employmentType} />
+        {/* 당월일수 + 정산기간 */}
+        {payslip.daysInMonth != null && (
+          <InfoRow label="당월일수" value={`${payslip.daysInMonth}일`} />
+        )}
+        {payslip.payrollPeriodStart && payslip.payrollPeriodEnd && (
+          <InfoRow
+            label="정산기간"
+            value={`${payslip.payrollPeriodStart} ~ ${payslip.payrollPeriodEnd}`}
+          />
+        )}
       </div>
 
       {/* 영(0) 항목 토글 */}

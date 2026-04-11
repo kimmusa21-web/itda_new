@@ -38,3 +38,57 @@ export function formatDateKR(date: string): string {
 export function formatPeriod(start: string, end: string): string {
   return `${formatDateDot(start)} ~ ${formatDateDot(end)}`
 }
+
+/**
+ * 해당 귀속월의 총 일수 반환 (윤년 자동 고려)
+ * getDaysInMonth('2026-02') → 28
+ * getDaysInMonth('2024-02') → 29  (윤년)
+ * getDaysInMonth('2026-03') → 31
+ */
+export function getDaysInMonth(payMonth: string): number {
+  const [year, month] = payMonth.split('-').map(Number)
+  // new Date(year, month, 0) = 해당 월의 마지막 날 (day 0 of next month)
+  return new Date(year, month, 0).getDate()
+}
+
+/**
+ * 급여 정산기간 계산
+ *
+ * payrollStartDay = 15, payMonth = '2026-05'
+ *   → { start: '2026-04-15', end: '2026-05-14' }
+ *
+ * payrollStartDay = null (or 1), payMonth = '2026-05'
+ *   → { start: '2026-05-01', end: '2026-05-31' }  (해당 월 전체)
+ *
+ * 전월 말일 초과 startDay 자동 클램프 (예: 2월에 startDay=30 → 28/29로)
+ */
+export function getPayrollPeriod(
+  payMonth: string,
+  payrollStartDay: number | null | undefined,
+): { start: string; end: string } {
+  const [year, month] = payMonth.split('-').map(Number)
+
+  // Fallback: 해당 월 1일 ~ 말일
+  if (!payrollStartDay || payrollStartDay <= 1) {
+    const lastDay = new Date(year, month, 0).getDate()
+    return {
+      start: `${payMonth}-01`,
+      end:   `${payMonth}-${String(lastDay).padStart(2, '0')}`,
+    }
+  }
+
+  // 정산 시작일이 2 이상인 경우:
+  // 시작: (전월 payrollStartDay) ~ 종료: (당월 payrollStartDay - 1)
+  const prevYear  = month === 1 ? year - 1 : year
+  const prevMonth = month === 1 ? 12       : month - 1
+
+  // 전월 말일을 초과하는 startDay 클램프 (e.g. 2월 → max 28/29)
+  const prevMonthLastDay = new Date(prevYear, prevMonth, 0).getDate()
+  const clampedStart     = Math.min(payrollStartDay, prevMonthLastDay)
+
+  const prevMonthStr = `${String(prevYear).padStart(4, '0')}-${String(prevMonth).padStart(2, '0')}`
+  const start = `${prevMonthStr}-${String(clampedStart).padStart(2, '0')}`
+  const end   = `${payMonth}-${String(payrollStartDay - 1).padStart(2, '0')}`
+
+  return { start, end }
+}

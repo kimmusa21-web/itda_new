@@ -42,6 +42,10 @@ export type PayslipDetail = {
   totalDeductions: number
   netPay: number
   calculationNotes?: string[]
+  // 급여 기간 정보
+  daysInMonth?: number        // 당월일수 (예: 31)
+  payrollPeriodStart?: string // 정산기간 시작 (예: '2026-04-15')
+  payrollPeriodEnd?: string   // 정산기간 종료 (예: '2026-05-14')
 }
 
 export const mockPayslip: PayslipDetail = {

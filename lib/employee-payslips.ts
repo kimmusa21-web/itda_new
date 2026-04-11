@@ -7,6 +7,7 @@
 import { createClient }        from '@/lib/supabase/server'
 import { mapEarnings, mapDeductions } from '@/lib/payroll-labels'
 import { parsePayslipNote }   from '@/lib/payslip-defaults'
+import { getDaysInMonth, getPayrollPeriod } from '@/lib/payslip-utils'
 import {
   rowToListItem,
   type PayInfoV2Row,
@@ -90,7 +91,7 @@ export async function getEmployeePayslipById(
         name, email, department, position,
         Date_of_joining, birthdate, company_id
       ),
-      companies ( name, payslip_note )
+      companies ( name, payslip_note, payroll_start_day )
     `)
     .eq('id', id)
     .eq('employee_id', employeeId)   // ★ 본인 검증 — 다른 직원 id면 null 반환
@@ -104,6 +105,12 @@ export async function getEmployeePayslipById(
   const totalEarnings   = Math.round(Number(row.total_earnings))
   const totalDeductions = Math.abs(Math.round(Number(row.total_deductions)))
   const netPay          = Math.round(Number(row.net_pay))
+
+  // ── 당월일수 + 정산기간 ──
+  const payrollStartDay = ((row.companies as any)?.payroll_start_day ?? null) as number | null
+  const daysInMonth     = getDaysInMonth(row.accrual_month)
+  const { start: payrollPeriodStart, end: payrollPeriodEnd } =
+    getPayrollPeriod(row.accrual_month, payrollStartDay)
 
   return {
     id:           row.id,
@@ -132,6 +139,9 @@ export async function getEmployeePayslipById(
       birthDate:  row.employees?.birthdate  ?? null,
       employeeNo: `EMP-${String(employeeId).padStart(4, '0')}`,
     },
-    companyName: row.companies?.name ?? '',
+    companyName:        row.companies?.name ?? '',
+    daysInMonth,
+    payrollPeriodStart,
+    payrollPeriodEnd,
   }
 }

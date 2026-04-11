@@ -157,6 +157,16 @@ export function PayslipDetailView({ detail: d }: Props) {
           <InfoRow label="직위"     value={d.employee.position}   />
           <InfoRow label="입사일"   value={d.employee.joinDate ? formatDateDot(d.employee.joinDate) : null} />
           <InfoRow label="사원번호" value={d.employee.employeeNo} />
+          {/* 당월일수 + 정산기간 */}
+          {d.daysInMonth != null && (
+            <InfoRow label="당월일수" value={`${d.daysInMonth}일`} />
+          )}
+          {d.payrollPeriodStart && d.payrollPeriodEnd && (
+            <InfoRow
+              label="정산기간"
+              value={`${d.payrollPeriodStart} ~ ${d.payrollPeriodEnd}`}
+            />
+          )}
         </InfoSection>
 
         {/* ── 근무 정보 ── */}

@@ -71,6 +71,10 @@ export interface PayslipDetail {
     employeeNo:  string
   }
   companyName: string
+  // 급여 기간 정보
+  daysInMonth?: number        // 당월일수
+  payrollPeriodStart?: string // 정산기간 시작
+  payrollPeriodEnd?: string   // 정산기간 종료
 }
 
 /** DB Row → 목록 아이템 변환 (금액 필드 없음) */

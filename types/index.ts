@@ -36,6 +36,10 @@ export interface Company {
   contact_name: string | null
   contact_email: string | null
   deleted_at: string | null
+  // 신규 추가 (migration 20260411)
+  payroll_day: number | null
+  // 신규 추가 (migration 20260412)
+  payroll_start_day: number | null
 }
 
 // ── 알림 ─────────────────────────────────────────────────────

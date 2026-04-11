@@ -1,5 +1,6 @@
 import type { PayslipDetail, EarningItem, DeductionItem } from '@/lib/mock-payslip'
 import { parsePayslipNote } from '@/lib/payslip-defaults'
+import { getDaysInMonth, getPayrollPeriod } from '@/lib/payslip-utils'
 
 export interface PayInfoRow {
   id: number
@@ -101,6 +102,12 @@ export function mapRowToPayslip(row: PayInfoRow): PayslipDetail {
     ? `${birthdate.slice(0,2)}****-*******`
     : '***-*****'
 
+  // ── 당월일수 + 정산기간 ──
+  const payrollStartDay = ((emp?.companies as any)?.payroll_start_day ?? null) as number | null
+  const daysInMonth     = getDaysInMonth(row.accrual_month)
+  const { start: payrollPeriodStart, end: payrollPeriodEnd } =
+    getPayrollPeriod(row.accrual_month, payrollStartDay)
+
   return {
     id: `ps-${row.id}`,
     accrualMonth: row.accrual_month,
@@ -135,5 +142,8 @@ export function mapRowToPayslip(row: PayInfoRow): PayslipDetail {
     calculationNotes: parsePayslipNote(
       (emp?.companies as any)?.payslip_note ?? null
     ),
+    daysInMonth,
+    payrollPeriodStart,
+    payrollPeriodEnd,
   }
 }

@@ -1,0 +1,202 @@
+'use server'
+/**
+ * 기업별 급여 조회 흐름 전용 쿼리
+ * admin/manager 공통 사용 — checkCompanyAccess()로 권한 분기
+ */
+import { createClient } from '@/lib/supabase/server'
+import type { PayInfoRow } from '@/lib/supabase/queries/payslip-shared'
+
+/* ── 공통 헬퍼 ─────────────────────────────────────────────── */
+function parseAmt(val: string | null | undefined): number {
+  if (!val) return 0
+  const n = parseInt(String(val).replace(/[,\s]/g, ''), 10)
+  return isNaN(n) ? 0 : Math.abs(n)
+}
+
+/* ── 타입 ─────────────────────────────────────────────────── */
+
+export interface CompanyDetail {
+  id: number
+  name: string
+  biz_number: string | null
+  representative: string | null
+  status: 'active' | 'inactive'
+  contact_name: string | null
+  contact_email: string | null
+  payroll_day: number | null
+  payslip_note: string | null
+}
+
+export interface PayrollLedgerSummary {
+  accrual_month: string        // 'YYYY-MM'
+  payment_date: string | null
+  total_earnings: number
+  total_deductions: number
+  net_pay: number
+  employee_count: number
+}
+
+export interface CompanyEmployeeRow {
+  id: number
+  name: string
+  email: string
+  employee_number: string | null
+  department: string | null
+  position: string | null
+  is_active: boolean
+  Date_of_joining: string | null
+}
+
+/* ═══════════════════════════════════════════════════════════
+   권한 확인 헬퍼
+   admin → 모든 회사 허용
+   manager → 본인 company_id 만 허용
+   employee → 차단
+═══════════════════════════════════════════════════════════ */
+export async function checkCompanyAccess(companyId: number): Promise<{
+  allowed: boolean
+  role: 'admin' | 'manager' | null
+  profileCompanyId: number | null
+}> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { allowed: false, role: null, profileCompanyId: null }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, company_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile) return { allowed: false, role: null, profileCompanyId: null }
+
+  const role = profile.role as string
+  const profileCompanyId = profile.company_id as number | null
+
+  if (role === 'admin') return { allowed: true, role: 'admin', profileCompanyId }
+  if (role === 'manager' && profileCompanyId === companyId) {
+    return { allowed: true, role: 'manager', profileCompanyId }
+  }
+  return { allowed: false, role: null, profileCompanyId }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   회사 상세 조회
+═══════════════════════════════════════════════════════════ */
+export async function getCompanyDetail(id: number): Promise<CompanyDetail | null> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('companies')
+    .select('id, name, biz_number, representative, status, contact_name, contact_email, payroll_day, payslip_note')
+    .eq('id', id)
+    .is('deleted_at', null)
+    .single()
+  if (error || !data) return null
+  return data as unknown as CompanyDetail
+}
+
+/* ═══════════════════════════════════════════════════════════
+   월별 급여대장 집계 (최근순)
+═══════════════════════════════════════════════════════════ */
+export async function getCompanyPayrollLedgerSummaries(
+  companyId: number,
+): Promise<PayrollLedgerSummary[]> {
+  const supabase = createClient()
+  const { data } = await supabase
+    .from('pay_info')
+    .select('accrual_month, payment_date, Total_payment, Total_deductible, net_pay, employee_id')
+    .eq('company_id', companyId)
+    .order('accrual_month', { ascending: false })
+
+  if (!data || data.length === 0) return []
+
+  const map = new Map<string, PayrollLedgerSummary>()
+
+  for (const row of data) {
+    const earnings   = parseAmt(row.Total_payment)
+    const deductions = parseAmt(row.Total_deductible)
+    const net        = parseAmt(row.net_pay)
+    const month      = row.accrual_month as string
+
+    const existing = map.get(month)
+    if (existing) {
+      existing.total_earnings   += earnings
+      existing.total_deductions += deductions
+      existing.net_pay          += net
+      existing.employee_count   += 1
+      const pd = row.payment_date as string | null
+      if (pd && (!existing.payment_date || pd > existing.payment_date)) {
+        existing.payment_date = pd
+      }
+    } else {
+      map.set(month, {
+        accrual_month:    month,
+        payment_date:     row.payment_date as string | null,
+        total_earnings:   earnings,
+        total_deductions: deductions,
+        net_pay:          net,
+        employee_count:   1,
+      })
+    }
+  }
+
+  return Array.from(map.values()).sort((a, b) =>
+    b.accrual_month.localeCompare(a.accrual_month),
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
+   회사 직원 목록
+═══════════════════════════════════════════════════════════ */
+export async function getCompanyEmployees(
+  companyId: number,
+): Promise<CompanyEmployeeRow[]> {
+  const supabase = createClient()
+  const { data } = await supabase
+    .from('employees')
+    .select('id, name, email, employee_number, department, position, is_active, Date_of_joining')
+    .eq('company_id', companyId)
+    .order('name')
+  return (data ?? []) as CompanyEmployeeRow[]
+}
+
+/* ═══════════════════════════════════════════════════════════
+   월별 급여 전체 rows (직원 join 포함)
+═══════════════════════════════════════════════════════════ */
+export async function getMonthlyPayrollRows(
+  companyId: number,
+  payMonth: string,
+): Promise<PayInfoRow[]> {
+  const supabase = createClient()
+  const { data } = await supabase
+    .from('pay_info')
+    .select(
+      '*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))',
+    )
+    .eq('company_id', companyId)
+    .eq('accrual_month', payMonth)
+    .order('employee_id')
+  return (data ?? []) as PayInfoRow[]
+}
+
+/* ═══════════════════════════════════════════════════════════
+   특정 직원 급여명세서 단건
+═══════════════════════════════════════════════════════════ */
+export async function getEmployeePayslipForAdmin(
+  companyId: number,
+  payMonth: string,
+  employeeId: number,
+): Promise<PayInfoRow | null> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('pay_info')
+    .select(
+      '*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))',
+    )
+    .eq('company_id', companyId)
+    .eq('accrual_month', payMonth)
+    .eq('employee_id', employeeId)
+    .single()
+  if (error || !data) return null
+  return data as PayInfoRow
+}
