@@ -1,28 +1,69 @@
 'use client'
 
-import { Building2, CalendarDays, Briefcase, UserCircle2, Mail, KeyRound, LogOut } from 'lucide-react'
+import { useState } from 'react'
+import { Building2, CalendarDays, Briefcase, UserCircle2, Mail, Phone, KeyRound, LogOut, Pencil, X, Check, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { formatDateShort } from '@/lib/utils'
+import { updateEmployeeProfile } from '@/lib/actions/employee-profile-actions'
 
 interface Props {
-  name:       string
-  email:      string
-  department: string | null
-  position:   string | null
-  joinDate:   string | null
-  company:    string
+  empId:       number | null
+  name:        string
+  email:       string
+  phoneNumber: string
+  department:  string | null
+  position:    string | null
+  joinDate:    string | null
+  company:     string
 }
 
-export function ProfileClient({ name, email, department, position, joinDate, company }: Props) {
-  const router  = useRouter()
+export function ProfileClient({ empId, name, email, phoneNumber, department, position, joinDate, company }: Props) {
+  const router   = useRouter()
   const supabase = createClient()
+
+  const [editing,    setEditing]    = useState(false)
+  const [editEmail,  setEditEmail]  = useState(email)
+  const [editPhone,  setEditPhone]  = useState(phoneNumber)
+  const [saving,     setSaving]     = useState(false)
+  const [errMsg,     setErrMsg]     = useState<string | null>(null)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
   const initials = name.length >= 2 ? name.slice(0, 2) : name || '?'
 
   async function handleLogout() {
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  function handleEditToggle() {
+    if (editing) {
+      setEditEmail(email)
+      setEditPhone(phoneNumber)
+      setErrMsg(null)
+    }
+    setEditing(v => !v)
+    setSuccessMsg(null)
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    setErrMsg(null)
+    setSuccessMsg(null)
+
+    const result = await updateEmployeeProfile({
+      email:       editEmail,
+      phoneNumber: editPhone,
+    })
+
+    setSaving(false)
+    if (result.success) {
+      setSuccessMsg('정보가 저장되었습니다')
+      setEditing(false)
+      router.refresh()
+    } else {
+      setErrMsg(result.error)
+    }
   }
 
   return (
@@ -55,9 +96,63 @@ export function ProfileClient({ name, email, department, position, joinDate, com
           <InfoRow icon={UserCircle2}  label="직위"       value={position   || '-'} />
           <InfoRow icon={CalendarDays} label="입사일"     value={joinDate ? formatDateShort(joinDate) : '-'} />
         </InfoSection>
-        <InfoSection title="연락처">
-          <InfoRow icon={Mail} label="이메일" value={email} />
-        </InfoSection>
+
+        {/* 연락처 — 수정 가능 */}
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">연락처</p>
+            {empId && (
+              <button
+                onClick={handleEditToggle}
+                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700"
+              >
+                {editing ? <><X size={13} />취소</> : <><Pencil size={13} />수정</>}
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            {editing ? (
+              <>
+                <EditRow
+                  icon={Mail}
+                  label="이메일"
+                  value={editEmail}
+                  onChange={setEditEmail}
+                  type="email"
+                  placeholder="이메일 주소"
+                />
+                <EditRow
+                  icon={Phone}
+                  label="전화번호"
+                  value={editPhone}
+                  onChange={setEditPhone}
+                  type="tel"
+                  placeholder="전화번호 (선택)"
+                />
+                {errMsg && (
+                  <p className="text-xs text-red-500 pl-1">{errMsg}</p>
+                )}
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-60 transition-colors"
+                >
+                  {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                  저장
+                </button>
+              </>
+            ) : (
+              <>
+                <InfoRow icon={Mail}  label="이메일"   value={email       || '-'} />
+                <InfoRow icon={Phone} label="전화번호" value={phoneNumber || '-'} />
+                {successMsg && (
+                  <p className="text-xs text-green-600 pl-1">{successMsg}</p>
+                )}
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* 액션 버튼 */}
@@ -96,6 +191,31 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
       <Icon size={16} className="text-slate-400 flex-shrink-0" />
       <span className="text-sm text-slate-500 w-20 flex-shrink-0">{label}</span>
       <span className="text-sm font-medium text-slate-800 flex-1">{value}</span>
+    </div>
+  )
+}
+
+function EditRow({
+  icon: Icon, label, value, onChange, type, placeholder,
+}: {
+  icon: React.ElementType
+  label: string
+  value: string
+  onChange: (v: string) => void
+  type?: string
+  placeholder?: string
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <Icon size={16} className="text-slate-400 flex-shrink-0" />
+      <span className="text-sm text-slate-500 w-20 flex-shrink-0">{label}</span>
+      <input
+        type={type ?? 'text'}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400"
+      />
     </div>
   )
 }

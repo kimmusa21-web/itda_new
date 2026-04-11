@@ -11,34 +11,39 @@ export default async function EmployeeProfilePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  /* ── profiles 조회 (role + company_id + email) ── */
   const { data: profile } = await supabase
-    .from('profiles').select('role').eq('id', user.id).single()
+    .from('profiles')
+    .select('role, company_id, email')
+    .eq('id', user.id)
+    .single()
+
   if (profile?.role !== 'employee') redirect(`/${profile?.role ?? 'login'}`)
 
-  /* ── 직원 정보 조회 (user_id 우선, email fallback) ── */
+  /* ── employees 조회: company_id + email 기준 (중복 매칭 방지) ── */
+  const companyId    = profile?.company_id
+  const profileEmail = (profile?.email ?? user.email ?? '').toLowerCase()
+
   let emp: {
-    id: number; name: string; email: string; company_id: number
-    department: string | null; position: string | null
-    Date_of_joining: string | null; birthdate: string | null
+    id:             number
+    name:           string
+    email:          string
+    company_id:     number
+    department:     string | null
+    position:       string | null
+    Date_of_joining: string | null
+    phone_number:   string | null
   } | null = null
 
-  const { data: byUid } = await supabase
-    .from('employees')
-    .select('id, name, email, company_id, department, position, Date_of_joining, birthdate')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle()
-
-  if (byUid) {
-    emp = byUid
-  } else {
-    const { data: byEmail } = await supabase
+  if (companyId && profileEmail) {
+    const { data } = await supabase
       .from('employees')
-      .select('id, name, email, company_id, department, position, Date_of_joining, birthdate')
-      .ilike('email', user.email ?? '')
+      .select('id, name, email, company_id, department, position, Date_of_joining, phone_number')
+      .eq('company_id', companyId)
+      .ilike('email', profileEmail)
       .eq('is_active', true)
       .maybeSingle()
-    emp = byEmail ?? null
+    emp = data ?? null
   }
 
   /* ── 회사 이름 조회 ── */
@@ -51,8 +56,10 @@ export default async function EmployeeProfilePage() {
 
   return (
     <ProfileClient
+      empId={emp?.id ?? null}
       name={emp?.name ?? user.email?.split('@')[0] ?? ''}
-      email={emp?.email ?? user.email ?? ''}
+      email={emp?.email ?? profileEmail}
+      phoneNumber={emp?.phone_number ?? ''}
       department={emp?.department ?? null}
       position={emp?.position ?? null}
       joinDate={emp?.Date_of_joining ?? null}
