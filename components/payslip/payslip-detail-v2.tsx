@@ -9,7 +9,7 @@ import Link from 'next/link'
 import {
   ChevronLeft,
   Printer, CheckCircle2, Clock,
-  User, CalendarDays, Banknote, EyeOff, Eye,
+  User, CalendarDays, Banknote, EyeOff, Eye, Timer,
 } from 'lucide-react'
 import type { PayslipDetail } from '@/types/payslip'
 import { formatKRW, formatMonth, formatDateDot, formatDateKR, cn } from '@/lib/utils'
@@ -157,17 +157,29 @@ export function PayslipDetailView({ detail: d }: Props) {
           <InfoRow label="직위"     value={d.employee.position}   />
           <InfoRow label="입사일"   value={d.employee.joinDate ? formatDateDot(d.employee.joinDate) : null} />
           <InfoRow label="사원번호" value={d.employee.employeeNo} />
-          {/* 당월일수 + 정산기간 */}
+          {/* 당월일수 */}
           {d.daysInMonth != null && (
             <InfoRow label="당월일수" value={`${d.daysInMonth}일`} />
           )}
-          {d.payrollPeriodStart && d.payrollPeriodEnd && (
-            <InfoRow
-              label="정산기간"
-              value={`${d.payrollPeriodStart} ~ ${d.payrollPeriodEnd}`}
-            />
-          )}
+          {/* 정산기간: pay_info 직접 저장값 우선, fallback은 company 기준 계산 */}
+          {(d.startDate && d.endDate) ? (
+            <InfoRow label="정산기간" value={`${d.startDate} ~ ${d.endDate}`} />
+          ) : (d.payrollPeriodStart && d.payrollPeriodEnd) ? (
+            <InfoRow label="정산기간" value={`${d.payrollPeriodStart} ~ ${d.payrollPeriodEnd}`} />
+          ) : null}
         </InfoSection>
+
+        {/* ── 근로시간 / 연차 정보 ── */}
+        {(d.overTime != null || d.holidayWorkingHours != null || d.nightWorkHours != null || d.remainingAnnualLeaveHours != null) && (
+          <InfoSection icon={<Timer size={14} className="text-blue-500" />} title="근로시간 / 연차">
+            <div className="grid grid-cols-2 gap-3 py-2">
+              <WorkTimeRow label="연장근로시간(분)" value={d.overTime} />
+              <WorkTimeRow label="휴일근로시간(분)" value={d.holidayWorkingHours} />
+              <WorkTimeRow label="야간근로시간(분)" value={d.nightWorkHours} />
+              <WorkTimeRow label="잔여연차시간(분)" value={d.remainingAnnualLeaveHours} />
+            </div>
+          </InfoSection>
+        )}
 
         {/* ── 근무 정보 ── */}
         {(d.workDays != null || d.overtimeHours != null) && (
@@ -249,6 +261,16 @@ function InfoRow({ label, value }: { label: string; value: string | null | undef
     <div className="flex items-baseline justify-between py-2 border-b border-slate-50 last:border-0">
       <span className="text-xs text-slate-400 flex-shrink-0">{label}</span>
       <span className="text-sm font-medium text-slate-800 ml-2 text-right">{value}</span>
+    </div>
+  )
+}
+
+function WorkTimeRow({ label, value }: { label: string; value: number | null | undefined }) {
+  const display = value != null ? String(value) : '-'
+  return (
+    <div className="flex flex-col items-center justify-center bg-slate-50 rounded-xl py-3 px-2 text-center">
+      <span className="text-lg font-bold text-slate-900 leading-none">{display}</span>
+      <span className="text-[10px] font-medium text-slate-500 mt-1 leading-tight">{label}</span>
     </div>
   )
 }

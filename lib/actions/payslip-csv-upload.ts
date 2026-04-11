@@ -50,6 +50,10 @@ function serverValidateRow(
   if (row.bonus     && isNaN(Number(row.bonus)))     fail(`상여금 숫자 오류: ${row.bonus}`)
   if (row.allowance && isNaN(Number(row.allowance))) fail(`수당 숫자 오류: ${row.allowance}`)
   if (row.deduction && isNaN(Number(row.deduction))) fail(`공제액 숫자 오류: ${row.deduction}`)
+  if (row.start_date && !DATE_RE.test(row.start_date))
+    fail(`정산시작일 형식 오류: ${row.start_date} (YYYY-MM-DD 필요)`)
+  if (row.end_date && !DATE_RE.test(row.end_date))
+    fail(`정산종료일 형식 오류: ${row.end_date} (YYYY-MM-DD 필요)`)
   if (row.payment_date && !DATE_RE.test(row.payment_date))
     fail(`지급일 형식 오류: ${row.payment_date}`)
 
@@ -188,6 +192,9 @@ export async function uploadPayslipCsv(
       employee_id:       emailToEmployeeId.get(row.email.toLowerCase())!,
       accrual_month:     row.pay_month,
       payment_date:      row.payment_date || null,
+      // ★ 정산기간 직접 저장
+      start_date:        row.start_date || null,
+      end_date:          row.end_date   || null,
       earnings: {
         base_salary: baseSalary,
         bonus,

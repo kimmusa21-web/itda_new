@@ -1,4 +1,5 @@
 import { Bell, Building2, Users, Upload, Home, BarChart3, MoreHorizontal, Wallet, User, FileText, UserPlus, ClipboardList, type LucideIcon } from 'lucide-react'
+// Note: UserPlus is used in manager nav
 import type { Role } from '@/types'
 
 export type { Role }
@@ -13,7 +14,6 @@ export const roleNavMap: RoleNavMap = {
     { label: '기업신청',  href: '/admin/requests',                icon: Bell       },
     { label: '기업관리',  href: '/admin/companies',               icon: Building2  },
     { label: '직원관리',  href: '/admin/employees',               icon: Users      },
-    { label: '직원등록',  href: '/admin/employees/upload',        icon: Upload     },
     { label: '급여조회',  href: '/admin/payroll',                 icon: BarChart3  },
     { label: '급여업로드',href: '/admin/payroll/upload',          icon: Upload     },
     { label: '급여입력',  href: '/admin/payments/upload',         icon: Upload     },

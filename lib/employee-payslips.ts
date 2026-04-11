@@ -107,8 +107,9 @@ export async function getEmployeePayslipById(
   const netPay          = Math.round(Number(row.net_pay))
 
   // ── 당월일수 + 정산기간 ──
+  // pay_info_v2에 start_date/end_date가 있으면 우선 사용, 없으면 company 기준 계산
+  const daysInMonth = getDaysInMonth(row.accrual_month)
   const payrollStartDay = ((row.companies as any)?.payroll_start_day ?? null) as number | null
-  const daysInMonth     = getDaysInMonth(row.accrual_month)
   const { start: payrollPeriodStart, end: payrollPeriodEnd } =
     getPayrollPeriod(row.accrual_month, payrollStartDay)
 
@@ -118,6 +119,16 @@ export async function getEmployeePayslipById(
     paymentDate:  row.payment_date ?? null,
     workDays:     row.work_days != null ? Number(row.work_days) : null,
     overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : null,
+
+    // ★ 정산기간 — pay_info_v2 직접 저장값
+    startDate: row.start_date ?? null,
+    endDate:   row.end_date   ?? null,
+
+    // ★ 근로시간/연차
+    overTime:                  row.Over_time                   ?? null,
+    holidayWorkingHours:       row.Holiday_working_hours       ?? null,
+    nightWorkHours:            row.night_work_hours            ?? null,
+    remainingAnnualLeaveHours: row.Remaining_annual_leave_hours ?? null,
 
     // 금액 (상세에서만 노출)
     earnings:     mapEarnings(row.earnings ?? {}),

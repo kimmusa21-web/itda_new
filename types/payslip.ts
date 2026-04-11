@@ -11,6 +11,14 @@ export interface PayInfoV2Row {
   payment_date:     string | null        // date
   work_days:        number | string | null
   overtime_hours:   number | string | null
+  // 정산기간 (pay_info 기준)
+  start_date:       string | null        // DATE YYYY-MM-DD
+  end_date:         string | null        // DATE YYYY-MM-DD
+  // 근로시간/연차
+  Over_time:                  number | null
+  Holiday_working_hours:      number | null
+  night_work_hours:           number | null
+  Remaining_annual_leave_hours: number | null
   earnings:         Record<string, number>   // JSONB
   deductions:       Record<string, number>   // JSONB
   total_earnings:   number | string
@@ -30,7 +38,7 @@ export interface PayInfoV2Row {
     Date_of_joining: string | null
     company_id:      number
   } | null
-  companies?: { name: string; payslip_note?: string | null } | null
+  companies?: { name: string; payslip_note?: string | null; payroll_start_day?: number | null } | null
 }
 
 /* ── 목록용 — 금액 없음 ─────────────────────────────────── */
@@ -54,6 +62,14 @@ export interface PayslipDetail {
   paymentDate:     string | null
   workDays:        number | null
   overtimeHours:   number | null
+  // 정산기간 (pay_info 직접 저장값)
+  startDate?:      string | null   // YYYY-MM-DD
+  endDate?:        string | null   // YYYY-MM-DD
+  // 근로시간/연차 (분 단위)
+  overTime?:                  number | null
+  holidayWorkingHours?:       number | null
+  nightWorkHours?:            number | null
+  remainingAnnualLeaveHours?: number | null
   // 상세에서만 노출
   earnings:        PayslipLineItem[]
   deductions:      PayslipLineItem[]
@@ -71,10 +87,10 @@ export interface PayslipDetail {
     employeeNo:  string
   }
   companyName: string
-  // 급여 기간 정보
+  // 급여 기간 정보 (fallback — company 기준 계산값)
   daysInMonth?: number        // 당월일수
-  payrollPeriodStart?: string // 정산기간 시작
-  payrollPeriodEnd?: string   // 정산기간 종료
+  payrollPeriodStart?: string // 정산기간 시작 (fallback)
+  payrollPeriodEnd?: string   // 정산기간 종료 (fallback)
 }
 
 /** DB Row → 목록 아이템 변환 (금액 필드 없음) */

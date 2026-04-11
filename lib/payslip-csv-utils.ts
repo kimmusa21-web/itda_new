@@ -18,10 +18,12 @@ import {
 export function generatePayslipCsvTemplate(): string {
   const headers = PAYSLIP_CSV_HEADERS.join(',')
   const example1 = [
-    'hong@example.com', '2026-04', '3000000', '200000', '100000', '50000', '2026-04-25',
+    'hong@example.com', '2026-04', '2026-03-16', '2026-04-15',
+    '3000000', '200000', '100000', '50000', '2026-04-25',
   ].join(',')
   const example2 = [
-    'kim@example.com', '2026-04', '2800000', '0', '50000', '40000', '2026-04-25',
+    'kim@example.com', '2026-04', '2026-03-16', '2026-04-15',
+    '2800000', '0', '50000', '40000', '2026-04-25',
   ].join(',')
   return '\uFEFF' + [headers, example1, example2].join('\n')
 }
@@ -67,6 +69,8 @@ export async function parsePayslipCsv(file: File): Promise<PayslipParseResult> {
         const rows: PayslipCsvRow[] = result.data.map(raw => ({
           email:        (raw['email']        ?? '').trim(),
           pay_month:    (raw['pay_month']    ?? '').trim(),
+          start_date:   (raw['start_date']   ?? '').trim(),
+          end_date:     (raw['end_date']     ?? '').trim(),
           base_salary:  (raw['base_salary']  ?? '').trim(),
           bonus:        (raw['bonus']        ?? '').trim(),
           allowance:    (raw['allowance']    ?? '').trim(),
@@ -119,6 +123,14 @@ export function validatePayslipRow(
     if (val && (isNaN(Number(val)) || Number(val) < 0)) {
       addFail(`${label} 숫자 오류: ${val}`)
     }
+  }
+
+  // 정산기간 (선택)
+  if (row.start_date && !DATE_RE.test(row.start_date)) {
+    addFail(`정산시작일 형식 오류: ${row.start_date} (YYYY-MM-DD 필요)`)
+  }
+  if (row.end_date && !DATE_RE.test(row.end_date)) {
+    addFail(`정산종료일 형식 오류: ${row.end_date} (YYYY-MM-DD 필요)`)
   }
 
   // 지급일 (선택)

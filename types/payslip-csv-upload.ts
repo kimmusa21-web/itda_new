@@ -7,6 +7,8 @@
 export interface PayslipCsvRow {
   email:        string
   pay_month:    string   // YYYY-MM
+  start_date:   string   // optional, YYYY-MM-DD (정산기간 시작)
+  end_date:     string   // optional, YYYY-MM-DD (정산기간 종료)
   base_salary:  string
   bonus:        string
   allowance:    string
@@ -39,7 +41,8 @@ export interface PayslipCsvUploadParams {
 
 /** CSV 헤더 목록 (순서 고정) */
 export const PAYSLIP_CSV_HEADERS = [
-  'email', 'pay_month', 'base_salary', 'bonus', 'allowance', 'deduction', 'payment_date',
+  'email', 'pay_month', 'start_date', 'end_date',
+  'base_salary', 'bonus', 'allowance', 'deduction', 'payment_date',
 ] as const
 export type PayslipCsvHeader = (typeof PAYSLIP_CSV_HEADERS)[number]
 
@@ -50,6 +53,8 @@ export const REQUIRED_PAYSLIP_HEADERS: PayslipCsvHeader[] = ['email', 'pay_month
 export const PAYSLIP_HEADER_LABELS: Record<PayslipCsvHeader, string> = {
   email:        '이메일',
   pay_month:    '귀속월(YYYY-MM)',
+  start_date:   '정산시작일(YYYY-MM-DD)',
+  end_date:     '정산종료일(YYYY-MM-DD)',
   base_salary:  '기본급',
   bonus:        '상여금',
   allowance:    '수당',
