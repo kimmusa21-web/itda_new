@@ -50,6 +50,34 @@ export async function getCurrentEmployee() {
 }
 
 /* ────────────────────────────────────────────────────────
+   getEmployeePayslipsForHistory — 이력 페이지용 (net_pay 포함)
+   빙의 모드에서 history 페이지가 사용 (pay_info_v2 기반)
+──────────────────────────────────────────────────────── */
+export async function getEmployeePayslipsForHistory(
+  employeeId: number,
+): Promise<Array<{ id: number; netPay: number; accrualMonth: string; paymentDate: string | null }>> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('pay_info_v2')
+    .select('id, accrual_month, payment_date, net_pay')
+    .eq('employee_id', employeeId)
+    .order('accrual_month', { ascending: false })
+
+  if (error) {
+    console.error('[getEmployeePayslipsForHistory]', error.message)
+    return []
+  }
+
+  return (data ?? []).map(r => ({
+    id:           r.id,
+    netPay:       Math.round(Number(r.net_pay ?? 0)),
+    accrualMonth: r.accrual_month,
+    paymentDate:  r.payment_date ?? null,
+  }))
+}
+
+/* ────────────────────────────────────────────────────────
    getEmployeePayslips — 목록 조회
    ★★★ SELECT에 earnings/deductions/금액 필드 절대 포함 금지 ★★★
 ──────────────────────────────────────────────────────── */
@@ -71,6 +99,82 @@ export async function getEmployeePayslips(
   }
 
   return (data ?? []).map(rowToListItem)
+}
+
+/* ────────────────────────────────────────────────────────
+   getAdminEmployeePayslipDetail — admin/manager용 상세 조회
+   company_id + accrual_month + employee_id 로 식별
+   (소유권 검증 없음 — admin/manager 권한 전제)
+──────────────────────────────────────────────────────── */
+export async function getAdminEmployeePayslipDetail(
+  companyId:  number,
+  payMonth:   string,
+  employeeId: number,
+): Promise<PayslipDetail | null> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('pay_info_v2')
+    .select(`
+      *,
+      employees (
+        name, email, department, position,
+        Date_of_joining, birthdate, company_id
+      ),
+      companies ( name, payslip_note, payroll_start_day )
+    `)
+    .eq('company_id', companyId)
+    .eq('accrual_month', payMonth)
+    .eq('employee_id', employeeId)
+    .maybeSingle()
+
+  if (error || !data) return null
+
+  const row = data as PayInfoV2Row
+
+  const totalEarnings   = Math.round(Number(row.total_earnings))
+  const totalDeductions = Math.abs(Math.round(Number(row.total_deductions)))
+  const netPay          = Math.round(Number(row.net_pay))
+
+  const daysInMonth = getDaysInMonth(row.accrual_month)
+  const payrollStartDay = ((row.companies as any)?.payroll_start_day ?? null) as number | null
+  const { start: payrollPeriodStart, end: payrollPeriodEnd } =
+    getPayrollPeriod(row.accrual_month, payrollStartDay)
+
+  return {
+    id:           row.id,
+    accrualMonth: row.accrual_month,
+    paymentDate:  row.payment_date ?? null,
+    workDays:     row.work_days != null ? Number(row.work_days) : null,
+    overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : null,
+    startDate: row.start_date ?? null,
+    endDate:   row.end_date   ?? null,
+    overTime:                  row.Over_time                   ?? null,
+    holidayWorkingHours:       row.Holiday_working_hours       ?? null,
+    nightWorkHours:            row.night_work_hours            ?? null,
+    remainingAnnualLeaveHours: row.Remaining_annual_leave_hours ?? null,
+    earnings:     mapEarnings(row.earnings ?? {}),
+    deductions:   mapDeductions(row.deductions ?? {}),
+    totalEarnings,
+    totalDeductions,
+    netPay,
+    calculationNotes: parsePayslipNote(
+      (row.companies as any)?.payslip_note ?? null
+    ),
+    employee: {
+      name:       row.employees?.name       ?? '',
+      email:      row.employees?.email      ?? '',
+      department: row.employees?.department ?? null,
+      position:   row.employees?.position   ?? null,
+      joinDate:   row.employees?.Date_of_joining ?? null,
+      birthDate:  row.employees?.birthdate  ?? null,
+      employeeNo: `EMP-${String(employeeId).padStart(4, '0')}`,
+    },
+    companyName:        row.companies?.name ?? '',
+    daysInMonth,
+    payrollPeriodStart,
+    payrollPeriodEnd,
+  }
 }
 
 /* ────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { EmployeeCsvUpload } from '@/components/employee-upload/employee-csv-upload'
 
 export const metadata = { title: '직원 CSV 대량 등록 | itda' }
@@ -11,18 +12,9 @@ export default async function ManagerEmployeeUploadPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, company_id, companies(name)')
-    .eq('id', user.id)
-    .single()
+  const ctx = await getEffectiveManagerContext()
 
-  if (profile?.role !== 'manager') redirect(`/${profile?.role ?? 'employee'}`)
-
-  const companyId   = profile?.company_id
-  const companyName = (profile?.companies as any)?.name ?? ''
-
-  if (!companyId) {
+  if (!ctx?.companyId) {
     return (
       <div className="card p-10 text-center text-slate-400">
         <p className="text-sm">회사 정보가 연결되지 않았습니다. 어드민에게 문의해주세요.</p>
@@ -30,9 +22,10 @@ export default async function ManagerEmployeeUploadPage() {
     )
   }
 
+  const { companyId, companyName } = ctx
+
   return (
     <div className="space-y-5 max-w-4xl">
-      {/* 헤더 */}
       <div className="flex items-start gap-4">
         <Link
           href="/manager/employees"
@@ -51,7 +44,6 @@ export default async function ManagerEmployeeUploadPage() {
         </div>
       </div>
 
-      {/* 업로드 컴포넌트 */}
       <div className="card p-6">
         <EmployeeCsvUpload
           role="manager"

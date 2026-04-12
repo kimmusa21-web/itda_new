@@ -1,15 +1,18 @@
 'use client'
-import Sidebar      from './sidebar'
-import BottomTabBar from './bottom-tab-bar'
-import AppHeader    from './app-header'
-import type { Role } from '@/types'
+import Sidebar                from './sidebar'
+import BottomTabBar           from './bottom-tab-bar'
+import AppHeader              from './app-header'
+import { ImpersonationBanner } from '@/components/impersonation/impersonation-banner'
+import type { Role }          from '@/types'
+import type { ImpersonationContext } from '@/lib/impersonation/types'
 
 interface Props {
-  children:     React.ReactNode
-  name?:        string
-  role:         Role         // DB에서 확인된 실제 역할
-  email?:       string
-  avatarColor?: string
+  children:        React.ReactNode
+  name?:           string
+  role:            Role
+  email?:          string
+  avatarColor?:    string
+  impersonation?:  ImpersonationContext | null
 }
 
 export default function AppShell({
@@ -18,6 +21,7 @@ export default function AppShell({
   role,
   email       = '',
   avatarColor = '#1d4ed8',
+  impersonation = null,
 }: Props) {
   return (
     <div className="flex min-h-dvh bg-slate-50">
@@ -26,9 +30,12 @@ export default function AppShell({
         name={name}
         email={email}
         avatarColor={avatarColor}
+        impersonation={impersonation}
       />
       <div className="flex-1 flex flex-col min-h-dvh lg:ml-60">
         <AppHeader role={role} name={name} />
+        {/* 빙의 배너 — 점검 모드일 때만 표시 */}
+        {impersonation && <ImpersonationBanner ctx={impersonation} />}
         <main className="flex-1 overflow-y-auto">
           <div
             className="max-w-5xl mx-auto px-4 py-6"

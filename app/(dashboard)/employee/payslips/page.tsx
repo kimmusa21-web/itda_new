@@ -1,8 +1,8 @@
 import { redirect }          from 'next/navigation'
 import { Wallet }            from 'lucide-react'
 import { createClient }      from '@/lib/supabase/server'
+import { getEffectiveEmployeeContext } from '@/lib/impersonation/get-effective-context'
 import {
-  getCurrentEmployee,
   getEmployeePayslips,
 } from '@/lib/employee-payslips'
 import { PayslipCurrentCard } from '@/components/payslip/payslip-current-card'
@@ -11,7 +11,6 @@ import { PayslipListItem }   from '@/components/payslip/payslip-list-item'
 export const metadata = { title: '내 급여 | itda' }
 
 export default async function EmployeePayslipsPage() {
-  /* ── 인증 + 역할 확인 ── */
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -21,15 +20,14 @@ export default async function EmployeePayslipsPage() {
     .select('role, name, companies(name)')
     .eq('id', user.id)
     .single()
-  if (profile?.role !== 'employee') redirect(`/${profile?.role ?? 'admin'}`)
 
+  const role = profile?.role
+  if (role !== 'employee' && role !== 'admin') redirect(`/${role ?? 'admin'}`)
+
+  const empCtx = await getEffectiveEmployeeContext()
   const companyName = (profile?.companies as any)?.name ?? ''
 
-  /* ── 직원 row 확보 ── */
-  const employee = await getCurrentEmployee()
-
-  /* ── 급여 목록 (금액 없음) ── */
-  const payslips       = employee ? await getEmployeePayslips(employee.id) : []
+  const payslips       = empCtx ? await getEmployeePayslips(empCtx.employeeId) : []
   const currentPayslip = payslips[0] ?? null
   const history        = payslips.slice(1)
 
@@ -37,7 +35,6 @@ export default async function EmployeePayslipsPage() {
     <div className="min-h-dvh bg-slate-50">
       <div className="max-w-lg mx-auto px-4 py-6 pb-28 space-y-6">
 
-        {/* 헤더 */}
         <div>
           {companyName && (
             <p className="text-xs font-semibold text-slate-400 mb-0.5">{companyName}</p>
@@ -49,7 +46,7 @@ export default async function EmployeePayslipsPage() {
         </div>
 
         {/* 계정 미연결 */}
-        {!employee && (
+        {!empCtx && (
           <div className="card p-10 text-center">
             <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
               <Wallet size={28} className="text-slate-400" />
@@ -64,7 +61,7 @@ export default async function EmployeePayslipsPage() {
         )}
 
         {/* 급여 없음 */}
-        {employee && payslips.length === 0 && (
+        {empCtx && payslips.length === 0 && (
           <div className="card p-10 text-center">
             <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
               <Wallet size={28} className="text-slate-400" />

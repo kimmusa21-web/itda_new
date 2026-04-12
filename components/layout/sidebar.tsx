@@ -1,23 +1,32 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LogOut } from 'lucide-react'
+import { LogOut, Eye, ArrowLeft } from 'lucide-react'
 import { roleNavMap, type Role } from '@/lib/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { stopImpersonation } from '@/lib/impersonation/actions'
 import { cn } from '@/lib/utils'
+import type { ImpersonationContext } from '@/lib/impersonation/types'
 
 interface Props {
-  role:        Role
-  name:        string
-  email?:      string
-  avatarColor?: string
+  role:          Role
+  name:          string
+  email?:        string
+  avatarColor?:  string
+  impersonation?: ImpersonationContext | null
 }
 
-export default function Sidebar({ role, name, email = '', avatarColor = '#1d4ed8' }: Props) {
-  const pathname  = usePathname()
-  const router    = useRouter()
-  const supabase  = createClient()
-  const navItems  = roleNavMap[role]
+export default function Sidebar({
+  role,
+  name,
+  email       = '',
+  avatarColor = '#1d4ed8',
+  impersonation = null,
+}: Props) {
+  const pathname = usePathname()
+  const router   = useRouter()
+  const supabase = createClient()
+  const navItems = roleNavMap[role]
 
   const roleBg: Record<Role, string> = {
     admin:    'bg-indigo-900 text-indigo-200',
@@ -35,6 +44,13 @@ export default function Sidebar({ role, name, email = '', avatarColor = '#1d4ed8
     router.push('/login')
   }
 
+  // 빙의 중 표시할 레이블
+  const impersonationLabel = impersonation
+    ? impersonation.type === 'company_manager'
+      ? impersonation.companyName
+      : `${impersonation.employeeName ?? '직원'} · ${impersonation.companyName}`
+    : null
+
   return (
     <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-full w-60 bg-[#0f172a] z-40 border-r border-[#1e293b]">
 
@@ -50,9 +66,21 @@ export default function Sidebar({ role, name, email = '', avatarColor = '#1d4ed8
           </div>
           <span className="text-lg font-bold text-white tracking-tight">itda</span>
         </div>
-        <span className={cn('inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium mt-3', roleBg[role])}>
-          {roleLabel[role]}
-        </span>
+
+        {/* 역할 뱃지 — 빙의 중이면 점검 모드 강조 */}
+        {impersonation ? (
+          <div className="mt-3 space-y-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300">
+              <Eye size={11} />
+              점검 모드
+            </span>
+            <p className="text-[11px] text-amber-400/80 px-1 truncate">{impersonationLabel}</p>
+          </div>
+        ) : (
+          <span className={cn('inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium mt-3', roleBg[role])}>
+            {roleLabel[role]}
+          </span>
+        )}
       </div>
 
       {/* 사용자 정보 */}
@@ -76,7 +104,7 @@ export default function Sidebar({ role, name, email = '', avatarColor = '#1d4ed8
       {/* 네비게이션 */}
       <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
         {navItems.map(item => {
-          const Icon = item.icon
+          const Icon   = item.icon
           const active = pathname === item.href
             || (item.href !== `/${role}` && pathname.startsWith(item.href))
           return (
@@ -98,8 +126,22 @@ export default function Sidebar({ role, name, email = '', avatarColor = '#1d4ed8
         })}
       </nav>
 
-      {/* 로그아웃 */}
-      <div className="px-3 py-4 border-t border-[#1e293b]">
+      {/* 하단 버튼 영역 */}
+      <div className="px-3 py-4 border-t border-[#1e293b] space-y-1">
+        {/* 빙의 종료 버튼 (빙의 중일 때만 표시) */}
+        {impersonation && (
+          <form action={stopImpersonation}>
+            <button
+              type="submit"
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-amber-400 hover:bg-amber-500/10 transition-all font-medium"
+            >
+              <ArrowLeft size={17} />
+              관리자 모드로 복귀
+            </button>
+          </form>
+        )}
+
+        {/* 로그아웃 */}
         <button
           onClick={logout}
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-slate-500 hover:bg-[#1e293b] hover:text-red-400 transition-all"

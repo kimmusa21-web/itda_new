@@ -6,15 +6,19 @@
 import { useState } from 'react'
 import { Search, Users } from 'lucide-react'
 import type { CompanyEmployeeRow } from '@/lib/supabase/queries/company-payroll'
+import { StartEmployeeImpersonationButton } from '@/components/impersonation/start-impersonation-button'
 import { cn } from '@/lib/utils'
 
 type StatusFilter = 'active' | 'inactive' | 'all'
 
 interface Props {
-  initialEmployees: CompanyEmployeeRow[]
+  initialEmployees:   CompanyEmployeeRow[]
+  /** admin 화면에서만 전달: 직원별 점검 버튼 표시용 */
+  companyId?:   number
+  companyName?: string
 }
 
-export function CompanyEmployeeList({ initialEmployees }: Props) {
+export function CompanyEmployeeList({ initialEmployees, companyId, companyName }: Props) {
   const [search, setSearch]   = useState('')
   const [filter, setFilter]   = useState<StatusFilter>('active')
 
@@ -91,6 +95,7 @@ export function CompanyEmployeeList({ initialEmployees }: Props) {
                     <th className="text-left px-5 py-3 font-semibold">직급</th>
                     <th className="text-left px-5 py-3 font-semibold">입사일</th>
                     <th className="text-left px-5 py-3 font-semibold">상태</th>
+                    {companyId && <th className="px-5 py-3" />}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -110,6 +115,17 @@ export function CompanyEmployeeList({ initialEmployees }: Props) {
                           {e.is_active ? '재직중' : '퇴직'}
                         </span>
                       </td>
+                      {companyId && (
+                        <td className="px-3 py-3">
+                          <StartEmployeeImpersonationButton
+                            companyId={companyId}
+                            companyName={companyName ?? ''}
+                            employeeId={e.id}
+                            employeeName={e.name}
+                            employeeEmail={e.email}
+                          />
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -122,16 +138,27 @@ export function CompanyEmployeeList({ initialEmployees }: Props) {
             {filtered.map(e => (
               <div key={e.id} className="card p-4">
                 <div className="flex items-start justify-between mb-1.5">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-slate-900">{e.name}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{e.email}</p>
+                    <p className="text-xs text-slate-500 mt-0.5 truncate">{e.email}</p>
                   </div>
-                  <span className={cn(
-                    'badge text-xs flex-shrink-0',
-                    e.is_active ? 'badge-green' : 'badge-gray',
-                  )}>
-                    {e.is_active ? '재직중' : '퇴직'}
-                  </span>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                    {companyId && (
+                      <StartEmployeeImpersonationButton
+                        companyId={companyId}
+                        companyName={companyName ?? ''}
+                        employeeId={e.id}
+                        employeeName={e.name}
+                        employeeEmail={e.email}
+                      />
+                    )}
+                    <span className={cn(
+                      'badge text-xs',
+                      e.is_active ? 'badge-green' : 'badge-gray',
+                    )}>
+                      {e.is_active ? '재직중' : '퇴직'}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-400 mt-1">
                   {e.employee_number && <span>사번 {e.employee_number}</span>}

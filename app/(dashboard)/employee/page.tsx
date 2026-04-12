@@ -1,33 +1,39 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Building2, CalendarDays, Briefcase, UserCircle2, ChevronRight, ArrowRight, Wallet } from 'lucide-react'
-import { getServerUser } from '@/lib/supabase/queries/auth'
-import { getMyPayslips } from '@/lib/supabase/queries/payslip'
-import { mapRowToPayslip } from '@/lib/supabase/queries/payslip-shared'
-import { getMyEmployee } from '@/lib/supabase/queries/employee'
-import { formatKRW, formatAccrualMonth, formatDateDot } from '@/lib/payslip-utils'
-import { formatDateShort } from '@/lib/utils'
+import { Building2, CalendarDays, Briefcase, UserCircle2, ArrowRight, Wallet } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { getEffectiveEmployeeContext } from '@/lib/impersonation/get-effective-context'
+import { getEmployeePayslips } from '@/lib/employee-payslips'
+import { formatAccrualMonth, formatDateDot } from '@/lib/payslip-utils'
+import { formatDateShort } from '@/lib/utils'
 import NoticeCard from '@/components/common/notice-card'
 import { notices as mockNotices } from '@/lib/mock-data'
 
 export default async function EmployeeDashboard() {
-  const { user } = await getServerUser()
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const supabase = createClient()
   const { data: profile } = await supabase
-    .from('profiles').select('*, companies(name)').eq('id', user.id).single()
-  if (profile?.role !== 'employee') redirect(`/${profile?.role ?? 'employee'}`)
+    .from('profiles').select('role, companies(name)').eq('id', user.id).single()
 
-  const [payRows, employee] = await Promise.all([
-    getMyPayslips(),
-    getMyEmployee(),
-  ])
+  // admin + impersonation은 허용, 그 외 employee만
+  const role = profile?.role
+  if (role !== 'employee' && role !== 'admin') redirect(`/${role ?? 'login'}`)
 
-  const latest = payRows[0] ? mapRowToPayslip(payRows[0]) : null
-  const history = payRows.slice(1).map(mapRowToPayslip)
-  const companyName = (profile?.companies as any)?.name ?? ''
+  const empCtx = await getEffectiveEmployeeContext()
+
+  let companyName = (profile?.companies as any)?.name ?? ''
+  if (empCtx?.companyId) {
+    const { data: co } = await supabase
+      .from('companies').select('name').eq('id', empCtx.companyId).single()
+    if (co?.name) companyName = co.name
+  }
+
+  /* ── 급여 목록 ── */
+  const payslips = empCtx ? await getEmployeePayslips(empCtx.employeeId) : []
+  const current  = payslips[0] ?? null
+  const history  = payslips.slice(1)
 
   return (
     <div className="space-y-6">
@@ -36,29 +42,19 @@ export default async function EmployeeDashboard() {
         <h1 className="text-xl font-semibold text-slate-900 mt-0.5">내 급여</h1>
       </div>
 
-      {/* Latest payslip hero */}
-      {latest ? (
+      {/* 최신 급여 카드 */}
+      {current ? (
         <div className="rounded-2xl overflow-hidden border border-slate-200">
           <div className="bg-[#0f172a] px-5 py-5">
-            <p className="text-blue-300 text-xs mb-1">{formatAccrualMonth(latest.accrualMonth)} 급여명세서</p>
-            <p className="text-white text-3xl font-semibold tracking-tight">
-              {formatKRW(latest.netPay)}
-            </p>
+            <p className="text-blue-300 text-xs mb-1">{formatAccrualMonth(current.accrualMonth)} 급여명세서</p>
+            <p className="text-white text-3xl font-semibold tracking-tight">—</p>
             <p className="text-slate-400 text-xs mt-2">
-              지급일 {latest.paymentDate ? formatDateDot(latest.paymentDate) : '-'}
+              지급일 {current.paymentDate ? formatDateDot(current.paymentDate) : '-'}
             </p>
-          </div>
-          <div className="bg-blue-600 px-5 py-3 flex items-center justify-between">
-            <div>
-              <span className="text-blue-200 text-xs">지급합계 </span>
-              <span className="text-white text-sm font-medium">{formatKRW(latest.totalEarnings)}</span>
-              <span className="text-blue-300 text-xs ml-3">공제 </span>
-              <span className="text-blue-100 text-sm">-{formatKRW(latest.totalDeductions)}</span>
-            </div>
           </div>
           <div className="bg-white px-5 py-3">
             <Link
-              href={`/employee/payslips/${payRows[0].id}`}
+              href={`/employee/payslips/${current.id}`}
               className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
             >
               명세서 상세 보기
@@ -74,65 +70,61 @@ export default async function EmployeeDashboard() {
         </div>
       )}
 
-      {/* History */}
+      {/* 지급 이력 */}
       {history.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-slate-700">지급 이력</h2>
-            <Link href="/employee/history" className="text-xs text-blue-600 hover:underline">전체 보기</Link>
+            <Link href="/employee/payslips" className="text-xs text-blue-600 hover:underline">전체 보기</Link>
           </div>
           <div className="space-y-2.5">
-            {payRows.slice(1, 4).map((row, i) => {
-              const ps = history[i]
-              return (
-                <Link key={row.id} href={`/employee/payslips/${row.id}`}
-                  className="flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">{formatAccrualMonth(ps.accrualMonth)}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <CalendarDays size={11} className="text-slate-400" />
-                      <span className="text-xs text-slate-400">
-                        지급일 {ps.paymentDate ? formatDateDot(ps.paymentDate) : '-'}
-                      </span>
-                    </div>
+            {history.slice(0, 3).map(p => (
+              <Link key={p.id} href={`/employee/payslips/${p.id}`}
+                className="flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all">
+                <div>
+                  <p className="text-sm font-medium text-slate-900">{formatAccrualMonth(p.accrualMonth)}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <CalendarDays size={11} className="text-slate-400" />
+                    <span className="text-xs text-slate-400">
+                      지급일 {p.paymentDate ? formatDateDot(p.paymentDate) : '-'}
+                    </span>
                   </div>
-                  <div className="text-right">
-                    <p className="text-base font-semibold text-slate-900">{formatKRW(ps.netPay)}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">실수령액</p>
-                  </div>
-                </Link>
-              )
-            })}
+                </div>
+                <ChevronRight />
+              </Link>
+            ))}
           </div>
         </section>
       )}
 
-      {/* My info */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-700">내 정보</h2>
-          <Link href="/employee/profile" className="text-xs text-blue-600 hover:underline">상세 보기</Link>
-        </div>
-        <div className="card p-4 space-y-3">
-          <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-semibold text-white bg-blue-600 flex-shrink-0">
-              {(profile?.name ?? '?').slice(0, 2)}
+      {/* 내 정보 */}
+      {empCtx && (
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-slate-700">내 정보</h2>
+            <Link href="/employee/profile" className="text-xs text-blue-600 hover:underline">상세 보기</Link>
+          </div>
+          <div className="card p-4 space-y-3">
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-semibold text-white bg-blue-600 flex-shrink-0">
+                {empCtx.employeeName.slice(0, 2)}
+              </div>
+              <div>
+                <p className="text-base font-semibold text-slate-900">{empCtx.employeeName}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{empCtx.employeeEmail}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-base font-semibold text-slate-900">{profile?.name}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{user.email}</p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <InfoRow icon={Building2}    label="소속"   value={companyName} />
+              <InfoRow icon={Briefcase}    label="부서"   value={empCtx.department ?? '-'} />
+              <InfoRow icon={UserCircle2}  label="직위"   value={empCtx.position ?? '-'} />
+              <InfoRow icon={CalendarDays} label="입사일" value={formatDateShort(empCtx.dateOfJoining)} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-            <InfoRow icon={Building2}    label="소속"   value={companyName} />
-            <InfoRow icon={Briefcase}    label="부서"   value={employee?.department ?? '-'} />
-            <InfoRow icon={UserCircle2}  label="직위"   value={employee?.position ?? '-'} />
-            <InfoRow icon={CalendarDays} label="입사일" value={formatDateShort(employee?.Date_of_joining)} />
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* Notices (mock — 추후 DB 연동) */}
+      {/* 공지사항 */}
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-slate-700">공지사항</h2>
@@ -145,6 +137,10 @@ export default async function EmployeeDashboard() {
       </section>
     </div>
   )
+}
+
+function ChevronRight() {
+  return <ArrowRight size={15} className="text-slate-400" />
 }
 
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {

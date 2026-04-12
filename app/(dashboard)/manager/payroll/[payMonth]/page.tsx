@@ -2,6 +2,7 @@ import { redirect, notFound }    from 'next/navigation'
 import Link                       from 'next/link'
 import { ArrowLeft, CreditCard, Users } from 'lucide-react'
 import { createClient }           from '@/lib/supabase/server'
+import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import {
   getCompanyDetail,
   getMonthlyPayrollRows,
@@ -28,20 +29,15 @@ export default async function ManagerPayrollMonthPage({ params }: Props) {
 
   if (!/^\d{4}-\d{2}$/.test(payMonth)) notFound()
 
-  /* ── 인증 + 역할 ── */
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles').select('role, company_id').eq('id', user.id).single()
+  const ctx = await getEffectiveManagerContext()
+  if (!ctx?.companyId) redirect('/manager')
 
-  if (profile?.role !== 'manager') redirect(`/${profile?.role ?? 'employee'}`)
+  const companyId = ctx.companyId
 
-  const companyId = profile?.company_id as number | null
-  if (!companyId) redirect('/manager')
-
-  /* ── 데이터 병렬 조회 ── */
   const [company, rows] = await Promise.all([
     getCompanyDetail(companyId),
     getMonthlyPayrollRows(companyId, payMonth),
@@ -49,7 +45,6 @@ export default async function ManagerPayrollMonthPage({ params }: Props) {
 
   if (!company) notFound()
 
-  /* ── 집계 ── */
   const totalEarnings   = rows.reduce((s, r) => s + parseAmt(r.Total_payment),    0)
   const totalDeductions = rows.reduce((s, r) => s + parseAmt(r.Total_deductible), 0)
   const totalNetPay     = rows.reduce((s, r) => s + parseAmt(r.net_pay),           0)
@@ -59,8 +54,6 @@ export default async function ManagerPayrollMonthPage({ params }: Props) {
 
   return (
     <div className="space-y-6">
-
-      {/* ── 헤더 ── */}
       <div className="flex items-center gap-3">
         <Link
           href="/manager/payroll"
@@ -79,7 +72,6 @@ export default async function ManagerPayrollMonthPage({ params }: Props) {
         </div>
       </div>
 
-      {/* ── 요약 카드 ── */}
       <div className="card p-5">
         <div className="flex items-center gap-2 mb-4">
           <CreditCard size={16} className="text-slate-400" />
@@ -117,7 +109,6 @@ export default async function ManagerPayrollMonthPage({ params }: Props) {
         </div>
       </div>
 
-      {/* ── 직원별 급여내역 ── */}
       <section className="space-y-3">
         <div className="flex items-center gap-2">
           <Users size={15} className="text-slate-400" />
@@ -126,22 +117,15 @@ export default async function ManagerPayrollMonthPage({ params }: Props) {
         </div>
         <CompanyEmployeePayrollTable rows={rows} basePath={basePath} />
       </section>
-
     </div>
   )
 }
 
-function InfoItem({
-  label, value, emphasis,
-}: {
-  label: string; value: string; emphasis?: boolean
-}) {
+function InfoItem({ label, value, emphasis }: { label: string; value: string; emphasis?: boolean }) {
   return (
     <div>
       <p className="text-xs text-slate-400 mb-0.5">{label}</p>
-      <p className={`text-sm font-medium ${emphasis ? 'text-blue-700' : 'text-slate-800'}`}>
-        {value}
-      </p>
+      <p className={`text-sm font-medium ${emphasis ? 'text-blue-700' : 'text-slate-800'}`}>{value}</p>
     </div>
   )
 }

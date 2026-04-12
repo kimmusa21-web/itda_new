@@ -1,7 +1,8 @@
 import { redirect, notFound }     from 'next/navigation'
 import Link                        from 'next/link'
-import { Building2, Users, Calendar, Edit2, ArrowLeft, CreditCard } from 'lucide-react'
+import { Building2, Users, Edit2, ArrowLeft, CreditCard } from 'lucide-react'
 import { createClient }            from '@/lib/supabase/server'
+import { StartCompanyImpersonationButton } from '@/components/impersonation/start-impersonation-button'
 import {
   getCompanyDetail,
   getCompanyPayrollLedgerSummaries,
@@ -64,13 +65,19 @@ export default async function AdminCompanyDetailPage({ params }: Props) {
             </p>
           </div>
         </div>
-        <Link
-          href={`/admin/companies/${id}/edit`}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors flex-shrink-0"
-        >
-          <Edit2 size={13} />
-          정보 수정
-        </Link>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <StartCompanyImpersonationButton
+            companyId={id}
+            companyName={company.name}
+          />
+          <Link
+            href={`/admin/companies/${id}/edit`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
+          >
+            <Edit2 size={13} />
+            정보 수정
+          </Link>
+        </div>
       </div>
 
       {/* ── 회사 요약 카드 ── */}
@@ -127,7 +134,11 @@ export default async function AdminCompanyDetailPage({ params }: Props) {
           <h2 className="text-sm font-semibold text-slate-700">직원 목록</h2>
           <span className="text-xs text-slate-400">· {totalCount}명</span>
         </div>
-        <CompanyEmployeeList initialEmployees={employees} />
+        <CompanyEmployeeList
+          initialEmployees={employees}
+          companyId={id}
+          companyName={company.name}
+        />
       </section>
 
     </div>

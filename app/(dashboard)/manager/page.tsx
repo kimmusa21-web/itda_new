@@ -2,6 +2,7 @@ import { redirect }            from 'next/navigation'
 import Link                    from 'next/link'
 import { Plus, BarChart3, Users, Upload, ClipboardList } from 'lucide-react'
 import { createClient }        from '@/lib/supabase/server'
+import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { getCompanyEmployees } from '@/lib/supabase/queries/employee'
 import { getAvailableMonths }  from '@/lib/supabase/queries/payslip'
 import { formatMonth }         from '@/lib/utils'
@@ -14,27 +15,25 @@ export default async function ManagerDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const ctx = await getEffectiveManagerContext()
+  if (!ctx?.companyId) redirect('/login')
+
+  const companyId   = ctx.companyId
+  const companyName = ctx.companyName
+
+  // admin 본인 프로필 이름 조회 (greeting용)
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, name, company_id, companies(name)')
-    .eq('id', user.id)
-    .single()
-
-  if (!['admin', 'manager'].includes(profile?.role ?? '')) redirect('/employee')
-
-  const companyId   = profile?.company_id
-  const companyName = (profile?.companies as { name?: string } | null)?.name ?? ''
+    .from('profiles').select('name').eq('id', user.id).single()
 
   /* ── 데이터 병렬 조회 ── */
   const [employees, months] = await Promise.all([
-    companyId ? getCompanyEmployees(companyId) : Promise.resolve([]),
-    companyId ? getAvailableMonths(companyId)  : Promise.resolve([]),
+    getCompanyEmployees(companyId),
+    getAvailableMonths(companyId),
   ])
 
   const activeEmployees = employees.filter(e => e.is_active)
   const latestMonth     = months[0] ?? null
 
-  /* ── 최근 등록 직원 (최대 4명) ── */
   const recentEmployees = activeEmployees.slice(0, 4)
 
   return (
@@ -119,10 +118,7 @@ export default async function ManagerDashboard() {
                 key={emp.id}
                 className="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 bg-white"
               >
-                {/* 아바타 */}
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0 bg-blue-600"
-                >
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0 bg-blue-600">
                   {(emp.name ?? '?').slice(0, 2)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -146,15 +142,15 @@ export default async function ManagerDashboard() {
         )}
       </section>
 
-      {/* 빠른 액세스 링크 */}
+      {/* 빠른 메뉴 */}
       <section>
         <h2 className="section-title mb-3">빠른 메뉴</h2>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { href: '/manager/employees/create', icon: Plus,           label: '직원 등록 신청',  sub: '개별 신청' },
-            { href: '/manager/employees/upload', icon: Upload,         label: '직원 CSV 등록',  sub: '대량 등록' },
-            { href: '/manager/requests',         icon: ClipboardList,  label: '신청 내역',       sub: '처리 현황' },
-            { href: '/manager/employees',        icon: Users,          label: '직원 관리',       sub: '목록 보기' },
+            { href: '/manager/employees/create', icon: Plus,          label: '직원 등록 신청', sub: '개별 신청' },
+            { href: '/manager/employees/upload', icon: Upload,        label: '직원 CSV 등록', sub: '대량 등록' },
+            { href: '/manager/requests',         icon: ClipboardList, label: '신청 내역',      sub: '처리 현황' },
+            { href: '/manager/employees',        icon: Users,         label: '직원 관리',      sub: '목록 보기' },
           ].map(item => (
             <Link
               key={item.href}

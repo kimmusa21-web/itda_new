@@ -1,5 +1,6 @@
 import { redirect }         from 'next/navigation'
 import { createClient }     from '@/lib/supabase/server'
+import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { PayslipCsvUpload } from '@/components/payslip-csv-upload/payslip-csv-upload'
 
 export const metadata = { title: '급여 업로드 | itda' }
@@ -9,24 +10,17 @@ export default async function ManagerPaymentsUploadPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, company_id, companies(name)')
-    .eq('id', user.id)
-    .single()
+  const ctx = await getEffectiveManagerContext()
 
-  if (!['admin', 'manager'].includes(profile?.role ?? '')) redirect('/employee')
-
-  const companyId   = profile?.company_id
-  const companyName = (profile?.companies as any)?.name ?? ''
-
-  if (!companyId) {
+  if (!ctx?.companyId) {
     return (
       <div className="card p-10 text-center text-slate-400">
         <p className="text-sm">회사 정보가 연결되지 않았습니다. 어드민에게 문의해주세요.</p>
       </div>
     )
   }
+
+  const { companyId, companyName } = ctx
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">

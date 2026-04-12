@@ -1,4 +1,4 @@
-import { Bell, Building2, Users, Upload, Home, BarChart3, MoreHorizontal, Wallet, User, FileText, UserPlus, ClipboardList, type LucideIcon } from 'lucide-react'
+import { Bell, Building2, Users, Upload, Home, BarChart3, MoreHorizontal, Wallet, User, FileText, UserPlus, ClipboardList, Eye, type LucideIcon } from 'lucide-react'
 // Note: UserPlus is used in manager nav
 import type { Role } from '@/types'
 
@@ -18,6 +18,7 @@ export const roleNavMap: RoleNavMap = {
     { label: '급여업로드',href: '/admin/payroll/upload',          icon: Upload     },
     { label: '급여입력',  href: '/admin/payments/upload',         icon: Upload     },
     { label: '가입신청',  href: '/admin/employee-requests',       icon: FileText   },
+    { label: '점검 모드', href: '/admin/impersonation',           icon: Eye        },
   ],
   manager: [
     { label: '홈',      href: '/manager',                    icon: Home           },
@@ -76,6 +77,7 @@ export function getPageTitle(pathname: string): string {
     '/admin/payroll/upload':   '급여 CSV 업로드 (고급)',
     '/admin/payments/upload':  '급여 입력',
     '/admin/employee-requests': '직원 가입신청',
+    '/admin/impersonation': '점검 모드',
     '/admin/companies/new': '회사 등록',
     // 기업 상세/급여대장/명세서는 동적 경로라 runtime에서 처리
     '/auth/verify': '가입 인증',

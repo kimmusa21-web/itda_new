@@ -15,7 +15,11 @@ import type { PayslipDetail } from '@/types/payslip'
 import { formatKRW, formatMonth, formatDateDot, formatDateKR, cn } from '@/lib/utils'
 import { PayrollNoteAccordion } from '@/components/payslip/payroll-note-accordion'
 
-interface Props { detail: PayslipDetail }
+interface Props {
+  detail: PayslipDetail
+  backHref?: string   // 기본값: /employee/payslips
+  backLabel?: string  // 기본값: 목록
+}
 
 /** 금액을 숨김/공개 상태에 따라 렌더링 */
 function AmountText({
@@ -43,7 +47,7 @@ function AmountText({
   )
 }
 
-export function PayslipDetailView({ detail: d }: Props) {
+export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', backLabel = '목록' }: Props) {
   const [revealed,   setRevealed]   = useState(false)
 
   const today     = new Date().toISOString().slice(0, 10)
@@ -59,9 +63,9 @@ export function PayslipDetailView({ detail: d }: Props) {
 
         {/* ── 헤더 ── */}
         <div className="flex items-center justify-between">
-          <Link href="/employee/payslips"
+          <Link href={backHref}
             className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 -ml-1">
-            <ChevronLeft size={17} />목록
+            <ChevronLeft size={17} />{backLabel}
           </Link>
           <div className="flex gap-2">
             <button

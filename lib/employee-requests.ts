@@ -39,6 +39,22 @@ export async function getCurrentUserProfile() {
   return data ?? null
 }
 
+/* ── 회사 전체 신청 목록 조회 (admin 빙의용) ─────────── */
+export async function getCompanyEmployeeRequests(companyId: number): Promise<EmployeeRequest[]> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const { data, error } = await supabase
+    .from('employee_requests')
+    .select('*, companies(name)')
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false })
+
+  if (error) { console.error('[getCompanyEmployeeRequests]', error.message); return [] }
+  return (data as EmployeeRequestRow[]).map(mapRowToRequest)
+}
+
 /* ── manager 본인 신청 목록 조회 ────────────────────────── */
 export async function getManagerRequests(): Promise<EmployeeRequest[]> {
   const supabase = createClient()

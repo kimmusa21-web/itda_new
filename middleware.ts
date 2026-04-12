@@ -5,10 +5,12 @@
      2. 미인증 사용자 → /login 로 redirect (redirect 파라미터 보존)
      3. 이미 로그인된 사용자의 /login 접근 → 역할별 홈으로
      4. 역할별 경로 접근 제어
+     5. admin + impersonation 쿠키 → /manager, /employee 접근 허용
    ================================================================ */
 
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getImpersonationFromRequest } from '@/lib/impersonation/cookie'
 
 /** 인증 없이 접근 가능한 공개 경로 prefix */
 const PUBLIC_PATHS = ['/login', '/register', '/auth', '/no-access']
@@ -92,15 +94,30 @@ export async function middleware(request: NextRequest) {
       }
 
       // manager: /manager 이하만 허용
+      // 단, admin + 유효한 company_manager impersonation 쿠키가 있으면 허용
       if (path.startsWith('/manager') && !['admin', 'manager'].includes(role ?? '')) {
         const dest = role ? `/${role}` : '/no-access'
         return NextResponse.redirect(new URL(dest, request.url))
       }
+      if (path.startsWith('/manager') && role === 'admin') {
+        const imp = getImpersonationFromRequest(request)
+        if (!imp || imp.type !== 'company_manager' || imp.adminUserId !== user.id) {
+          // impersonation 없이 admin이 /manager 접근 → /admin으로
+          return NextResponse.redirect(new URL('/admin', request.url))
+        }
+      }
 
       // employee: /employee 이하만 허용
-      if (path.startsWith('/employee') && role !== 'employee') {
+      // 단, admin + 유효한 employee impersonation 쿠키가 있으면 허용
+      if (path.startsWith('/employee') && !['admin', 'employee'].includes(role ?? '')) {
         const dest = role ? `/${role}` : '/no-access'
         return NextResponse.redirect(new URL(dest, request.url))
+      }
+      if (path.startsWith('/employee') && role === 'admin') {
+        const imp = getImpersonationFromRequest(request)
+        if (!imp || imp.type !== 'employee' || imp.adminUserId !== user.id) {
+          return NextResponse.redirect(new URL('/admin', request.url))
+        }
       }
 
       // role 자체가 없는 경우
