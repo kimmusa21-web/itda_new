@@ -47,6 +47,9 @@ export interface PayInfoPayload {
   payment_date:     string | null
   work_days:        number | null
   overtime_hours:   number | null
+  // pay_info 흡수 컬럼 (선택)
+  Number_of_days?:   number | null   // 정산기간 총 일수
+  Total_tax_salary?: number | null   // 과세급여합계
   earnings:         Record<string, number>
   deductions:       Record<string, number>
   total_earnings:   number

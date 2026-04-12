@@ -19,6 +19,9 @@ export interface PayInfoV2Row {
   Holiday_working_hours?:      number | null
   night_work_hours?:           number | null
   Remaining_annual_leave_hours?: number | null
+  // pay_info 흡수 컬럼 (선택)
+  Number_of_days?:     number | null   // 정산기간 총 일수
+  Total_tax_salary?:   number | null   // 과세급여합계
   earnings:         Record<string, number>   // JSONB
   deductions:       Record<string, number>   // JSONB
   total_earnings:   number | string
@@ -70,6 +73,9 @@ export interface PayslipDetail {
   holidayWorkingHours?:       number | null
   nightWorkHours?:            number | null
   remainingAnnualLeaveHours?: number | null
+  // pay_info 흡수 컬럼 (선택)
+  numberOfDays?:     number | null   // 정산기간 총 일수 (Number_of_days)
+  totalTaxSalary?:   number | null   // 과세급여합계 (Total_tax_salary)
   // 상세에서만 노출
   earnings:        PayslipLineItem[]
   deductions:      PayslipLineItem[]

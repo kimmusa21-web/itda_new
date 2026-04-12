@@ -153,6 +153,8 @@ export async function getAdminEmployeePayslipDetail(
     holidayWorkingHours:       row.Holiday_working_hours       ?? null,
     nightWorkHours:            row.night_work_hours            ?? null,
     remainingAnnualLeaveHours: row.Remaining_annual_leave_hours ?? null,
+    numberOfDays:   (row as any).Number_of_days != null ? Number((row as any).Number_of_days) : null,
+    totalTaxSalary: (row as any).Total_tax_salary != null ? Number((row as any).Total_tax_salary) : null,
     earnings:     mapEarnings(row.earnings ?? {}),
     deductions:   mapDeductions(row.deductions ?? {}),
     totalEarnings,
@@ -233,6 +235,10 @@ export async function getEmployeePayslipById(
     holidayWorkingHours:       row.Holiday_working_hours       ?? null,
     nightWorkHours:            row.night_work_hours            ?? null,
     remainingAnnualLeaveHours: row.Remaining_annual_leave_hours ?? null,
+
+    // ★ pay_info 흡수 필드
+    numberOfDays:   (row as any).Number_of_days != null ? Number((row as any).Number_of_days) : null,
+    totalTaxSalary: (row as any).Total_tax_salary != null ? Number((row as any).Total_tax_salary) : null,
 
     // 금액 (상세에서만 노출)
     earnings:     mapEarnings(row.earnings ?? {}),

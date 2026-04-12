@@ -102,6 +102,9 @@ export interface PayInfoV2 {
   Holiday_working_hours?: number | null
   night_work_hours?: number | null
   Remaining_annual_leave_hours?: number | null
+  // pay_info 흡수 컬럼 (선택)
+  Number_of_days?: number | null     // 정산기간 총 일수
+  Total_tax_salary?: number | null   // 과세급여합계
   earnings: Record<string, number>
   deductions: Record<string, number>
   total_earnings: number

@@ -16,6 +16,7 @@ export const EARNINGS_LABELS: Record<string, string> = {
   Other_allowances2:      '기타수당2',
   Holiday_bonus:          '명절상여',
   Total_payment:          '지급합계',
+  Total_tax_salary:       '과세급여합계',
 }
 
 export const DEDUCTIONS_LABELS: Record<string, string> = {

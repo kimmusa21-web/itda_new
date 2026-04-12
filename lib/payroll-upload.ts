@@ -63,19 +63,21 @@ export async function upsertPayInfo(
   const supabase = createClient()
 
   const records = payloads.map(p => ({
-    company_id:       p.company_id,
-    employee_id:      p.employee_id,
-    accrual_month:    p.accrual_month,
-    payment_date:     p.payment_date,
-    work_days:        p.work_days,
-    overtime_hours:   p.overtime_hours,
-    earnings:         p.earnings,          // ★ pay_info_v2 컬럼명
-    deductions:       p.deductions,        // ★ pay_info_v2 컬럼명
-    total_earnings:   p.total_earnings,
-    total_deductions: p.total_deductions,
-    net_pay:          p.net_pay,
+    company_id:        p.company_id,
+    employee_id:       p.employee_id,
+    accrual_month:     p.accrual_month,
+    payment_date:      p.payment_date,
+    work_days:         p.work_days,
+    overtime_hours:    p.overtime_hours,
+    Number_of_days:    p.Number_of_days   ?? null,   // ★ 정산기간 총 일수
+    Total_tax_salary:  p.Total_tax_salary ?? null,   // ★ 과세급여합계
+    earnings:          p.earnings,                   // ★ pay_info_v2 컬럼명
+    deductions:        p.deductions,                 // ★ pay_info_v2 컬럼명
+    total_earnings:    p.total_earnings,
+    total_deductions:  p.total_deductions,
+    net_pay:           p.net_pay,
     calculation_notes: p.calculation_notes,
-    upload_log_id:    uploadLogId ?? null,
+    upload_log_id:     uploadLogId ?? null,
   }))
 
   const { error } = await supabase
