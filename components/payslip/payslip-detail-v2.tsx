@@ -9,7 +9,7 @@ import Link from 'next/link'
 import {
   ChevronLeft,
   Printer, CheckCircle2, Clock,
-  User, CalendarDays, Banknote, EyeOff, Eye, Timer,
+  User, CalendarDays, EyeOff, Eye, Timer,
 } from 'lucide-react'
 import type { PayslipDetail } from '@/types/payslip'
 import { formatKRW, formatMonth, formatDateDot, formatDateKR, cn } from '@/lib/utils'
@@ -171,10 +171,11 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
           <InfoRow label="직위"     value={d.employee.position}   />
           <InfoRow label="입사일"   value={d.employee.joinDate ? formatDateDot(d.employee.joinDate) : null} />
           <InfoRow label="사원번호" value={d.employee.employeeNo} />
-          {/* 당월일수 */}
-          {d.daysInMonth != null && (
-            <InfoRow label="당월일수" value={`${d.daysInMonth}일`} />
-          )}
+          {/* 급여지급일 */}
+          <InfoRow label="급여지급일" value={d.paymentDate ? formatDateKR(d.paymentDate) : null} />
+          {/* 급여지급일 아래: 당월일수 → 근무일수 → 정산기간 */}
+          <InfoRow label="당월일수" value={d.daysInMonth != null ? `${d.daysInMonth}일` : null} />
+          <InfoRow label="근무일수" value={d.workDays   != null ? `${d.workDays}일`    : null} />
           {/* 정산기간: pay_info 직접 저장값 우선, fallback은 company 기준 계산 */}
           {(d.startDate && d.endDate) ? (
             <InfoRow label="정산기간" value={`${d.startDate} ~ ${d.endDate}`} />
@@ -192,14 +193,6 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
               <WorkTimeRow label="야간근로시간(분)" value={d.nightWorkHours} />
               <WorkTimeRow label="잔여연차시간(분)" value={d.remainingAnnualLeaveHours} />
             </div>
-          </InfoSection>
-        )}
-
-        {/* ── 근무 정보 ── */}
-        {(d.workDays != null || d.overtimeHours != null) && (
-          <InfoSection icon={<Banknote size={14} className="text-blue-500" />} title="근무 정보">
-            {d.workDays      != null && <InfoRow label="근무일수"    value={`${d.workDays}일`} />}
-            {d.overtimeHours != null && <InfoRow label="연장근로시간" value={`${d.overtimeHours}H`} />}
           </InfoSection>
         )}
 
