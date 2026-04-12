@@ -105,8 +105,18 @@ export default function Sidebar({
       <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
         {navItems.map(item => {
           const Icon   = item.icon
+          // prefix 매칭 시 더 구체적인 다른 항목이 있으면 비활성 처리
           const active = pathname === item.href
-            || (item.href !== `/${role}` && pathname.startsWith(item.href))
+            || (
+              item.href !== `/${role}` &&
+              pathname.startsWith(item.href + '/') &&
+              !navItems.some(
+                other =>
+                  other.href !== item.href &&
+                  pathname.startsWith(other.href) &&
+                  other.href.length > item.href.length,
+              )
+            )
           return (
             <Link
               key={item.href}

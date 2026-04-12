@@ -44,9 +44,10 @@ type DropStatus = 'idle' | 'parsing' | 'done'
 interface Props {
   companies:     { id: number; name: string }[]
   currentUserId: string
+  hideHeader?:   boolean
 }
 
-export function PayrollUploadPage({ companies, currentUserId: _currentUserId }: Props) {
+export function PayrollUploadPage({ companies, currentUserId: _currentUserId, hideHeader = false }: Props) {
   // 설정
   const [companyId,    setCompanyId]    = useState(0)
   const [accrualMonth, setAccrualMonth] = useState('')
@@ -179,13 +180,15 @@ export function PayrollUploadPage({ companies, currentUserId: _currentUserId }: 
     <div className="space-y-5 max-w-5xl mx-auto">
 
       {/* 헤더 */}
-      <div>
-        <p className="text-xs text-slate-400 mb-1">어드민 › 급여 관리</p>
-        <h1 className="text-2xl font-bold text-slate-900">급여 CSV 업로드</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          검증 후 pay_info_v2에 upsert 저장됩니다. 같은 귀속월 재업로드 시 자동 덮어쓰기.
-        </p>
-      </div>
+      {!hideHeader && (
+        <div>
+          <p className="text-xs text-slate-400 mb-1">어드민 › 급여업로드</p>
+          <h1 className="text-2xl font-bold text-slate-900">고급 CSV 업로드</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            컬럼 매핑 기반 검증 후 저장됩니다. 같은 귀속월 재업로드 시 자동 덮어쓰기.
+          </p>
+        </div>
+      )}
 
       {/* 완료/실패 배너 */}
       {(phase === 'done' || phase === 'failed') && (

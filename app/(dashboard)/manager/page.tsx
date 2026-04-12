@@ -80,14 +80,14 @@ export default async function ManagerDashboard() {
           </div>
         </Link>
         <Link
-          href="/manager/payments/upload"
+          href="/manager/payroll/upload"
           className="flex items-center gap-3 card rounded-2xl px-4 py-4 hover:bg-slate-50 transition-colors"
         >
           <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
             <Upload size={17} className="text-slate-600" />
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-800">급여 업로드</p>
+            <p className="text-sm font-medium text-slate-800">급여업로드</p>
             <p className="text-xs text-slate-400 mt-0.5">CSV 등록 →</p>
           </div>
         </Link>

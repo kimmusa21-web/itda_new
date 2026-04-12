@@ -84,7 +84,7 @@ export default async function AdminDashboard() {
             <Upload size={17} className="text-white" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-white truncate">급여 업로드</p>
+            <p className="text-sm font-medium text-white truncate">급여업로드</p>
             <p className="text-xs text-slate-400 mt-0.5">CSV 파일 등록</p>
           </div>
         </Link>

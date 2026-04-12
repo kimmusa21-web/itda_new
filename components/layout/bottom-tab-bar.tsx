@@ -17,7 +17,16 @@ export default function BottomTabBar({ role }: { role: Role }) {
         {navItems.map(item => {
           const Icon   = item.icon
           const active = pathname === item.href
-            || (item.href !== `/${role}` && pathname.startsWith(item.href))
+            || (
+              item.href !== `/${role}` &&
+              pathname.startsWith(item.href + '/') &&
+              !navItems.some(
+                other =>
+                  other.href !== item.href &&
+                  pathname.startsWith(other.href) &&
+                  other.href.length > item.href.length,
+              )
+            )
           return (
             <Link
               key={item.href}
