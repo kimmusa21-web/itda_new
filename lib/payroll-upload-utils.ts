@@ -284,6 +284,11 @@ export function toPayInfoPayloads(
       const emp = empMap.get(p.email)
       if (!emp) return []   // 매핑 실패 시 조용히 건너뜀
 
+      // earnings/deductions JSONB에서 개별 컬럼 추출 (null-safe)
+      const e = p.earnings
+      const d = p.deductions
+      const nvl = (v: number | undefined): number | null => (v !== undefined && v !== 0) ? v : null
+
       return [{
         company_id:        companyId,
         employee_id:       emp.id,
@@ -291,6 +296,33 @@ export function toPayInfoPayloads(
         payment_date:      p.paymentDate || null,
         work_days:         null,
         overtime_hours:    null,
+        // 지급 항목 개별 컬럼
+        base_salary:               nvl(e.base_salary),
+        overtime_pay_fixed:        nvl(e.overtime_pay_fixed),
+        overtime_pay:              nvl(e.overtime_pay),
+        holidaytime_pay:           nvl(e.holidaytime_pay),
+        nighttime_pay:             nvl(e.nighttime_pay),
+        meal_allowance:            nvl(e.meal_allowance),
+        incentive:                 nvl(e.incentive),
+        annual_leave_allowance:    nvl(e.annual_leave_allowance),
+        Other_allowances:          nvl(e.Other_allowances),
+        Other_allowances2:         nvl(e.Other_allowances2),
+        Holiday_bonus:             nvl(e.Holiday_bonus),
+        Total_payment:             p.totalEarnings || null,
+        // 공제 항목 개별 컬럼
+        national_pension:           nvl(d.national_pension),
+        health_insurance:           nvl(d.health_insurance),
+        longterm_care:              nvl(d.longterm_care),
+        employment_insurance:       nvl(d.employment_insurance),
+        income_tax:                 nvl(d.income_tax),
+        resident_tax:               nvl(d.resident_tax),
+        student_loan:               nvl(d.student_loan),
+        income_tax_refund:          d.income_tax_refund !== undefined ? d.income_tax_refund : null,
+        resident_tax_refund:        d.resident_tax_refund !== undefined ? d.resident_tax_refund : null,
+        Total_deductible:           p.totalDeductions || null,
+        Other_deductions:           nvl(d.Other_deductions),
+        health_insurance_adjustment: nvl(d.health_insurance_adjustment),
+        // JSONB (표시용)
         earnings:          p.earnings,
         deductions:        p.deductions,
         total_earnings:    p.totalEarnings,

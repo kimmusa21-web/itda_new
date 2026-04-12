@@ -69,10 +69,37 @@ export async function upsertPayInfo(
     payment_date:      p.payment_date,
     work_days:         p.work_days,
     overtime_hours:    p.overtime_hours,
-    Number_of_days:    p.Number_of_days   ?? null,   // ★ 정산기간 총 일수
-    Total_tax_salary:  p.Total_tax_salary ?? null,   // ★ 과세급여합계
-    earnings:          p.earnings,                   // ★ pay_info_v2 컬럼명
-    deductions:        p.deductions,                 // ★ pay_info_v2 컬럼명
+    Number_of_days:    p.Number_of_days   ?? null,
+    Total_tax_salary:  p.Total_tax_salary ?? null,
+    // 지급 항목 개별 컬럼
+    base_salary:               p.base_salary              ?? null,
+    overtime_pay_fixed:        p.overtime_pay_fixed       ?? null,
+    overtime_pay:              p.overtime_pay             ?? null,
+    holidaytime_pay:           p.holidaytime_pay          ?? null,
+    nighttime_pay:             p.nighttime_pay            ?? null,
+    meal_allowance:            p.meal_allowance           ?? null,
+    incentive:                 p.incentive                ?? null,
+    annual_leave_allowance:    p.annual_leave_allowance   ?? null,
+    Other_allowances:          p.Other_allowances         ?? null,
+    Other_allowances2:         p.Other_allowances2        ?? null,
+    Holiday_bonus:             p.Holiday_bonus            ?? null,
+    Total_payment:             p.Total_payment            ?? null,
+    // 공제 항목 개별 컬럼
+    national_pension:           p.national_pension          ?? null,
+    health_insurance:           p.health_insurance          ?? null,
+    longterm_care:              p.longterm_care             ?? null,
+    employment_insurance:       p.employment_insurance      ?? null,
+    income_tax:                 p.income_tax                ?? null,
+    resident_tax:               p.resident_tax              ?? null,
+    student_loan:               p.student_loan              ?? null,
+    income_tax_refund:          p.income_tax_refund         ?? null,
+    resident_tax_refund:        p.resident_tax_refund       ?? null,
+    Total_deductible:           p.Total_deductible          ?? null,
+    Other_deductions:           p.Other_deductions          ?? null,
+    health_insurance_adjustment: p.health_insurance_adjustment ?? null,
+    // JSONB
+    earnings:          p.earnings,
+    deductions:        p.deductions,
     total_earnings:    p.total_earnings,
     total_deductions:  p.total_deductions,
     net_pay:           p.net_pay,

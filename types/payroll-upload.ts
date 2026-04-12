@@ -50,6 +50,33 @@ export interface PayInfoPayload {
   // pay_info 흡수 컬럼 (선택)
   Number_of_days?:   number | null   // 정산기간 총 일수
   Total_tax_salary?: number | null   // 과세급여합계
+  // 지급 항목 개별 컬럼 (JSONB와 1:1 대응)
+  base_salary?:               number | null
+  overtime_pay_fixed?:        number | null
+  overtime_pay?:              number | null
+  holidaytime_pay?:           number | null
+  nighttime_pay?:             number | null
+  meal_allowance?:            number | null
+  incentive?:                 number | null
+  annual_leave_allowance?:    number | null
+  Other_allowances?:          number | null
+  Other_allowances2?:         number | null
+  Holiday_bonus?:             number | null
+  Total_payment?:             number | null
+  // 공제 항목 개별 컬럼
+  national_pension?:           number | null
+  health_insurance?:           number | null
+  longterm_care?:              number | null
+  employment_insurance?:       number | null
+  income_tax?:                 number | null
+  resident_tax?:               number | null
+  student_loan?:               number | null
+  income_tax_refund?:          number | null
+  resident_tax_refund?:        number | null
+  Total_deductible?:           number | null
+  Other_deductions?:           number | null
+  health_insurance_adjustment?: number | null
+  // JSONB (표시용)
   earnings:         Record<string, number>
   deductions:       Record<string, number>
   total_earnings:   number
