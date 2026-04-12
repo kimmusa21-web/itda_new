@@ -1,14 +1,16 @@
 'use client'
 
-import { useState }                              from 'react'
-import { Search, BarChart3, X }                  from 'lucide-react'
-import { createClient }                          from '@/lib/supabase/client'
-import type { PayInfoRow }                       from '@/lib/supabase/queries/payslip-shared'
-import { mapRowToPayslip }                       from '@/lib/supabase/queries/payslip-shared'
-import { PayslipInlineDetail }                    from '@/components/payslip/payslip-inline-detail'
-import { SendPayslipButton }                     from '@/components/payroll/send-payslip-button'
-import { formatKRW, formatAccrualMonth }         from '@/lib/payslip-utils'
-import LoadingState                              from '@/components/ui/loading-state'
+import { useState }                      from 'react'
+import { Search, BarChart3, X }          from 'lucide-react'
+import { createClient }                  from '@/lib/supabase/client'
+import type { PayInfoV2 }                from '@/types'
+import { mapEarnings, mapDeductions }    from '@/lib/payroll-labels'
+import { PayslipDetailView }             from '@/components/payslip/payslip-detail-v2'
+import { SendPayslipButton }             from '@/components/payroll/send-payslip-button'
+import { formatKRW, formatAccrualMonth } from '@/lib/payslip-utils'
+import { getDaysInMonth, getPayrollPeriod } from '@/lib/payslip-utils'
+import type { PayslipDetail }            from '@/types/payslip'
+import LoadingState                      from '@/components/ui/loading-state'
 
 /* ── 타입 ── */
 interface Company { id: number; name: string }
@@ -18,8 +20,52 @@ interface Props {
   initialCompanyId: number | null
   initialMonths:    string[]
   initialMonth:     string
-  initialRows:      PayInfoRow[]
-  initialSearch:    string
+  initialRows:      PayInfoV2[]
+}
+
+/* ── PayInfoV2 → PayslipDetail 변환 (클라이언트용) ── */
+function rowToDetail(row: PayInfoV2): PayslipDetail {
+  const totalEarnings   = Math.round(Number(row.total_earnings   ?? 0))
+  const totalDeductions = Math.abs(Math.round(Number(row.total_deductions ?? 0)))
+  const netPay          = Math.round(Number(row.net_pay ?? 0))
+
+  const daysInMonth = getDaysInMonth(row.accrual_month)
+  const payrollStartDay = (row.companies as any)?.payroll_start_day ?? null
+  const { start: payrollPeriodStart, end: payrollPeriodEnd } =
+    getPayrollPeriod(row.accrual_month, payrollStartDay)
+
+  return {
+    id:           row.id,
+    accrualMonth: row.accrual_month,
+    paymentDate:  row.payment_date ?? null,
+    workDays:     row.work_days != null ? Number(row.work_days) : null,
+    overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : null,
+    startDate:    (row as any).start_date ?? null,
+    endDate:      (row as any).end_date   ?? null,
+    overTime:                  row.Over_time                   ?? null,
+    holidayWorkingHours:       row.Holiday_working_hours       ?? null,
+    nightWorkHours:            row.night_work_hours            ?? null,
+    remainingAnnualLeaveHours: row.Remaining_annual_leave_hours ?? null,
+    earnings:     mapEarnings(row.earnings   ?? {}),
+    deductions:   mapDeductions(row.deductions ?? {}),
+    totalEarnings,
+    totalDeductions,
+    netPay,
+    calculationNotes: row.calculation_notes ?? [],
+    employee: {
+      name:       row.employees?.name       ?? '',
+      email:      row.employees?.email      ?? '',
+      department: row.employees?.department ?? null,
+      position:   row.employees?.position   ?? null,
+      joinDate:   row.employees?.Date_of_joining ?? null,
+      birthDate:  row.employees?.birthdate  ?? null,
+      employeeNo: `EMP-${String(row.employee_id).padStart(4, '0')}`,
+    },
+    companyName:       (row.companies as any)?.name ?? '',
+    daysInMonth,
+    payrollPeriodStart,
+    payrollPeriodEnd,
+  }
 }
 
 /* ── 메인 컴포넌트 ── */
@@ -29,17 +75,16 @@ export default function AdminPayrollClient({
   initialMonths,
   initialMonth,
   initialRows,
-  initialSearch,
 }: Props) {
   const supabase = createClient()
 
   const [companyId, setCompanyId]   = useState<number | null>(initialCompanyId)
   const [months, setMonths]         = useState<string[]>(initialMonths)
   const [month, setMonth]           = useState<string>(initialMonth)
-  const [allRows, setAllRows]       = useState<PayInfoRow[]>(initialRows)
-  const [search, setSearch]         = useState<string>(initialSearch)
+  const [allRows, setAllRows]       = useState<PayInfoV2[]>(initialRows)
+  const [search, setSearch]         = useState<string>('')
   const [loading, setLoading]       = useState<boolean>(false)
-  const [detailRow, setDetailRow]   = useState<PayInfoRow | null>(null)
+  const [detailRow, setDetailRow]   = useState<PayInfoV2 | null>(null)
 
   /* ── 회사 변경 → 월 목록 + 데이터 새로 고침 ── */
   async function onCompanyChange(cid: number | null) {
@@ -47,10 +92,9 @@ export default function AdminPayrollClient({
     setLoading(true)
     setSearch('')
 
-    // 해당 회사의 귀속월 목록
     const monthQuery = cid
-      ? supabase.from('pay_info').select('accrual_month').eq('company_id', cid).order('accrual_month', { ascending: false })
-      : supabase.from('pay_info').select('accrual_month').order('accrual_month', { ascending: false })
+      ? supabase.from('pay_info_v2').select('accrual_month').eq('company_id', cid).order('accrual_month', { ascending: false })
+      : supabase.from('pay_info_v2').select('accrual_month').order('accrual_month', { ascending: false })
     const { data: mData } = await monthQuery
     const newMonths = [...new Set(
       (mData ?? []).map((r: { accrual_month: string }) => r.accrual_month)
@@ -59,7 +103,7 @@ export default function AdminPayrollClient({
 
     const newMonth = newMonths[0] ?? ''
     setMonth(newMonth)
-    await fetchRows(cid, newMonth, '')
+    await fetchRows(cid, newMonth)
     setLoading(false)
   }
 
@@ -67,26 +111,18 @@ export default function AdminPayrollClient({
   async function onMonthChange(m: string) {
     setMonth(m)
     setLoading(true)
-    await fetchRows(companyId, m, search)
+    await fetchRows(companyId, m)
     setLoading(false)
   }
 
-  /* ── 검색 변경 (클라이언트 필터) ── */
-  function onSearch(q: string) {
-    setSearch(q)
-  }
-
   /* ── 실제 데이터 패치 ── */
-  async function fetchRows(cid: number | null, m: string, _q: string) {
-    if (!m) {
-      setAllRows([])
-      return
-    }
+  async function fetchRows(cid: number | null, m: string) {
+    if (!m) { setAllRows([]); return }
     const select = '*, employees(name,email,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))'
     const { data } = cid
-      ? await supabase.from('pay_info').select(select).eq('company_id', cid).eq('accrual_month', m).order('employee_id')
-      : await supabase.from('pay_info').select(select).eq('accrual_month', m).order('employee_id')
-    setAllRows((data ?? []) as PayInfoRow[])
+      ? await supabase.from('pay_info_v2').select(select).eq('company_id', cid).eq('accrual_month', m).order('employee_id')
+      : await supabase.from('pay_info_v2').select(select).eq('accrual_month', m).order('employee_id')
+    setAllRows((data ?? []) as PayInfoV2[])
   }
 
   /* ── 클라이언트 검색 필터 (이름·이메일) ── */
@@ -102,32 +138,19 @@ export default function AdminPayrollClient({
     : allRows
 
   /* ── 요약 통계 ── */
-  const totalPay    = rows.reduce((s, r) => s + (parseInt(r.Total_payment    ?? '0') || 0), 0)
-  const totalDeduct = rows.reduce((s, r) => s + Math.abs(parseInt(r.Total_deductible ?? '0') || 0), 0)
-  const totalNet    = rows.reduce((s, r) => s + (parseInt(r.net_pay          ?? '0') || 0), 0)
+  const totalPay    = rows.reduce((s, r) => s + Math.round(Number(r.total_earnings   ?? 0)), 0)
+  const totalDeduct = rows.reduce((s, r) => s + Math.abs(Math.round(Number(r.total_deductions ?? 0))), 0)
+  const totalNet    = rows.reduce((s, r) => s + Math.round(Number(r.net_pay          ?? 0)), 0)
 
   /* ── 상세 뷰 ── */
   if (detailRow) {
-    const ps  = mapRowToPayslip(detailRow)
-    const emp = detailRow.employees as { name?: string; companies?: { name?: string } | null } | null
+    const detail = rowToDetail(detailRow)
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setDetailRow(null)}
-            className="text-sm text-blue-600 hover:underline flex items-center gap-1"
-          >
-            ← 목록으로
-          </button>
-          <span className="text-xs text-slate-400">
-            {emp?.companies?.name ?? ''}{emp?.name ? ` · ${emp.name}` : ''}
-          </span>
-        </div>
-        <PayslipInlineDetail payslip={ps} />
-        <button onClick={() => setDetailRow(null)} className="btn-secondary w-full">
-          목록으로
-        </button>
-      </div>
+      <PayslipDetailView
+        detail={detail}
+        backLabel="목록으로"
+        onBack={() => setDetailRow(null)}
+      />
     )
   }
 
@@ -142,7 +165,7 @@ export default function AdminPayrollClient({
 
       {/* 필터 영역 */}
       <div className="flex flex-wrap gap-2">
-        {/* 회사 필터 (admin only) */}
+        {/* 회사 필터 */}
         <select
           className="input w-44"
           value={companyId ?? ''}
@@ -176,19 +199,19 @@ export default function AdminPayrollClient({
             className="input pl-9"
             placeholder="직원명·이메일 검색"
             value={search}
-            onChange={e => onSearch(e.target.value)}
+            onChange={e => setSearch(e.target.value)}
           />
           {search && (
             <button
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              onClick={() => onSearch('')}
+              onClick={() => setSearch('')}
             >
               <X size={14} />
             </button>
           )}
         </div>
 
-        {/* 급여명세서 이메일 발송 (회사가 선택된 경우만) */}
+        {/* 급여명세서 이메일 발송 */}
         {month && rows.length > 0 && companyId && (
           <SendPayslipButton
             companyId={companyId}
@@ -257,12 +280,12 @@ export default function AdminPayrollClient({
                         <p className="font-medium text-slate-900">{emp?.name ?? '-'}</p>
                         <p className="text-xs text-slate-400">{emp?.email ?? '-'}</p>
                       </td>
-                      <td className="px-4 py-3.5 text-slate-600 text-xs whitespace-nowrap">{emp?.companies?.name ?? '-'}</td>
+                      <td className="px-4 py-3.5 text-slate-600 text-xs whitespace-nowrap">{(row.companies as any)?.name ?? '-'}</td>
                       <td className="px-4 py-3.5 text-slate-600 text-xs">{emp?.department ?? '-'}</td>
                       <td className="px-4 py-3.5 text-slate-600 text-xs whitespace-nowrap">{formatAccrualMonth(row.accrual_month)}</td>
-                      <td className="px-4 py-3.5 text-slate-700 whitespace-nowrap">{formatKRW(Number(row.Total_payment) || 0)}</td>
-                      <td className="px-4 py-3.5 text-red-500 whitespace-nowrap">-{formatKRW(Math.abs(Number(row.Total_deductible) || 0))}</td>
-                      <td className="px-4 py-3.5 font-semibold text-blue-600 whitespace-nowrap">{formatKRW(Number(row.net_pay) || 0)}</td>
+                      <td className="px-4 py-3.5 text-slate-700 whitespace-nowrap">{formatKRW(Math.round(Number(row.total_earnings ?? 0)))}</td>
+                      <td className="px-4 py-3.5 text-red-500 whitespace-nowrap">-{formatKRW(Math.abs(Math.round(Number(row.total_deductions ?? 0))))}</td>
+                      <td className="px-4 py-3.5 font-semibold text-blue-600 whitespace-nowrap">{formatKRW(Math.round(Number(row.net_pay ?? 0)))}</td>
                       <td className="px-4 py-3.5">
                         <button onClick={() => setDetailRow(row)} className="text-xs text-blue-600 hover:underline whitespace-nowrap">명세서 보기</button>
                       </td>
@@ -279,23 +302,21 @@ export default function AdminPayrollClient({
       {!loading && rows.length > 0 && (
         <div className="md:hidden space-y-2.5">
           {rows.map(row => {
-            const emp = row.employees as { name?: string; email?: string; department?: string; companies?: { name?: string } | null } | null
-            const netPay  = Number(row.net_pay) || 0
-            const grossPay = Number(row.Total_payment) || 0
-            const deduct  = Math.abs(Number(row.Total_deductible) || 0)
+            const emp     = row.employees as { name?: string; email?: string; department?: string; companies?: { name?: string } | null } | null
+            const netPay  = Math.round(Number(row.net_pay ?? 0))
+            const grossPay = Math.round(Number(row.total_earnings ?? 0))
+            const deduct  = Math.abs(Math.round(Number(row.total_deductions ?? 0)))
             return (
               <div key={row.id} className="card p-4 space-y-3">
-                {/* 상단: 직원 + 귀속월 */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-900 truncate">{emp?.name ?? '-'}</p>
-                    <p className="text-xs text-slate-400 truncate">{emp?.companies?.name ?? ''}{emp?.department ? ` · ${emp.department}` : ''}</p>
+                    <p className="text-xs text-slate-400 truncate">{(row.companies as any)?.name ?? ''}{emp?.department ? ` · ${emp.department}` : ''}</p>
                   </div>
                   <span className="badge badge-blue flex-shrink-0 whitespace-nowrap">
                     {formatAccrualMonth(row.accrual_month)}
                   </span>
                 </div>
-                {/* 금액 요약 */}
                 <div className="grid grid-cols-3 gap-2 bg-slate-50 rounded-xl p-3 text-center">
                   <div>
                     <p className="text-[10px] text-slate-400">지급합계</p>

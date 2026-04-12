@@ -17,8 +17,9 @@ import { PayrollNoteAccordion } from '@/components/payslip/payroll-note-accordio
 
 interface Props {
   detail: PayslipDetail
-  backHref?: string   // 기본값: /employee/payslips
-  backLabel?: string  // 기본값: 목록
+  backHref?: string      // 기본값: /employee/payslips
+  backLabel?: string     // 기본값: 목록
+  onBack?: () => void    // 제공 시 Link 대신 button 사용 (인라인 뷰용)
 }
 
 /** 금액을 숨김/공개 상태에 따라 렌더링 */
@@ -47,7 +48,7 @@ function AmountText({
   )
 }
 
-export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', backLabel = '목록' }: Props) {
+export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', backLabel = '목록', onBack }: Props) {
   const [revealed,   setRevealed]   = useState(false)
 
   const today     = new Date().toISOString().slice(0, 10)
@@ -63,10 +64,19 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
 
         {/* ── 헤더 ── */}
         <div className="flex items-center justify-between">
-          <Link href={backHref}
-            className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 -ml-1">
-            <ChevronLeft size={17} />{backLabel}
-          </Link>
+          {onBack ? (
+            <button
+              onClick={onBack}
+              className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 -ml-1"
+            >
+              <ChevronLeft size={17} />{backLabel}
+            </button>
+          ) : (
+            <Link href={backHref}
+              className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 -ml-1">
+              <ChevronLeft size={17} />{backLabel}
+            </Link>
+          )}
           <div className="flex gap-2">
             <button
               onClick={() => setRevealed(r => !r)}

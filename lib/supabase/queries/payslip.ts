@@ -1,3 +1,8 @@
+/**
+ * @deprecated pay_info 기반 레거시 쿼리 파일.
+ * 신규 코드는 payslip-v2.ts (pay_info_v2 기반) 를 사용하세요.
+ * getAllBatches() 는 payroll_batches 조회로 여전히 유효합니다.
+ */
 'use server'
 import { createClient } from '@/lib/supabase/server'
 import type { PayInfoRow } from './payslip-shared'

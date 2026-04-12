@@ -4,7 +4,7 @@
  * admin/manager 공통 사용 — checkCompanyAccess()로 권한 분기
  */
 import { createClient } from '@/lib/supabase/server'
-import type { PayInfoRow } from '@/lib/supabase/queries/payslip-shared'
+import type { PayInfoV2 } from '@/types'
 
 /* ── 공통 헬퍼 ─────────────────────────────────────────────── */
 function parseAmt(val: string | null | undefined): number {
@@ -103,8 +103,8 @@ export async function getCompanyPayrollLedgerSummaries(
 ): Promise<PayrollLedgerSummary[]> {
   const supabase = createClient()
   const { data } = await supabase
-    .from('pay_info')
-    .select('accrual_month, payment_date, Total_payment, Total_deductible, net_pay, employee_id')
+    .from('pay_info_v2')
+    .select('accrual_month, payment_date, total_earnings, total_deductions, net_pay, employee_id')
     .eq('company_id', companyId)
     .order('accrual_month', { ascending: false })
 
@@ -113,9 +113,9 @@ export async function getCompanyPayrollLedgerSummaries(
   const map = new Map<string, PayrollLedgerSummary>()
 
   for (const row of data) {
-    const earnings   = parseAmt(row.Total_payment)
-    const deductions = parseAmt(row.Total_deductible)
-    const net        = parseAmt(row.net_pay)
+    const earnings   = Math.round(Number(row.total_earnings   ?? 0))
+    const deductions = Math.abs(Math.round(Number(row.total_deductions ?? 0)))
+    const net        = Math.round(Number(row.net_pay          ?? 0))
     const month      = row.accrual_month as string
 
     const existing = map.get(month)
@@ -166,37 +166,38 @@ export async function getCompanyEmployees(
 export async function getMonthlyPayrollRows(
   companyId: number,
   payMonth: string,
-): Promise<PayInfoRow[]> {
+): Promise<PayInfoV2[]> {
   const supabase = createClient()
   const { data } = await supabase
-    .from('pay_info')
+    .from('pay_info_v2')
     .select(
       '*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))',
     )
     .eq('company_id', companyId)
     .eq('accrual_month', payMonth)
     .order('employee_id')
-  return (data ?? []) as PayInfoRow[]
+  return (data ?? []) as PayInfoV2[]
 }
 
 /* ═══════════════════════════════════════════════════════════
    특정 직원 급여명세서 단건
 ═══════════════════════════════════════════════════════════ */
+/** @deprecated getAdminEmployeePayslipDetail (lib/employee-payslips.ts) 사용 권장 */
 export async function getEmployeePayslipForAdmin(
   companyId: number,
   payMonth: string,
   employeeId: number,
-): Promise<PayInfoRow | null> {
+): Promise<PayInfoV2 | null> {
   const supabase = createClient()
   const { data, error } = await supabase
-    .from('pay_info')
+    .from('pay_info_v2')
     .select(
       '*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))',
     )
     .eq('company_id', companyId)
     .eq('accrual_month', payMonth)
     .eq('employee_id', employeeId)
-    .single()
+    .maybeSingle()
   if (error || !data) return null
-  return data as PayInfoRow
+  return data as PayInfoV2
 }

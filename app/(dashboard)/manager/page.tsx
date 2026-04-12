@@ -4,7 +4,7 @@ import { Plus, BarChart3, Users, Upload, ClipboardList } from 'lucide-react'
 import { createClient }        from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { getCompanyEmployees } from '@/lib/supabase/queries/employee'
-import { getAvailableMonths }  from '@/lib/supabase/queries/payslip'
+import { getAvailableMonthsV2 } from '@/lib/supabase/queries/payslip-v2'
 import { formatMonth }         from '@/lib/utils'
 import EmptyState              from '@/components/common/empty-state'
 
@@ -28,7 +28,7 @@ export default async function ManagerDashboard() {
   /* ── 데이터 병렬 조회 ── */
   const [employees, months] = await Promise.all([
     getCompanyEmployees(companyId),
-    getAvailableMonths(companyId),
+    getAvailableMonthsV2(companyId),
   ])
 
   const activeEmployees = employees.filter(e => e.is_active)

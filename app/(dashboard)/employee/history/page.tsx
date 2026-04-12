@@ -2,12 +2,8 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { CalendarDays, Wallet } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getEffectiveEmployeeContext } from '@/lib/impersonation/get-effective-context'
-import { getMyPayslips } from '@/lib/supabase/queries/payslip'
-import { getEmployeePayslipsForHistory } from '@/lib/employee-payslips'
-import { mapRowToPayslip } from '@/lib/supabase/queries/payslip-shared'
+import { getCurrentEmployee, getEmployeePayslipsForHistory } from '@/lib/employee-payslips'
 import { formatKRW, formatAccrualMonth, formatDateDot } from '@/lib/payslip-utils'
-import { getImpersonationContext } from '@/lib/impersonation/server'
 
 export default async function EmployeeHistoryPage() {
   const supabase = createClient()
@@ -19,28 +15,10 @@ export default async function EmployeeHistoryPage() {
   const role = profile?.role
   if (role !== 'employee' && role !== 'admin') redirect(`/${role ?? 'admin'}`)
 
-  const impersonation = getImpersonationContext()
-  const isImpersonating = impersonation?.adminUserId === user.id
-
-  let payslips: Array<{ id: number; netPay: number; accrualMonth: string; paymentDate: string | null }>
-
-  if (isImpersonating) {
-    // 빙의 중: getEffectiveEmployeeContext()로 직원 ID 확인 후 pay_info_v2 기반 조회
-    const empCtx = await getEffectiveEmployeeContext()
-    if (!empCtx) {
-      payslips = []
-    } else {
-      const rows = await getEmployeePayslipsForHistory(empCtx.employeeId)
-      payslips = rows
-    }
-  } else {
-    // 실제 employee: 기존 pay_info 기반 조회
-    const rows = await getMyPayslips()
-    payslips = rows.map(r => {
-      const ps = mapRowToPayslip(r)
-      return { id: r.id, netPay: ps.netPay, accrualMonth: ps.accrualMonth, paymentDate: ps.paymentDate }
-    })
-  }
+  const employee = await getCurrentEmployee()
+  const payslips = employee
+    ? await getEmployeePayslipsForHistory(employee.id)
+    : []
 
   const total = payslips.reduce((s, p) => s + p.netPay, 0)
 

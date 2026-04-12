@@ -18,12 +18,6 @@ interface Props {
   params: { payMonth: string }
 }
 
-function parseAmt(val: string | null | undefined): number {
-  if (!val) return 0
-  const n = parseInt(String(val).replace(/[,\s]/g, ''), 10)
-  return isNaN(n) ? 0 : Math.abs(n)
-}
-
 export default async function ManagerPayrollMonthPage({ params }: Props) {
   const payMonth = params.payMonth
 
@@ -45,9 +39,9 @@ export default async function ManagerPayrollMonthPage({ params }: Props) {
 
   if (!company) notFound()
 
-  const totalEarnings   = rows.reduce((s, r) => s + parseAmt(r.Total_payment),    0)
-  const totalDeductions = rows.reduce((s, r) => s + parseAmt(r.Total_deductible), 0)
-  const totalNetPay     = rows.reduce((s, r) => s + parseAmt(r.net_pay),           0)
+  const totalEarnings   = rows.reduce((s, r) => s + Math.round(Number(r.total_earnings   ?? 0)), 0)
+  const totalDeductions = rows.reduce((s, r) => s + Math.abs(Math.round(Number(r.total_deductions ?? 0))), 0)
+  const totalNetPay     = rows.reduce((s, r) => s + Math.round(Number(r.net_pay          ?? 0)), 0)
   const paymentDate     = rows.find(r => r.payment_date)?.payment_date ?? null
 
   const basePath = `/manager/payroll/${payMonth}`

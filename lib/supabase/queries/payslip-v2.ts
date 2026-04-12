@@ -59,3 +59,27 @@ export async function getAvailableMonthsV2(companyId?: number): Promise<string[]
   const { data } = await q.order('accrual_month', { ascending: false })
   return [...new Set((data ?? []).map(r => r.accrual_month))]
 }
+
+/** 어드민: 급여 목록 조회 (전체 or 회사 필터) */
+export async function getAdminPayrollListV2(opts?: {
+  companyId?:    number
+  accrualMonth?: string
+  search?:       string
+}): Promise<PayInfoV2[]> {
+  const supabase = createClient()
+
+  const select = '*, employees(name,email,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))'
+
+  let q = supabase.from('pay_info_v2').select(select).order('employee_id')
+
+  if (opts?.companyId)    q = q.eq('company_id', opts.companyId)
+  if (opts?.accrualMonth) q = q.eq('accrual_month', opts.accrualMonth)
+
+  const { data } = await q
+  return (data ?? []) as PayInfoV2[]
+}
+
+/** 어드민: 사용 가능한 귀속월 목록 (전체 or 회사 필터) */
+export async function getAdminAvailableMonthsV2(companyId?: number): Promise<string[]> {
+  return getAvailableMonthsV2(companyId)
+}

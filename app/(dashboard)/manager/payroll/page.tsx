@@ -1,7 +1,6 @@
-import { redirect } from 'next/navigation'
-import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
-import { getCompanyPayroll, getAvailableMonths } from '@/lib/supabase/queries/payslip'
-import ManagerPayrollClient from './client'
+import { getEffectiveManagerContext }         from '@/lib/impersonation/get-effective-context'
+import { getCompanyPayrollV2, getAvailableMonthsV2 } from '@/lib/supabase/queries/payslip-v2'
+import ManagerPayrollClient                  from './client'
 
 export default async function ManagerPayrollPage() {
   const ctx = await getEffectiveManagerContext()
@@ -12,9 +11,9 @@ export default async function ManagerPayrollPage() {
 
   const { companyId, companyName } = ctx
 
-  const months      = await getAvailableMonths(companyId)
+  const months      = await getAvailableMonthsV2(companyId)
   const latestMonth = months[0] ?? ''
-  const rows        = latestMonth ? await getCompanyPayroll(companyId, latestMonth) : []
+  const rows        = latestMonth ? await getCompanyPayrollV2(companyId, latestMonth) : []
 
   return (
     <ManagerPayrollClient

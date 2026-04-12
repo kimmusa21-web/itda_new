@@ -6,10 +6,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Users, ChevronRight } from 'lucide-react'
-import type { PayInfoRow } from '@/lib/supabase/queries/payslip-shared'
+import type { PayInfoV2 } from '@/types'
 import { formatKRW } from '@/lib/payslip-utils'
 
-/* 내부 타입: employees join에 employee_number 포함 */
 type EmpField = {
   name: string
   email: string
@@ -19,15 +18,9 @@ type EmpField = {
 }
 
 interface Props {
-  rows: PayInfoRow[]
+  rows: PayInfoV2[]
   /** 클릭 시 이동할 base path, 이후 /employees/[employeeId] 가 붙음 */
   basePath: string
-}
-
-function parseAmt(val: string | null | undefined): number {
-  if (!val) return 0
-  const n = parseInt(String(val).replace(/[,\s]/g, ''), 10)
-  return isNaN(n) ? 0 : Math.abs(n)
 }
 
 export function CompanyEmployeePayrollTable({ rows, basePath }: Props) {
@@ -91,9 +84,9 @@ export function CompanyEmployeePayrollTable({ rows, basePath }: Props) {
                 <tbody className="divide-y divide-slate-50">
                   {filtered.map(row => {
                     const emp      = row.employees as EmpField | null
-                    const baseSal  = parseAmt(row.base_salary)
-                    const deduct   = parseAmt(row.Total_deductible)
-                    const net      = parseAmt(row.net_pay)
+                    const baseSal  = Math.round(Number(row.earnings?.base_salary ?? 0))
+                    const deduct   = Math.abs(Math.round(Number(row.total_deductions ?? 0)))
+                    const net      = Math.round(Number(row.net_pay ?? 0))
                     return (
                       <tr
                         key={row.id}
@@ -136,9 +129,9 @@ export function CompanyEmployeePayrollTable({ rows, basePath }: Props) {
           <div className="sm:hidden space-y-2.5">
             {filtered.map(row => {
               const emp    = row.employees as EmpField | null
-              const deduct = parseAmt(row.Total_deductible)
-              const net    = parseAmt(row.net_pay)
-              const gross  = parseAmt(row.Total_payment)
+              const deduct = Math.abs(Math.round(Number(row.total_deductions ?? 0)))
+              const net    = Math.round(Number(row.net_pay ?? 0))
+              const gross  = Math.round(Number(row.total_earnings ?? 0))
               return (
                 <button
                   key={row.id}

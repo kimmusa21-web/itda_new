@@ -1,7 +1,7 @@
-import { redirect }                  from 'next/navigation'
-import { createClient }              from '@/lib/supabase/server'
-import { getAdminPayrollList, getAdminAvailableMonths } from '@/lib/supabase/queries/payslip'
-import AdminPayrollClient            from './client'
+import { redirect }                          from 'next/navigation'
+import { createClient }                      from '@/lib/supabase/server'
+import { getAdminPayrollListV2, getAdminAvailableMonthsV2 } from '@/lib/supabase/queries/payslip-v2'
+import AdminPayrollClient                    from './client'
 
 export const metadata = { title: '급여 조회 | itda' }
 
@@ -29,15 +29,14 @@ export default async function AdminPayrollPage({ searchParams }: Props) {
   /* ── 3. 검색 파라미터 파싱 ── */
   const companyId    = searchParams.company ? Number(searchParams.company) : undefined
   const accrualMonth = searchParams.month   ?? undefined
-  const search       = searchParams.q       ?? undefined
 
   /* ── 4. 사용 가능한 월 목록 ── */
-  const months = await getAdminAvailableMonths(companyId)
+  const months = await getAdminAvailableMonthsV2(companyId)
   const selectedMonth = accrualMonth ?? months[0] ?? ''
 
   /* ── 5. 급여 목록 조회 ── */
   const rows = selectedMonth
-    ? await getAdminPayrollList({ companyId, accrualMonth: selectedMonth, search })
+    ? await getAdminPayrollListV2({ companyId, accrualMonth: selectedMonth })
     : []
 
   return (
@@ -47,7 +46,6 @@ export default async function AdminPayrollPage({ searchParams }: Props) {
       initialMonths={months}
       initialMonth={selectedMonth}
       initialRows={rows}
-      initialSearch={search ?? ''}
     />
   )
 }
