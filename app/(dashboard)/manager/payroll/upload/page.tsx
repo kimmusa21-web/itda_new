@@ -1,7 +1,7 @@
 import { redirect }         from 'next/navigation'
 import { createClient }     from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
-import { PayslipCsvUpload } from '@/components/payslip-csv-upload/payslip-csv-upload'
+import { ManagerUploadTabs } from './upload-tabs'
 
 export const metadata = { title: '급여업로드 | itda' }
 
@@ -37,10 +37,7 @@ export default async function ManagerPayrollUploadPage() {
         </p>
       </div>
 
-      <PayslipCsvUpload
-        role="manager"
-        defaultCompanyId={companyId}
-      />
+      <ManagerUploadTabs companyId={companyId} />
     </div>
   )
 }

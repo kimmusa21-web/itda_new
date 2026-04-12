@@ -1,16 +1,17 @@
 'use server'
 /* ================================================================
-   itda — 급여 간편 CSV 업로드 Server Action
+   itda — 급여 표준 CSV 업로드 Server Action (pay_info_v2 전체 컬럼)
 
    처리 순서:
      1. 인증 + 권한 확인 (admin / manager)
      2. manager: company_id 불일치 차단
      3. 행별 형식 검증
      4. 파일 내 중복 검사 (email + pay_month)
-     5. company_id + email 기준 직원 매칭
-        → Option A: 한 명이라도 실패 시 전체 중단
-     6. pay_info_v2 upsert (company_id, employee_id, accrual_month)
-     7. 결과 반환
+     5. Option A: 오류 1건이라도 → 전체 중단
+     6. company_id + email 기준 직원 매칭
+        → 한 명이라도 실패 시 전체 중단
+     7. pay_info_v2 upsert (company_id, employee_id, accrual_month)
+     8. 결과 반환
 ================================================================ */
 
 import { createClient } from '@/lib/supabase/server'
@@ -22,18 +23,26 @@ import type {
 } from '@/types/payslip-csv-upload'
 
 /* ── 숫자 변환 헬퍼 ──────────────────────────────────────── */
-function toNum(v: string | undefined): number {
-  if (!v || v.trim() === '') return 0
+/** 빈값/NaN → null, 음수 허용 여부 선택 */
+function toNumOrNull(v: string | undefined, allowNegative = false): number | null {
+  if (!v || v.trim() === '') return null
   const n = Number(v.replace(/,/g, ''))
-  return isNaN(n) || n < 0 ? 0 : n
+  if (isNaN(n)) return null
+  if (!allowNegative && n < 0) return null
+  return n
 }
 
-/* ── 이메일 정규식 ───────────────────────────────────────── */
+/** 합산용: 빈값/NaN → 0 */
+function toNum(v: string | undefined, allowNegative = false): number {
+  return toNumOrNull(v, allowNegative) ?? 0
+}
+
+/* ── 정규식 ─────────────────────────────────────────────── */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/
 const DATE_RE  = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/
 
-/* ── 행 검증 ────────────────────────────────────────────── */
+/* ── 서버 측 행 검증 ────────────────────────────────────── */
 function serverValidateRow(
   row: PayslipCsvRow,
   rowNumber: number,
@@ -41,23 +50,152 @@ function serverValidateRow(
   const failures: PayslipCsvFailure[] = []
   const fail = (reason: string) => failures.push({ rowNumber, email: row.email, reason })
 
-  if (!row.email)                            fail('이메일 필수값')
-  else if (!EMAIL_RE.test(row.email))        fail(`이메일 형식 오류: ${row.email}`)
-  if (!row.pay_month)                        fail('귀속월 필수값 (YYYY-MM)')
-  else if (!MONTH_RE.test(row.pay_month))    fail(`귀속월 형식 오류: ${row.pay_month}`)
-  if (!row.base_salary)                      fail('기본급 필수값')
-  else if (isNaN(Number(row.base_salary)))   fail(`기본급 숫자 오류: ${row.base_salary}`)
-  if (row.bonus     && isNaN(Number(row.bonus)))     fail(`상여금 숫자 오류: ${row.bonus}`)
-  if (row.allowance && isNaN(Number(row.allowance))) fail(`수당 숫자 오류: ${row.allowance}`)
-  if (row.deduction && isNaN(Number(row.deduction))) fail(`공제액 숫자 오류: ${row.deduction}`)
-  if (row.start_date && !DATE_RE.test(row.start_date))
-    fail(`정산시작일 형식 오류: ${row.start_date} (YYYY-MM-DD 필요)`)
-  if (row.end_date && !DATE_RE.test(row.end_date))
-    fail(`정산종료일 형식 오류: ${row.end_date} (YYYY-MM-DD 필요)`)
+  if (!row.email)                          fail('이메일 필수값')
+  else if (!EMAIL_RE.test(row.email))      fail(`이메일 형식 오류: ${row.email}`)
+  if (!row.pay_month)                      fail('귀속월 필수값 (YYYY-MM)')
+  else if (!MONTH_RE.test(row.pay_month))  fail(`귀속월 형식 오류: ${row.pay_month}`)
+  if (!row.base_salary)                    fail('기본급 필수값')
+  else if (isNaN(Number(row.base_salary))) fail(`기본급 숫자 오류: ${row.base_salary}`)
+
   if (row.payment_date && !DATE_RE.test(row.payment_date))
-    fail(`지급일 형식 오류: ${row.payment_date}`)
+    fail(`급여지급일 형식 오류: ${row.payment_date}`)
+  if (row.start_date && !DATE_RE.test(row.start_date))
+    fail(`정산시작일 형식 오류: ${row.start_date}`)
+  if (row.end_date && !DATE_RE.test(row.end_date))
+    fail(`정산종료일 형식 오류: ${row.end_date}`)
 
   return failures
+}
+
+/* ── pay_info_v2 레코드 빌드 ────────────────────────────── */
+function buildUpsertRecord(
+  row:        PayslipCsvRow,
+  companyId:  number,
+  employeeId: number,
+) {
+  // 지급 항목 개별 컬럼
+  const baseSalary             = toNum(row.base_salary)
+  const overtimePayFixed       = toNumOrNull(row.overtime_pay_fixed)
+  const overtimePay            = toNumOrNull(row.overtime_pay)
+  const holidaytimePay         = toNumOrNull(row.holidaytime_pay)
+  const nighttimePay           = toNumOrNull(row.nighttime_pay)
+  const mealAllowance          = toNumOrNull(row.meal_allowance)
+  const incentive              = toNumOrNull(row.incentive)
+  const annualLeaveAllowance   = toNumOrNull(row.annual_leave_allowance)
+  const otherAllowances        = toNumOrNull(row.Other_allowances)
+  const otherAllowances2       = toNumOrNull(row.Other_allowances2)
+  const holidayBonus           = toNumOrNull(row.Holiday_bonus)
+
+  // 공제 항목 개별 컬럼 (환급 필드는 음수 허용)
+  const nationalPension           = toNumOrNull(row.national_pension)
+  const healthInsurance           = toNumOrNull(row.health_insurance)
+  const longtermCare              = toNumOrNull(row.longterm_care)
+  const employmentInsurance       = toNumOrNull(row.employment_insurance)
+  const incomeTax                 = toNumOrNull(row.income_tax)
+  const residentTax               = toNumOrNull(row.resident_tax)
+  const studentLoan               = toNumOrNull(row.student_loan)
+  const incomeTaxRefund           = toNumOrNull(row.income_tax_refund, true)
+  const residentTaxRefund         = toNumOrNull(row.resident_tax_refund, true)
+  const healthInsuranceAdjustment = toNumOrNull(row.health_insurance_adjustment, true)
+  const otherDeductions           = toNumOrNull(row.Other_deductions)
+
+  // JSONB earnings 빌드 (0이 아닌 항목만)
+  const earnings: Record<string, number> = {}
+  const earningsMap: [string, number | null][] = [
+    ['base_salary',            baseSalary],
+    ['overtime_pay_fixed',     overtimePayFixed],
+    ['overtime_pay',           overtimePay],
+    ['holidaytime_pay',        holidaytimePay],
+    ['nighttime_pay',          nighttimePay],
+    ['meal_allowance',         mealAllowance],
+    ['incentive',              incentive],
+    ['annual_leave_allowance', annualLeaveAllowance],
+    ['Other_allowances',       otherAllowances],
+    ['Other_allowances2',      otherAllowances2],
+    ['Holiday_bonus',          holidayBonus],
+  ]
+  for (const [k, v] of earningsMap) {
+    if (v !== null && v !== 0) earnings[k] = v
+  }
+
+  // JSONB deductions 빌드 (null이 아닌 항목만)
+  const deductions: Record<string, number> = {}
+  const deductionsMap: [string, number | null][] = [
+    ['national_pension',            nationalPension],
+    ['health_insurance',            healthInsurance],
+    ['longterm_care',               longtermCare],
+    ['employment_insurance',        employmentInsurance],
+    ['income_tax',                  incomeTax],
+    ['resident_tax',                residentTax],
+    ['student_loan',                studentLoan],
+    ['income_tax_refund',           incomeTaxRefund],
+    ['resident_tax_refund',         residentTaxRefund],
+    ['health_insurance_adjustment', healthInsuranceAdjustment],
+    ['Other_deductions',            otherDeductions],
+  ]
+  for (const [k, v] of deductionsMap) {
+    if (v !== null) deductions[k] = v
+  }
+
+  // 합계 계산 (CSV에 있으면 그 값 사용, 없으면 계산)
+  const totalEarnings = row.Total_payment
+    ? toNum(row.Total_payment)
+    : Object.values(earnings).reduce((s, v) => s + v, 0)
+
+  const totalDeductions = row.Total_deductible
+    ? toNum(row.Total_deductible, true)
+    : Object.values(deductions).reduce((s, v) => s + v, 0)
+
+  const netPay = row.net_pay
+    ? toNum(row.net_pay, true)
+    : totalEarnings - totalDeductions
+
+  // 근로시간: Over_time → overtime_hours (분 단위)
+  const overtimeHours = toNumOrNull(row.Over_time) ?? 0
+
+  return {
+    company_id:        companyId,
+    employee_id:       employeeId,
+    accrual_month:     row.pay_month,
+    payment_date:      row.payment_date || null,
+    start_date:        row.start_date   || null,
+    end_date:          row.end_date     || null,
+    work_days:         row.work_days    ? toNum(row.work_days) : null,
+    overtime_hours:    overtimeHours,
+    // 지급 항목 개별 컬럼
+    base_salary:               baseSalary,
+    overtime_pay_fixed:        overtimePayFixed,
+    overtime_pay:              overtimePay,
+    holidaytime_pay:           holidaytimePay,
+    nighttime_pay:             nighttimePay,
+    meal_allowance:            mealAllowance,
+    incentive:                 incentive,
+    annual_leave_allowance:    annualLeaveAllowance,
+    Other_allowances:          otherAllowances,
+    Other_allowances2:         otherAllowances2,
+    Holiday_bonus:             holidayBonus,
+    Total_payment:             row.Total_payment  ? toNum(row.Total_payment)         : null,
+    // 공제 항목 개별 컬럼
+    national_pension:           nationalPension,
+    health_insurance:           healthInsurance,
+    longterm_care:              longtermCare,
+    employment_insurance:       employmentInsurance,
+    income_tax:                 incomeTax,
+    resident_tax:               residentTax,
+    student_loan:               studentLoan,
+    income_tax_refund:          incomeTaxRefund,
+    resident_tax_refund:        residentTaxRefund,
+    health_insurance_adjustment: healthInsuranceAdjustment,
+    Other_deductions:           otherDeductions,
+    Total_deductible:           row.Total_deductible ? toNum(row.Total_deductible, true) : null,
+    // JSONB
+    earnings,
+    deductions,
+    total_earnings:   totalEarnings,
+    total_deductions: totalDeductions,
+    net_pay:          netPay,
+    calculation_notes: ['표준 CSV 업로드'],
+  }
 }
 
 /* ── 메인 서버 액션 ─────────────────────────────────────── */
@@ -98,30 +236,27 @@ export async function uploadPayslipCsv(
 
   /* 4. 행별 형식 검증 */
   for (let i = 0; i < rows.length; i++) {
-    const rowNumber = i + 2  // 헤더 = 1행
-    const rowFails  = serverValidateRow(rows[i], rowNumber)
-    allFailures.push(...rowFails)
+    allFailures.push(...serverValidateRow(rows[i], i + 2))
   }
 
-  /* 5. 파일 내 중복 검사 (email + pay_month) */
+  /* 5. 파일 내 중복 검사 */
   const keyCount = new Map<string, number>()
   for (let i = 0; i < rows.length; i++) {
-    const rowNumber = i + 2
     const row = rows[i]
-    if (!row.email || !row.pay_month) continue   // 이미 검증 에러 있음
+    if (!row.email || !row.pay_month) continue
     const key = `${row.email.toLowerCase()}|${row.pay_month}`
     if (keyCount.has(key)) {
       allFailures.push({
-        rowNumber,
-        email:  row.email,
-        reason: `파일 내 중복 (${row.email} / ${row.pay_month})`,
+        rowNumber: i + 2,
+        email:     row.email,
+        reason:    `파일 내 중복 (${row.email} / ${row.pay_month})`,
       })
     } else {
-      keyCount.set(key, rowNumber)
+      keyCount.set(key, i + 2)
     }
   }
 
-  /* 6. Option A: 형식/중복 오류 있으면 전체 중단 */
+  /* Option A: 형식/중복 오류 있으면 전체 중단 */
   if (allFailures.length > 0) {
     return {
       totalCount,
@@ -132,7 +267,7 @@ export async function uploadPayslipCsv(
     }
   }
 
-  /* 7. 회사 직원 목록 조회 (company_id 기준) */
+  /* 6. 직원 목록 조회 */
   const { data: employees, error: empError } = await supabase
     .from('employees')
     .select('id, email')
@@ -142,75 +277,40 @@ export async function uploadPayslipCsv(
     return { ...empty, totalCount, authError: `직원 조회 오류: ${empError.message}` }
   }
 
-  // email → employee_id 맵 (company 내, 소문자 정규화)
-  const emailToEmployeeId = new Map<string, number>()
+  const emailToId = new Map<string, number>()
   for (const emp of employees ?? []) {
-    if (emp.email) {
-      emailToEmployeeId.set(emp.email.toLowerCase(), emp.id as number)
-    }
+    if (emp.email) emailToId.set(emp.email.toLowerCase(), emp.id as number)
   }
 
-  /* 8. 직원 매칭 (company_id + email) */
+  /* 7. 직원 매칭 */
   const matchFailures: PayslipCsvFailure[] = []
   for (let i = 0; i < rows.length; i++) {
-    const rowNumber = i + 2
     const row = rows[i]
-    const empId = emailToEmployeeId.get(row.email.toLowerCase())
-    if (!empId) {
+    if (!emailToId.has(row.email.toLowerCase())) {
       matchFailures.push({
-        rowNumber,
-        email:  row.email,
-        reason: `직원 없음 — company_id=${companyId}, email=${row.email}`,
+        rowNumber: i + 2,
+        email:     row.email,
+        reason:    `직원 없음 — company_id=${companyId}, email=${row.email}`,
       })
     }
   }
 
-  /* Option A: 한 명이라도 매칭 실패 → 전체 중단 */
   if (matchFailures.length > 0) {
     return {
       totalCount,
       successCount: 0,
       failureCount: matchFailures.length,
       failures:     matchFailures,
-      authError:    `직원 매칭 실패 ${matchFailures.length}건. 전체 업로드를 중단했습니다. employees 테이블에서 직원 등록 여부를 확인하세요.`,
+      authError:    `직원 매칭 실패 ${matchFailures.length}건. employees 테이블에서 직원 등록 여부를 확인하세요.`,
     }
   }
 
-  /* 9. pay_info_v2 upsert 데이터 구성 */
-  const upsertRows = rows.map(row => {
-    const baseSalary = toNum(row.base_salary)
-    const bonus      = toNum(row.bonus)
-    const allowance  = toNum(row.allowance)
-    const deduction  = toNum(row.deduction)
+  /* 8. upsert 데이터 빌드 */
+  const upsertRows = rows.map(row =>
+    buildUpsertRecord(row, companyId, emailToId.get(row.email.toLowerCase())!)
+  )
 
-    const totalEarnings    = baseSalary + bonus + allowance
-    const totalDeductions  = deduction
-    const netPay           = totalEarnings - totalDeductions
-
-    return {
-      company_id:        companyId,
-      employee_id:       emailToEmployeeId.get(row.email.toLowerCase())!,
-      accrual_month:     row.pay_month,
-      payment_date:      row.payment_date || null,
-      // ★ 정산기간 직접 저장
-      start_date:        row.start_date || null,
-      end_date:          row.end_date   || null,
-      earnings: {
-        base_salary: baseSalary,
-        bonus,
-        allowance,
-      },
-      deductions: {
-        deduction,
-      },
-      total_earnings:    totalEarnings,
-      total_deductions:  totalDeductions,
-      net_pay:           netPay,
-      calculation_notes: ['간편 CSV 업로드'],
-    }
-  })
-
-  /* 10. bulk upsert (conflict: company_id, employee_id, accrual_month) */
+  /* 9. bulk upsert */
   const BATCH_SIZE = 100
   let successCount = 0
   const upsertFailures: PayslipCsvFailure[] = []
@@ -226,12 +326,10 @@ export async function uploadPayslipCsv(
       })
 
     if (upsertError) {
-      // 배치 실패 시 해당 배치 전체를 실패로 처리
       for (let j = start; j < start + batch.length; j++) {
-        const row = rows[j]
         upsertFailures.push({
           rowNumber: j + 2,
-          email:     row?.email ?? '',
+          email:     rows[j]?.email ?? '',
           reason:    `DB 저장 오류: ${upsertError.message}`,
         })
       }

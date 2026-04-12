@@ -1,24 +1,25 @@
 'use client'
 /* ================================================================
-   itda — 급여 표준 CSV 업로드 컴포넌트
-   admin: 회사 선택 → 파일 업로드
-   manager: 고정 company_id
+   itda — 급여대장 자동 인식 업로드 컴포넌트
+   표준 CSV + 한국어 급여대장 양식 모두 지원
 ================================================================ */
 
 import { useState, useRef } from 'react'
 import {
-  Upload, Download, AlertCircle, FileText, X,
+  Upload, AlertCircle, FileText, X,
   CheckCircle, XCircle, Loader2, RefreshCw,
+  Sparkles, Info,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
-  downloadPayslipCsvTemplate,
-  parsePayslipCsv,
+  autoDetectAndParseCsv,
+  type AutoDetectResult,
+} from '@/lib/payroll-csv-auto-detect'
+import {
   validatePayslipRow,
   checkPayslipInternalDuplicates,
 } from '@/lib/payslip-csv-utils'
 import { uploadPayslipCsv } from '@/lib/actions/payslip-csv-upload'
-import { REQUIRED_PAYSLIP_KEYS, REQUIRED_PAYSLIP_LABELS } from '@/types/payslip-csv-upload'
 import type { PayslipCsvRow, PayslipCsvResult, PayslipCsvFailure } from '@/types/payslip-csv-upload'
 
 interface Props {
@@ -29,12 +30,13 @@ interface Props {
 
 type Step = 'idle' | 'preview' | 'uploading' | 'done'
 
-export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Props) {
+export function AutoDetectUpload({ role, defaultCompanyId, companies = [] }: Props) {
   const [step, setStep]               = useState<Step>('idle')
   const [companyId, setCompanyId]     = useState<number | ''>(defaultCompanyId ?? '')
   const [fileName, setFileName]       = useState('')
+  const [detectResult, setDetectResult] = useState<AutoDetectResult | null>(null)
   const [rows, setRows]               = useState<PayslipCsvRow[]>([])
-  const [headerError, setHeaderError] = useState<string | null>(null)
+  const [fileError, setFileError]     = useState<string | null>(null)
   const [previewErrors, setPreviewErrors] = useState<Record<number, PayslipCsvFailure[]>>({})
   const [result, setResult]           = useState<PayslipCsvResult | null>(null)
   const [authError, setAuthError]     = useState<string | null>(null)
@@ -46,35 +48,37 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
     if (!file) return
 
     if (!file.name.toLowerCase().endsWith('.csv')) {
-      setHeaderError('CSV 파일(.csv)만 업로드 가능합니다.')
+      setFileError('CSV 파일(.csv)만 업로드 가능합니다.')
       return
     }
 
     setFileName(file.name)
-    setHeaderError(null)
+    setFileError(null)
     setResult(null)
     setAuthError(null)
+    setDetectResult(null)
 
-    const parsed = await parsePayslipCsv(file)
+    const detected = await autoDetectAndParseCsv(file)
+    setDetectResult(detected)
 
-    if (parsed.headerError) {
-      setHeaderError(parsed.headerError)
+    if (detected.headerError) {
+      setFileError(detected.headerError)
       setRows([])
       setStep('idle')
       return
     }
 
-    if (parsed.rows.length === 0) {
-      setHeaderError('CSV 파일에 데이터가 없습니다.')
+    if (detected.rows.length === 0) {
+      setFileError('파일에 유효한 데이터가 없습니다.')
       setRows([])
       setStep('idle')
       return
     }
 
-    const { duplicates } = checkPayslipInternalDuplicates(parsed.rows)
+    const { duplicates } = checkPayslipInternalDuplicates(detected.rows)
 
     const errors: Record<number, PayslipCsvFailure[]> = {}
-    parsed.rows.forEach((row, idx) => {
+    detected.rows.forEach((row, idx) => {
       const rowNumber = idx + 2
       const rowFails: PayslipCsvFailure[] = []
 
@@ -89,7 +93,7 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
     })
 
     setPreviewErrors(errors)
-    setRows(parsed.rows)
+    setRows(detected.rows)
     setStep('preview')
   }
 
@@ -122,7 +126,8 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
     setStep('idle')
     setRows([])
     setFileName('')
-    setHeaderError(null)
+    setFileError(null)
+    setDetectResult(null)
     setPreviewErrors({})
     setResult(null)
     setAuthError(null)
@@ -142,26 +147,17 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
     <div className="space-y-6">
 
       {/* 안내 */}
-      <div className="card p-5 bg-blue-50 border-blue-100 space-y-3">
+      <div className="card p-5 bg-violet-50 border-violet-100 space-y-3">
         <div className="flex items-center gap-2">
-          <AlertCircle size={16} className="text-blue-500 flex-shrink-0" />
-          <p className="text-sm font-medium text-blue-800">표준 CSV 업로드 안내</p>
+          <Sparkles size={16} className="text-violet-500 flex-shrink-0" />
+          <p className="text-sm font-medium text-violet-800">자동 인식 업로드</p>
         </div>
-        <ul className="text-xs text-blue-700 space-y-1 ml-5 list-disc">
-          <li>
-            필수 컬럼: {REQUIRED_PAYSLIP_KEYS.map(k => REQUIRED_PAYSLIP_LABELS[k]).join(', ')}
-          </li>
-          <li>귀속월: <code className="bg-blue-100 px-1 rounded">YYYY-MM</code> (예: 2026-04) — 지급합계·공제합계·차인지급액 미입력 시 자동 계산</li>
-          <li>직원 매칭 기준: <strong>회사 + 이메일</strong> — 한 명이라도 없으면 전체 중단</li>
-          <li>같은 직원 + 귀속월로 재업로드 시 자동 덮어쓰기됩니다.</li>
+        <ul className="text-xs text-violet-700 space-y-1 ml-5 list-disc">
+          <li><strong>표준 CSV</strong>: email + pay_month 헤더가 있는 표준 양식을 자동 감지합니다.</li>
+          <li><strong>한국어 급여대장</strong>: 귀속월·성명·기본급 등 한국어 헤더를 자동으로 매핑합니다.</li>
+          <li>이메일 컬럼이 없는 경우: 직원 매칭 실패로 업로드가 불가합니다 — 직원 목록에 이메일을 등록하세요.</li>
+          <li>인식되지 않은 컬럼은 업로드 시 무시됩니다.</li>
         </ul>
-        <button
-          onClick={downloadPayslipCsvTemplate}
-          className="flex items-center gap-2 text-sm font-medium text-blue-700 hover:text-blue-900 underline-offset-2 hover:underline"
-        >
-          <Download size={14} />
-          표준 양식 다운로드 (35컬럼)
-        </button>
       </div>
 
       {/* 회사 선택 (admin only) */}
@@ -194,7 +190,7 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
             'border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer',
             isUploading
               ? 'bg-slate-50 border-slate-200 cursor-not-allowed'
-              : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50/30',
+              : 'border-violet-200 hover:border-violet-400 hover:bg-violet-50/30',
           )}
           onClick={() => !isUploading && fileInputRef.current?.click()}
         >
@@ -206,11 +202,11 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
             onChange={handleFileChange}
             disabled={isUploading}
           />
-          <Upload size={28} className="mx-auto text-slate-300 mb-2" />
+          <Sparkles size={28} className="mx-auto text-violet-300 mb-2" />
           {fileName ? (
             <div className="flex items-center justify-center gap-2">
-              <FileText size={14} className="text-blue-500" />
-              <span className="text-sm font-medium text-blue-700">{fileName}</span>
+              <FileText size={14} className="text-violet-500" />
+              <span className="text-sm font-medium text-violet-700">{fileName}</span>
               {!isUploading && (
                 <button
                   onClick={e => { e.stopPropagation(); handleReset() }}
@@ -222,16 +218,16 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
             </div>
           ) : (
             <>
-              <p className="text-sm text-slate-500">CSV 파일을 클릭하거나 드래그하여 업로드</p>
-              <p className="text-xs text-slate-400 mt-1">.csv 파일만 지원 (UTF-8 인코딩)</p>
+              <p className="text-sm text-slate-500">급여대장 CSV 파일을 클릭하거나 드래그하여 업로드</p>
+              <p className="text-xs text-slate-400 mt-1">표준 CSV · 한국어 급여대장 자동 인식</p>
             </>
           )}
         </div>
 
-        {headerError && (
+        {fileError && (
           <div className="mt-2 flex items-start gap-2 text-sm text-red-600">
             <XCircle size={14} className="flex-shrink-0 mt-0.5" />
-            <span>{headerError}</span>
+            <span className="whitespace-pre-line">{fileError}</span>
           </div>
         )}
         {authError && step !== 'done' && (
@@ -241,6 +237,11 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
           </div>
         )}
       </div>
+
+      {/* 감지 결과 배지 */}
+      {detectResult && !detectResult.headerError && (
+        <FormatBadge result={detectResult} />
+      )}
 
       {/* 미리보기 */}
       {step === 'preview' && rows.length > 0 && (
@@ -266,10 +267,10 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
                   <tr>
                     <th className="px-3 py-2.5 text-left text-slate-500 font-semibold w-10">행</th>
                     <th className="px-3 py-2.5 text-left text-slate-500 font-semibold">이메일</th>
+                    <th className="px-3 py-2.5 text-left text-slate-500 font-semibold">성명</th>
                     <th className="px-3 py-2.5 text-left text-slate-500 font-semibold">귀속월</th>
                     <th className="px-3 py-2.5 text-right text-slate-500 font-semibold">기본급</th>
                     <th className="px-3 py-2.5 text-right text-slate-500 font-semibold">지급합계</th>
-                    <th className="px-3 py-2.5 text-right text-slate-500 font-semibold">공제합계</th>
                     <th className="px-3 py-2.5 text-right text-slate-500 font-semibold">차인지급액</th>
                     <th className="px-3 py-2.5 text-left text-slate-500 font-semibold">상태</th>
                   </tr>
@@ -287,7 +288,10 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
                       >
                         <td className="px-3 py-2 text-slate-400">{rowNumber}</td>
                         <td className="px-3 py-2 text-slate-700">
-                          {row.email || <span className="text-red-400 italic">없음</span>}
+                          {row.email || <span className="text-amber-500 italic">없음</span>}
+                        </td>
+                        <td className="px-3 py-2 text-slate-600">
+                          {row.employee_name || <span className="text-slate-300">—</span>}
                         </td>
                         <td className="px-3 py-2 text-slate-600">
                           {row.pay_month || <span className="text-red-400 italic">없음</span>}
@@ -301,19 +305,13 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
                         <td className="px-3 py-2 text-right text-slate-500">
                           {row.Total_payment
                             ? Number(row.Total_payment.replace(/,/g, '')).toLocaleString()
-                            : <span className="text-slate-300">자동계산</span>
+                            : <span className="text-slate-300">계산됨</span>
                           }
                         </td>
-                        <td className="px-3 py-2 text-right text-slate-500">
-                          {row.Total_deductible
-                            ? Number(row.Total_deductible.replace(/,/g, '')).toLocaleString()
-                            : <span className="text-slate-300">자동계산</span>
-                          }
-                        </td>
-                        <td className="px-3 py-2 text-right text-slate-500">
+                        <td className="px-3 py-2 text-right font-medium text-slate-700">
                           {row.net_pay
                             ? Number(row.net_pay.replace(/,/g, '')).toLocaleString()
-                            : <span className="text-slate-300">자동계산</span>
+                            : <span className="text-slate-300">계산됨</span>
                           }
                         </td>
                         <td className="px-3 py-2">
@@ -344,7 +342,7 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
               <div>
                 <p className="text-sm font-semibold text-red-700">오류 {invalidRowCount}건 — 업로드 불가</p>
                 <p className="text-xs text-red-600 mt-0.5">
-                  CSV 파일의 오류를 수정 후 다시 업로드해주세요. 한 행이라도 오류가 있으면 전체 업로드가 차단됩니다.
+                  오류를 수정 후 다시 업로드해주세요.
                 </p>
               </div>
             </div>
@@ -370,6 +368,61 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/* ── 형식 감지 배지 ───────────────────────────────────────── */
+function FormatBadge({ result }: { result: AutoDetectResult }) {
+  const isKorean   = result.format === 'korean'
+  const isStandard = result.format === 'standard'
+
+  return (
+    <div className={cn(
+      'rounded-xl border px-4 py-3 space-y-2',
+      isKorean   ? 'bg-amber-50 border-amber-200'  : '',
+      isStandard ? 'bg-green-50 border-green-200'  : '',
+    )}>
+      <div className="flex items-center gap-2">
+        {isStandard ? (
+          <>
+            <CheckCircle size={14} className="text-green-500" />
+            <span className="text-sm font-semibold text-green-800">표준 CSV 형식 감지</span>
+          </>
+        ) : (
+          <>
+            <Sparkles size={14} className="text-amber-500" />
+            <span className="text-sm font-semibold text-amber-800">한국어 급여대장 자동 변환 중</span>
+          </>
+        )}
+        <span className={cn(
+          'ml-auto text-xs px-2 py-0.5 rounded-full font-medium',
+          isStandard ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700',
+        )}>
+          {result.rows.length}행 인식
+        </span>
+      </div>
+
+      {isKorean && (
+        <MappingSummaryPanel unmappedHeaders={result.unmappedHeaders} />
+      )}
+    </div>
+  )
+}
+
+/* ── 매핑 요약 ────────────────────────────────────────────── */
+function MappingSummaryPanel({ unmappedHeaders }: { unmappedHeaders: string[] }) {
+  if (unmappedHeaders.length === 0) return null
+
+  return (
+    <div className="flex items-start gap-2 bg-amber-100/60 rounded-lg px-3 py-2">
+      <Info size={12} className="text-amber-600 flex-shrink-0 mt-0.5" />
+      <div>
+        <p className="text-xs font-medium text-amber-800">인식되지 않은 컬럼 (무시됨)</p>
+        <p className="text-xs text-amber-700 mt-0.5">
+          {unmappedHeaders.join(', ')}
+        </p>
+      </div>
     </div>
   )
 }
