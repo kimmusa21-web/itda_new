@@ -9,7 +9,7 @@ import Link from 'next/link'
 import {
   ChevronLeft,
   Printer, CheckCircle2, Clock,
-  User, CalendarDays, EyeOff, Eye, Timer,
+  User, CalendarDays, EyeOff, Eye, Timer, CreditCard,
 } from 'lucide-react'
 import type { PayslipDetail } from '@/types/payslip'
 import { formatKRW, formatMonth, formatDateDot, formatDateKR, cn } from '@/lib/utils'
@@ -163,7 +163,7 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
           </div>
         </div>
 
-        {/* ── 인적 사항 ── */}
+        {/* ── 인적 사항 (사람 정보만) ── */}
         <InfoSection icon={<User size={14} className="text-blue-500" />} title="인적 사항">
           <InfoRow label="성명"     value={d.employee.name}      />
           <InfoRow label="회사"     value={d.companyName}         />
@@ -171,18 +171,51 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
           <InfoRow label="직위"     value={d.employee.position}   />
           <InfoRow label="입사일"   value={d.employee.joinDate ? formatDateDot(d.employee.joinDate) : null} />
           <InfoRow label="사원번호" value={d.employee.employeeNo} />
-          {/* 급여지급일 */}
-          <InfoRow label="급여지급일" value={d.paymentDate ? formatDateKR(d.paymentDate) : null} />
-          {/* 급여지급일 아래: 당월일수 → 근무일수 → 정산기간 */}
-          <InfoRow label="당월일수" value={d.daysInMonth != null ? `${d.daysInMonth}일` : null} />
-          <InfoRow label="근무일수" value={d.workDays   != null ? `${d.workDays}일`    : null} />
-          {/* 정산기간: pay_info 직접 저장값 우선, fallback은 company 기준 계산 */}
-          {(d.startDate && d.endDate) ? (
-            <InfoRow label="정산기간" value={`${d.startDate} ~ ${d.endDate}`} />
-          ) : (d.payrollPeriodStart && d.payrollPeriodEnd) ? (
-            <InfoRow label="정산기간" value={`${d.payrollPeriodStart} ~ ${d.payrollPeriodEnd}`} />
-          ) : null}
         </InfoSection>
+
+        {/* ── 급여 정보 ── */}
+        <div className="card overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+            <CreditCard size={14} className="text-blue-500" />
+            <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">급여 정보</span>
+          </div>
+          <div className="px-5 py-4">
+            {/* 2열 그리드: 귀속월 / 급여지급일 */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <PayInfoCell
+                label="귀속월"
+                value={formatMonth(d.accrualMonth)}
+              />
+              <PayInfoCell
+                label="급여지급일"
+                value={d.paymentDate ? formatDateDot(d.paymentDate) : '-'}
+              />
+            </div>
+            {/* 2열 그리드: 당월일수 / 급여일수 */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <PayInfoCell
+                label="당월일수"
+                value={d.daysInMonth != null ? `${d.daysInMonth}일` : '-'}
+              />
+              <PayInfoCell
+                label="급여일수"
+                value={d.workDays != null ? `${d.workDays}일` : '-'}
+              />
+            </div>
+            {/* 정산기간: 전체 너비 */}
+            <PayInfoCell
+              label="정산기간"
+              value={
+                (d.startDate && d.endDate)
+                  ? `${d.startDate} ~ ${d.endDate}`
+                  : (d.payrollPeriodStart && d.payrollPeriodEnd)
+                    ? `${d.payrollPeriodStart} ~ ${d.payrollPeriodEnd}`
+                    : '-'
+              }
+              wide
+            />
+          </div>
+        </div>
 
         {/* ── 근로시간 / 연차 정보 ── */}
         {(d.overTime != null || d.holidayWorkingHours != null || d.nightWorkHours != null || d.remainingAnnualLeaveHours != null) && (
@@ -268,6 +301,19 @@ function InfoRow({ label, value }: { label: string; value: string | null | undef
     <div className="flex items-baseline justify-between py-2 border-b border-slate-50 last:border-0">
       <span className="text-xs text-slate-400 flex-shrink-0">{label}</span>
       <span className="text-sm font-medium text-slate-800 ml-2 text-right">{value}</span>
+    </div>
+  )
+}
+
+/** 급여정보 섹션 그리드 셀 */
+function PayInfoCell({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
+  return (
+    <div className={cn(
+      'flex flex-col bg-slate-50 rounded-xl px-3.5 py-3',
+      wide && 'col-span-2',
+    )}>
+      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{label}</span>
+      <span className="text-sm font-semibold text-slate-800 leading-snug">{value}</span>
     </div>
   )
 }
