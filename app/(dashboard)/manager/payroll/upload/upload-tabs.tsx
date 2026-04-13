@@ -1,15 +1,16 @@
 'use client'
 /* ================================================================
    Manager 급여업로드 탭 컨테이너
-   표준 CSV | 자동 인식
+   표준 CSV | 자동 인식 | 급여대장
 ================================================================ */
 
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { PayslipCsvUpload }  from '@/components/payslip-csv-upload/payslip-csv-upload'
-import { AutoDetectUpload }  from '@/components/payslip-csv-upload/auto-detect-upload'
+import { PayslipCsvUpload }      from '@/components/payslip-csv-upload/payslip-csv-upload'
+import { AutoDetectUpload }      from '@/components/payslip-csv-upload/auto-detect-upload'
+import { PayrollLedgerUpload }   from '@/components/payslip-csv-upload/payroll-ledger-upload'
 
-type Tab = 'standard' | 'auto'
+type Tab = 'standard' | 'auto' | 'ledger'
 
 interface Props {
   companyId: number
@@ -18,6 +19,7 @@ interface Props {
 const TAB_DESCRIPTIONS: Record<Tab, string> = {
   standard: '표준 35컬럼 CSV 양식을 사용합니다. 양식 다운로드 후 작성하여 등록하세요.',
   auto:     '기존 급여대장 파일을 그대로 업로드하면 컬럼명을 자동으로 인식합니다.',
+  ledger:   '회사 급여대장 엑셀(xlsx/csv)을 그대로 업로드하면 사번·이름으로 직원을 자동 매칭합니다.',
 }
 
 export function ManagerUploadTabs({ companyId }: Props) {
@@ -32,6 +34,9 @@ export function ManagerUploadTabs({ companyId }: Props) {
         <TabButton active={tab === 'auto'}     onClick={() => setTab('auto')}>
           자동 인식
         </TabButton>
+        <TabButton active={tab === 'ledger'}   onClick={() => setTab('ledger')}>
+          급여대장
+        </TabButton>
       </div>
 
       <p className="text-xs text-slate-500">{TAB_DESCRIPTIONS[tab]}</p>
@@ -41,6 +46,9 @@ export function ManagerUploadTabs({ companyId }: Props) {
       </div>
       <div className={tab === 'auto' ? '' : 'hidden'}>
         <AutoDetectUpload role="manager" defaultCompanyId={companyId} />
+      </div>
+      <div className={tab === 'ledger' ? '' : 'hidden'}>
+        <PayrollLedgerUpload role="manager" defaultCompanyId={companyId} />
       </div>
     </div>
   )

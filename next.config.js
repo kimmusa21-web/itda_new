@@ -4,6 +4,20 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   },
+  // xlsx 패키지가 클라이언트 번들에서 Node.js built-ins를 참조하는 경우 무시
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs:     false,
+        crypto: false,
+        stream: false,
+        path:   false,
+        buffer: false,
+      }
+    }
+    return config
+  },
 }
 
 module.exports = nextConfig
