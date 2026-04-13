@@ -24,7 +24,7 @@ const TEMPLATE_EXAMPLE_ROWS: EmployeeCsvRawRow[] = [
   {
     name:              '홍길동',
     email:             'hong@example.com',
-    employee_number:   'E001',
+    employee_number:   '', // 사번은 자동 생성 — 비워두세요
     department:        '영업팀',
     position:          '사원',
     phone:             '010-1234-5678',
@@ -34,7 +34,7 @@ const TEMPLATE_EXAMPLE_ROWS: EmployeeCsvRawRow[] = [
   {
     name:              '김영희',
     email:             'kim@example.com',
-    employee_number:   'E002',
+    employee_number:   '', // 사번은 자동 생성 — 비워두세요
     department:        '인사팀',
     position:          '대리',
     phone:             '010-2345-6789',
@@ -152,8 +152,7 @@ export function validateEmployeeRow(
     reasons.push(`이메일 형식이 올바르지 않습니다: "${row.email}"`)
   }
 
-  // 사번 필수
-  if (!row.employee_number) reasons.push('사번이 비어 있습니다')
+  // 사번은 자동 생성 — CSV에 없어도 오류 없음
 
   // 입사일 형식 (입력된 경우만)
   if (row.join_date && !isValidDate(row.join_date)) {

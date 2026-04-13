@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Plus, Search, Mail, Upload, X }        from 'lucide-react'
+import { Plus, Search, Mail, Upload, X, Hash }  from 'lucide-react'
 import Link                                      from 'next/link'
 import { createClient }                          from '@/lib/supabase/client'
 import type { EmployeeRow }                      from '@/lib/supabase/queries/employee'
 import { formatDateShort, cn }                   from '@/lib/utils'
+import { createEmployeeAdmin }                   from '@/lib/actions/employee-admin-create'
 
 type Filter = 'active' | 'inactive' | 'all'
 
@@ -49,20 +50,30 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
     setSaving(true)
     try {
       if (modal === 'add') {
-        await supabase.from('employees').insert({
-          name: form.name, email: form.email, birthdate: form.birthdate,
-          company_id: form.company_id, department: form.department, position: form.position,
-          employee_number: form.employee_number,
-          job: form.job, Date_of_joining: form.Date_of_joining,
-          Tel: form.Tel, Sex: form.Sex, Grade: form.Grade, Role: form.Role,
-          'Working place': form['Working place'], 'Work details': form['Work details'],
-          is_active: true,
+        // 사번은 서버 액션에서 자동 생성
+        const result = await createEmployeeAdmin({
+          company_id:      Number(form.company_id),
+          name:            form.name ?? '',
+          email:           form.email ?? '',
+          birthdate:       form.birthdate ?? null,
+          department:      form.department ?? null,
+          position:        form.position ?? null,
+          job:             form.job ?? null,
+          Date_of_joining: form.Date_of_joining ?? null,
+          Tel:             form.Tel ?? null,
+          Sex:             form.Sex ?? null,
+          Grade:           form.Grade ?? null,
+          Role:            form.Role ?? null,
+          'Working place': form['Working place'] ?? null,
+          'Work details':  form['Work details'] ?? null,
+          is_active:       true,
         })
+        if (!result.success) throw new Error(result.error)
       } else if (modal === 'edit' && selected) {
+        // 사번(employee_number)은 수정 불가 — 자동 생성 값 유지
         await supabase.from('employees').update({
           name: form.name, email: form.email, birthdate: form.birthdate,
           department: form.department, position: form.position, job: form.job,
-          employee_number: form.employee_number,
           Date_of_joining: form.Date_of_joining, Tel: form.Tel, Sex: form.Sex,
           Grade: form.Grade, Role: form.Role,
           'Working place': form['Working place'], 'Work details': form['Work details'],
@@ -309,17 +320,26 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
       {(modal === 'add' || modal === 'edit') && (
         <Modal title={modal === 'add' ? '직원 등록' : '직원 수정'} onClose={() => setModal(null)}>
           <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto pr-1">
+            {/* 사번 — 수정 모달에서 읽기 전용 표시 */}
+            {modal === 'edit' && selected?.employee_number && (
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-slate-600 mb-1">사번 (자동 생성)</label>
+                <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-sm font-mono text-slate-600">
+                  <Hash size={13} className="text-slate-400" />
+                  {selected.employee_number}
+                </div>
+              </div>
+            )}
             {([
-              ['이름 *',       'name',            'text'],
-              ['이메일 *',     'email',           'email'],
-              ['사번',         'employee_number', 'text'],
-              ['생년월일 6자리','birthdate',       'text'],
-              ['부서',         'department',      'text'],
-              ['직위',         'position',        'text'],
-              ['직급',         'Grade',           'text'],
-              ['직책',         'Role',            'text'],
-              ['직무',         'job',             'text'],
-              ['전화번호',     'Tel',             'tel'],
+              ['이름 *',        'name',       'text'],
+              ['이메일 *',      'email',      'email'],
+              ['생년월일 6자리', 'birthdate',  'text'],
+              ['부서',          'department', 'text'],
+              ['직위',          'position',   'text'],
+              ['직급',          'Grade',      'text'],
+              ['직책',          'Role',       'text'],
+              ['직무',          'job',        'text'],
+              ['전화번호',      'Tel',        'tel'],
             ] as [string, keyof EmployeeRow, string][]).map(([label, key, type]) => (
               <div key={key}>
                 <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>

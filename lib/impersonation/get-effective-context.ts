@@ -67,6 +67,7 @@ export interface EmployeeContext {
   employeeId:      number
   employeeName:    string
   employeeEmail:   string
+  employeeNumber:  string | null
   companyId:       number
   department:      string | null
   position:        string | null
@@ -96,21 +97,22 @@ export async function getEffectiveEmployeeContext(): Promise<EmployeeContext | n
   ) {
     const { data: emp } = await supabase
       .from('employees')
-      .select('id, name, email, company_id, department, position, Date_of_joining, birthdate')
+      .select('id, name, email, employee_number, company_id, department, position, Date_of_joining, birthdate')
       .eq('id', impersonation.employeeId)
       .single()
 
     if (!emp) return null
 
     return {
-      employeeId:    emp.id,
-      employeeName:  emp.name,
-      employeeEmail: emp.email,
-      companyId:     emp.company_id,
-      department:    emp.department,
-      position:      emp.position,
-      dateOfJoining: emp.Date_of_joining,
-      birthdate:     emp.birthdate,
+      employeeId:     emp.id,
+      employeeName:   emp.name,
+      employeeEmail:  emp.email,
+      employeeNumber: emp.employee_number ?? null,
+      companyId:      emp.company_id,
+      department:     emp.department,
+      position:       emp.position,
+      dateOfJoining:  emp.Date_of_joining,
+      birthdate:      emp.birthdate,
       isImpersonating: true,
     }
   }
@@ -118,21 +120,22 @@ export async function getEffectiveEmployeeContext(): Promise<EmployeeContext | n
   // 실제 employee: 1순위 user_id, 2순위 email 매칭
   const { data: byUid } = await supabase
     .from('employees')
-    .select('id, name, email, company_id, department, position, Date_of_joining, birthdate')
+    .select('id, name, email, employee_number, company_id, department, position, Date_of_joining, birthdate')
     .eq('user_id', user.id)
     .eq('is_active', true)
     .maybeSingle()
 
   if (byUid) {
     return {
-      employeeId:    byUid.id,
-      employeeName:  byUid.name,
-      employeeEmail: byUid.email,
-      companyId:     byUid.company_id,
-      department:    byUid.department,
-      position:      byUid.position,
-      dateOfJoining: byUid.Date_of_joining,
-      birthdate:     byUid.birthdate,
+      employeeId:     byUid.id,
+      employeeName:   byUid.name,
+      employeeEmail:  byUid.email,
+      employeeNumber: byUid.employee_number ?? null,
+      companyId:      byUid.company_id,
+      department:     byUid.department,
+      position:       byUid.position,
+      dateOfJoining:  byUid.Date_of_joining,
+      birthdate:      byUid.birthdate,
       isImpersonating: false,
     }
   }
@@ -141,7 +144,7 @@ export async function getEffectiveEmployeeContext(): Promise<EmployeeContext | n
 
   const { data: byEmail } = await supabase
     .from('employees')
-    .select('id, name, email, company_id, department, position, Date_of_joining, birthdate')
+    .select('id, name, email, employee_number, company_id, department, position, Date_of_joining, birthdate')
     .ilike('email', user.email)
     .eq('is_active', true)
     .maybeSingle()
@@ -149,14 +152,15 @@ export async function getEffectiveEmployeeContext(): Promise<EmployeeContext | n
   if (!byEmail) return null
 
   return {
-    employeeId:    byEmail.id,
-    employeeName:  byEmail.name,
-    employeeEmail: byEmail.email,
-    companyId:     byEmail.company_id,
-    department:    byEmail.department,
-    position:      byEmail.position,
-    dateOfJoining: byEmail.Date_of_joining,
-    birthdate:     byEmail.birthdate,
+    employeeId:     byEmail.id,
+    employeeName:   byEmail.name,
+    employeeEmail:  byEmail.email,
+    employeeNumber: byEmail.employee_number ?? null,
+    companyId:      byEmail.company_id,
+    department:     byEmail.department,
+    position:       byEmail.position,
+    dateOfJoining:  byEmail.Date_of_joining,
+    birthdate:      byEmail.birthdate,
     isImpersonating: false,
   }
 }

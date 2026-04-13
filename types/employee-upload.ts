@@ -52,11 +52,10 @@ export const EMPLOYEE_CSV_HEADERS = [
 
 export type EmployeeCsvHeader = typeof EMPLOYEE_CSV_HEADERS[number]
 
-/** 필수 컬럼 */
+/** 필수 컬럼 (사번은 자동 생성이므로 불필요) */
 export const REQUIRED_CSV_HEADERS: EmployeeCsvHeader[] = [
   'name',
   'email',
-  'employee_number',
 ]
 
 /** 컬럼 한글 라벨 */

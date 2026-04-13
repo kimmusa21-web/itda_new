@@ -13,6 +13,7 @@
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { validateEmployeeRow } from '@/lib/csv-employee-utils'
+import { generateUniqueEmployeeNumbersBatch } from '@/lib/employee-number'
 import type {
   BulkUploadParams,
   EmployeeUploadResult,
@@ -72,20 +73,13 @@ export async function uploadEmployeesCsv(
     return { authError: msg, totalCount: 0, successCount: 0, failureCount: 0, successes: [], failures: [] }
   }
 
-  /* 4. DB 기존 데이터 조회 (중복 검증용) */
-  const { data: existingEmployees } = await adminClient
-    .from('employees')
-    .select('email, employee_number, company_id')
-    .eq('company_id', companyId)
-
-  const existingEmails = new Set(
-    (existingEmployees ?? []).map(e => (e.email ?? '').toLowerCase())
-  )
-  const existingEmpNums = new Set(
-    (existingEmployees ?? [])
-      .map(e => e.employee_number as string | null)
-      .filter(Boolean) as string[]
-  )
+  /* 4. 회사 사업자번호 조회 (사번 자동 생성용) */
+  const { data: companyData } = await adminClient
+    .from('companies')
+    .select('biz_number')
+    .eq('id', companyId)
+    .single()
+  const bizNumber = companyData?.biz_number ?? null
 
   /* 5. 전체 이메일 유니크 검증 (다른 회사 포함) */
   const { data: allEmployeeEmails } = await adminClient
@@ -95,11 +89,10 @@ export async function uploadEmployeesCsv(
     (allEmployeeEmails ?? []).map(e => (e.email ?? '').toLowerCase())
   )
 
-  /* 6. 파일 내 중복 추적 */
+  /* 7. 파일 내 이메일 중복 추적 */
   const seenEmails = new Set<string>()
-  const seenEmpNums = new Set<string>()
 
-  /* 7. 행별 검증 */
+  /* 8. 행별 검증 */
   const successes: EmployeeUploadRowResult[] = []
   const failures: EmployeeUploadRowResult[] = []
 
@@ -109,7 +102,7 @@ export async function uploadEmployeesCsv(
     const rowNumber = idx + 2 // 헤더 = 1행
     const reasons: string[] = []
 
-    // 형식 검증
+    // 형식 검증 (사번은 자동 생성이므로 미검증)
     const validation = validateEmployeeRow(row, rowNumber)
     reasons.push(...validation.reasons)
 
@@ -122,23 +115,9 @@ export async function uploadEmployeesCsv(
       }
     }
 
-    // 파일 내 사번 중복
-    if (row.employee_number) {
-      if (seenEmpNums.has(row.employee_number)) {
-        reasons.push(`파일 내 사번 중복: ${row.employee_number}`)
-      } else {
-        seenEmpNums.add(row.employee_number)
-      }
-    }
-
     // DB 이메일 중복 (전체)
     if (row.email && allEmails.has(row.email)) {
       reasons.push(`이미 등록된 이메일: ${row.email}`)
-    }
-
-    // DB 사번 중복 (해당 회사)
-    if (row.employee_number && existingEmpNums.has(row.employee_number)) {
-      reasons.push(`이미 등록된 사번: ${row.employee_number}`)
     }
 
     if (reasons.length > 0) {
@@ -148,13 +127,32 @@ export async function uploadEmployeesCsv(
     }
   })
 
-  /* 8. 유효 행 배치 INSERT */
+  /* 9. 유효 행 사번 일괄 자동 생성 */
+  let generatedNumbers: string[] = []
+  if (validRows.length > 0 && bizNumber) {
+    try {
+      generatedNumbers = await generateUniqueEmployeeNumbersBatch(
+        adminClient,
+        companyId,
+        bizNumber,
+        validRows.map(({ row }) => row.join_date || null),
+      )
+    } catch (e) {
+      console.error('[employee-bulk-upload] 사번 생성 실패:', e)
+      // 사번 생성 실패 시 null로 진행
+      generatedNumbers = validRows.map(() => '')
+    }
+  } else {
+    generatedNumbers = validRows.map(() => '')
+  }
+
+  /* 10. 유효 행 배치 INSERT */
   if (validRows.length > 0) {
-    const records = validRows.map(({ row }) => ({
+    const records = validRows.map(({ row }, i) => ({
       company_id:      companyId,
       name:            row.name,
       email:           row.email,
-      employee_number: row.employee_number || null,
+      employee_number: generatedNumbers[i] || null,
       department:      row.department || null,
       position:        row.position   || null,
       Tel:             row.phone      || null,
@@ -162,7 +160,7 @@ export async function uploadEmployeesCsv(
       is_active:       row.employment_status !== 'inactive',
     }))
 
-    // 50건씩 배치 처리
+    // 50건씩 배치 처리 (사번은 이미 generatedNumbers에 할당됨)
     const BATCH_SIZE = 50
     for (let i = 0; i < records.length; i += BATCH_SIZE) {
       const batch = records.slice(i, i + BATCH_SIZE)
@@ -189,7 +187,7 @@ export async function uploadEmployeesCsv(
     }
   }
 
-  /* 9. 업로드 이력 기록 */
+  /* 11. 업로드 이력 기록 */
   try {
     await adminClient.from('employee_upload_logs').insert({
       company_id:     companyId,

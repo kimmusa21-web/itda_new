@@ -36,6 +36,7 @@ export default async function EmployeeProfilePage() {
       empId={empCtx?.employeeId ?? null}
       name={empCtx?.employeeName ?? (profile?.email?.split('@')[0] ?? '')}
       email={empCtx?.employeeEmail ?? (profile?.email ?? '')}
+      employeeNumber={empCtx?.employeeNumber ?? null}
       phoneNumber={''}
       department={empCtx?.department ?? null}
       position={empCtx?.position ?? null}

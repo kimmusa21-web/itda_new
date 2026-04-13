@@ -1,24 +1,25 @@
 'use client'
 
 import { useState } from 'react'
-import { Building2, CalendarDays, Briefcase, UserCircle2, Mail, Phone, KeyRound, LogOut, Pencil, X, Check, Loader2 } from 'lucide-react'
+import { Building2, CalendarDays, Briefcase, UserCircle2, Mail, Phone, KeyRound, LogOut, Pencil, X, Check, Loader2, Hash } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { formatDateShort } from '@/lib/utils'
 import { updateEmployeeProfile } from '@/lib/actions/employee-profile-actions'
 
 interface Props {
-  empId:       number | null
-  name:        string
-  email:       string
-  phoneNumber: string
-  department:  string | null
-  position:    string | null
-  joinDate:    string | null
-  company:     string
+  empId:          number | null
+  name:           string
+  email:          string
+  employeeNumber: string | null
+  phoneNumber:    string
+  department:     string | null
+  position:       string | null
+  joinDate:       string | null
+  company:        string
 }
 
-export function ProfileClient({ empId, name, email, phoneNumber, department, position, joinDate, company }: Props) {
+export function ProfileClient({ empId, name, email, employeeNumber, phoneNumber, department, position, joinDate, company }: Props) {
   const router   = useRouter()
   const supabase = createClient()
 
@@ -95,6 +96,9 @@ export function ProfileClient({ empId, name, email, phoneNumber, department, pos
           <InfoRow icon={Briefcase}    label="부서"       value={department || '-'} />
           <InfoRow icon={UserCircle2}  label="직위"       value={position   || '-'} />
           <InfoRow icon={CalendarDays} label="입사일"     value={joinDate ? formatDateShort(joinDate) : '-'} />
+          {employeeNumber && (
+            <InfoRow icon={Hash} label="사번" value={employeeNumber} mono />
+          )}
         </InfoSection>
 
         {/* 연락처 — 수정 가능 */}
@@ -185,12 +189,12 @@ function InfoSection({ title, children }: { title: string; children: React.React
   )
 }
 
-function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+function InfoRow({ icon: Icon, label, value, mono }: { icon: React.ElementType; label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex items-center gap-3">
       <Icon size={16} className="text-slate-400 flex-shrink-0" />
       <span className="text-sm text-slate-500 w-20 flex-shrink-0">{label}</span>
-      <span className="text-sm font-medium text-slate-800 flex-1">{value}</span>
+      <span className={`text-sm font-medium text-slate-800 flex-1 ${mono ? 'font-mono' : ''}`}>{value}</span>
     </div>
   )
 }

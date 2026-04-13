@@ -8,6 +8,7 @@ import { createHash, randomInt, randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { sendVerificationEmail, sendInviteEmail } from '@/lib/email'
 import { notifyAllAdmins, createNotification } from '@/lib/supabase/queries/notifications'
+import { generateUniqueEmployeeNumber } from '@/lib/employee-number'
 import {
   mapRowToRequest,
   type EmployeeRequest,
@@ -137,8 +138,31 @@ async function createEmployeeFromRequest(
 ): Promise<{ id: number; name: string } | null> {
   const supabase = createClient()
 
+  /* 사번 자동 생성: 회사 사업자번호 조회 */
+  let employeeNumber: string | null = null
+  const { data: company } = await supabase
+    .from('companies')
+    .select('biz_number')
+    .eq('id', req.company_id)
+    .single()
+
+  if (company?.biz_number) {
+    try {
+      employeeNumber = await generateUniqueEmployeeNumber(
+        supabase,
+        company.biz_number,
+        req.join_date,
+        req.company_id,
+      )
+    } catch (e) {
+      console.error('[createEmployeeFromRequest] 사번 생성 실패:', e)
+    }
+  } else {
+    console.warn('[createEmployeeFromRequest] 사업자번호 없음 — 사번 미생성 (company_id=%d)', req.company_id)
+  }
+
   // employees 테이블의 실제 컬럼명에 맞게 매핑
-  // is_active=false: 인증 완료 후 true로 변경
+  // is_active=false: 인증 완료 전까지 비활성
   const { data, error } = await supabase
     .from('employees')
     .insert({
@@ -155,6 +179,7 @@ async function createEmployeeFromRequest(
       Date_of_joining:  req.join_date,
       'Work details':   req.work_details,
       'Working place':  req.work_location,
+      employee_number:  employeeNumber,
       is_active:        false, // 인증 완료 전까지 비활성
     })
     .select('id, name')
