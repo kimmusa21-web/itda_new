@@ -85,6 +85,9 @@ export async function uploadPayrollLedger(params: {
   const payloads: PayInfoPayload[] = []
   const rowResults: LedgerRowResult[] = []
 
+  // 배치 내 중복 (동일 employee_id + accrual_month) 감지용
+  const seenKeys = new Set<string>()
+
   for (const row of params.rows) {
     const rowResult: LedgerRowResult = {
       rowIndex:       row.rowIndex,
@@ -126,6 +129,15 @@ export async function uploadPayrollLedger(params: {
       rowResults.push(rowResult)
       continue
     }
+
+    // 배치 내 중복 체크 — 같은 employee_id + accrual_month 는 1건만 허용
+    const batchKey = `${employee.id}|${row.accrualMonth}`
+    if (seenKeys.has(batchKey)) {
+      rowResult.reason = `이 파일 내 중복 — 동일 직원(${row.rawName})의 같은 귀속월 데이터가 이미 처리됨`
+      rowResults.push(rowResult)
+      continue
+    }
+    seenKeys.add(batchKey)
 
     /* 5. earnings / deductions JSONB 빌드 */
     const r = row as unknown as Record<string, number>
