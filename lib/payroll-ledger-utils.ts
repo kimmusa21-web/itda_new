@@ -227,10 +227,113 @@ export function parseLedgerRows(
   return results
 }
 
+// ── 다행(3행/직원) 급여대장 형식 감지 ───────────────────────────
+function norm(v: unknown): string {
+  return String(v ?? '').replace(/\s/g, '').trim()
+}
+
+export function isMultiRowLedgerFormat(arrayRows: unknown[][]): boolean {
+  if (arrayRows.length < 6) return false
+  return (
+    norm(arrayRows[0]?.[0]) === '사번' &&
+    norm(arrayRows[1]?.[0]) === '입사일' &&
+    norm(arrayRows[2]?.[0]) === '퇴사일'
+  )
+}
+
+// ── 다행 급여대장 파싱 ───────────────────────────────────────────
+// 구조:
+//   헤더 3행 (행1: 사번/성명/기본급…, 행2: 입사일/인센티브…, 행3: 퇴사일/지급합계…)
+//   이후 직원마다 3행 묶음
+//
+// 컬럼 위치 (0-indexed):
+//   행1: 0=사번 1=성명 2=기본급 3=고정연장 4=연장근로 5=휴일근로 6=야간근로
+//        7=식대 8=국민연금 9=건강보험료 10=고용보험료 11=소득세 12=주민세
+//   행2: 2=인센티브 3=연차수당 4=기타수당 5=기타수당2 6=명절상여
+//        8=건강보험정산 9=장기요양보험료 10=학자금대출 11=소득세환급 12=주민세환급
+//   행3: 7=지급합계 8=기타공제 11=공제합계 12=차인지급액
+export function parseMultiRowLedger(arrayRows: unknown[][]): ParsedLedgerRow[] {
+  const results: ParsedLedgerRow[] = []
+  const data = arrayRows.slice(3)   // 헤더 3행 스킵
+
+  let i = 0
+  while (i < data.length) {
+    const r1 = (data[i]     ?? []) as unknown[]
+    const r2 = (data[i + 1] ?? []) as unknown[]
+    const r3 = (data[i + 2] ?? []) as unknown[]
+
+    const empNum  = norm(r1[0])
+    const empName = norm(r1[1])
+
+    // 빈 행·합계 행·자리표시 행 스킵
+    const isEmptyRow  = !empNum && !empName
+    const isTotalRow  = empNum.includes('총') || empName.includes('총')
+    const isPlaceholder = empName === '.' || empName === ''
+
+    if (isEmptyRow || isTotalRow) { i++; continue }
+    if (isPlaceholder || !/^\d+$/.test(empNum)) { i++; continue }
+
+    const csvRow = 4 + i   // CSV 행 번호 (헤더 3행 + 1-indexed)
+
+    results.push({
+      rowIndex:          csvRow,
+      rawName:           empName,
+      rawEmployeeNumber: empNum,
+      accrualMonth:      null,   // 이 형식은 귀속월 컬럼 없음 → 수동 입력
+      paymentDate:       null,
+
+      // 행1 지급 항목
+      base_salary:          toNumber(r1[2]),
+      overtime_pay_fixed:   toNumber(r1[3]),
+      overtime_pay:         toNumber(r1[4]),
+      holidaytime_pay:      toNumber(r1[5]),
+      nighttime_pay:        toNumber(r1[6]),
+      meal_allowance:       toNumber(r1[7]),
+      // 행1 공제 항목
+      national_pension:     toNumber(r1[8]),
+      health_insurance:     toNumber(r1[9]),
+      employment_insurance: toNumber(r1[10]),
+      income_tax:           toNumber(r1[11]),
+      resident_tax:         toNumber(r1[12]),
+
+      // 행2 지급 항목
+      incentive:                   toNumber(r2[2]),
+      annual_leave_allowance:      toNumber(r2[3]),
+      Other_allowances:            toNumber(r2[4]),
+      Other_allowances2:           toNumber(r2[5]),
+      Holiday_bonus:               toNumber(r2[6]),
+      // 행2 공제 항목
+      health_insurance_adjustment: toNumber(r2[8]),
+      longterm_care:               toNumber(r2[9]),
+      student_loan:                toNumber(r2[10]),
+      income_tax_refund:           toNumber(r2[11]),
+      resident_tax_refund:         toNumber(r2[12]),
+
+      // 행3 합계
+      Total_payment:    toNumber(r3[7]),
+      Other_deductions: toNumber(r3[8]),
+      Total_deductible: toNumber(r3[11]),
+      net_pay:          toNumber(r3[12]),
+    })
+
+    i += 3   // 다음 직원 묶음으로 이동
+  }
+
+  return results
+}
+
+const MULTI_ROW_HEADERS = [
+  '사번', '성명', '기본급', '고정연장수당', '연장근로수당', '휴일근로수당',
+  '야간근로수당', '식대', '국민연금', '건강보험료', '고용보험료', '소득세', '주민세',
+  '인센티브', '연차수당', '기타수당', '기타수당2', '명절상여',
+  '건강보험정산', '장기요양보험료', '학자금대출', '소득세환급', '주민세환급',
+  '지급합계', '기타공제', '공제합계', '차인지급액',
+]
+
 // ── 클라이언트 사이드 Excel/CSV 파싱 (xlsx 동적 import) ───────
 export async function parsePayrollFile(
   file: File,
-): Promise<{ rows: ParsedLedgerRow[]; error: string | null; detectedHeaders: string[] }> {
+): Promise<{ rows: ParsedLedgerRow[]; error: string | null; detectedHeaders: string[]; needsManualMonth?: boolean }> {
   try {
     const XLSX = await import('xlsx')
     const buf  = await file.arrayBuffer()
@@ -241,7 +344,28 @@ export async function parsePayrollFile(
       return { rows: [], error: '시트를 찾을 수 없습니다.', detectedHeaders: [] }
     }
 
-    const sheet   = workbook.Sheets[sheetName]
+    const sheet = workbook.Sheets[sheetName]
+
+    // ── 다행 형식 감지 (배열 모드로 먼저 읽기) ──────────────────
+    const arrayRows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+      header: 1, defval: '',
+    })
+
+    if (isMultiRowLedgerFormat(arrayRows)) {
+      const rows = parseMultiRowLedger(arrayRows)
+      if (rows.length === 0) {
+        return { rows: [], error: '유효한 직원 데이터가 없습니다. 파일을 확인해주세요.', detectedHeaders: [] }
+      }
+      console.log(`[parsePayrollFile] 다행 급여대장 형식 감지 — ${rows.length}명`)
+      return {
+        rows,
+        error: null,
+        detectedHeaders: MULTI_ROW_HEADERS,
+        needsManualMonth: true,
+      }
+    }
+
+    // ── 기존 단일행 형식 파싱 ────────────────────────────────────
     const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
       defval: '',
       raw: false,   // 모든 값을 문자열로 (날짜 자동 변환 방지)

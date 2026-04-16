@@ -9,7 +9,7 @@ import { useState, useRef } from 'react'
 import {
   Upload, FileSpreadsheet, X, RefreshCw,
   CheckCircle, XCircle, Loader2, AlertCircle,
-  BookOpen,
+  BookOpen, Calendar,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { parsePayrollFile, type ParsedLedgerRow } from '@/lib/payroll-ledger-utils'
@@ -35,6 +35,8 @@ export function PayrollLedgerUpload({ role, defaultCompanyId, companies = [] }: 
   const [detectedHeaders, setDetectedHeaders] = useState<string[]>([])
   const [fileError, setFileError]   = useState<string | null>(null)
   const [result, setResult]         = useState<LedgerUploadResult | null>(null)
+  const [needsManualMonth, setNeedsManualMonth] = useState(false)
+  const [manualMonth, setManualMonth]           = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   /* ── 파일 선택 ─────────────────────────────────────────────── */
@@ -53,8 +55,10 @@ export function PayrollLedgerUpload({ role, defaultCompanyId, companies = [] }: 
     setResult(null)
     setRows([])
     setDetectedHeaders([])
+    setNeedsManualMonth(false)
+    setManualMonth('')
 
-    const { rows: parsed, error, detectedHeaders: headers } = await parsePayrollFile(file)
+    const { rows: parsed, error, detectedHeaders: headers, needsManualMonth: noMonth } = await parsePayrollFile(file)
 
     if (error) {
       setFileError(error)
@@ -70,6 +74,7 @@ export function PayrollLedgerUpload({ role, defaultCompanyId, companies = [] }: 
 
     setRows(parsed)
     setDetectedHeaders(headers)
+    setNeedsManualMonth(noMonth ?? false)
     setStep('preview')
   }
 
@@ -78,10 +83,15 @@ export function PayrollLedgerUpload({ role, defaultCompanyId, companies = [] }: 
     if (!companyId || rows.length === 0) return
     setStep('uploading')
 
+    // 귀속월 수동 입력이 필요한 형식이면 모든 행에 적용
+    const uploadRows = needsManualMonth && manualMonth
+      ? rows.map(r => ({ ...r, accrualMonth: manualMonth }))
+      : rows
+
     try {
       const res = await uploadPayrollLedger({
         companyId: companyId as number,
-        rows,
+        rows: uploadRows,
         fileName,
       })
       setResult(res)
@@ -106,11 +116,14 @@ export function PayrollLedgerUpload({ role, defaultCompanyId, companies = [] }: 
     setFileError(null)
     setDetectedHeaders([])
     setResult(null)
+    setNeedsManualMonth(false)
+    setManualMonth('')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const isUploading = step === 'uploading'
-  const canUpload   = !!companyId && rows.length > 0 && !isUploading
+  const isUploading  = step === 'uploading'
+  const monthReady   = !needsManualMonth || /^\d{4}-\d{2}$/.test(manualMonth)
+  const canUpload    = !!companyId && rows.length > 0 && !isUploading && monthReady
 
   /* ── 완료 화면 ─────────────────────────────────────────────── */
   if (step === 'done' && result) {
@@ -130,6 +143,7 @@ export function PayrollLedgerUpload({ role, defaultCompanyId, companies = [] }: 
         <ul className="text-xs text-emerald-700 space-y-1 ml-5 list-disc">
           <li><strong>xlsx / xls / csv</strong> 형식의 급여대장 파일을 그대로 업로드하세요.</li>
           <li>한국어 컬럼명(성명, 사번, 기본급, 국민연금 등)을 자동으로 인식합니다.</li>
+          <li><strong>직원 1명당 3행</strong> 구조의 급여대장 CSV도 자동 감지하여 파싱합니다.</li>
           <li>직원 매칭: <strong>1순위 사번</strong> → <strong>2순위 이름</strong>(동명이인 불가)</li>
           <li>같은 귀속월 재업로드 시 기존 데이터를 덮어씁니다.</li>
         </ul>
@@ -231,11 +245,40 @@ export function PayrollLedgerUpload({ role, defaultCompanyId, companies = [] }: 
       {step === 'preview' && rows.length > 0 && (
         <div className="space-y-4">
           <p className="text-sm font-medium text-slate-700">
-            파싱 결과 미리보기 — 총 <strong>{rows.length}행</strong>
+            파싱 결과 미리보기 — 총 <strong>{rows.length}명</strong>
             <span className="text-xs text-slate-400 ml-2 font-normal">
               (업로드 시 직원 매칭 후 저장됩니다)
             </span>
           </p>
+
+          {/* 귀속월 수동 입력 (다행 형식일 때) */}
+          {needsManualMonth && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Calendar size={14} className="text-amber-600 flex-shrink-0" />
+                <p className="text-sm font-semibold text-amber-800">귀속월 입력 필요</p>
+              </div>
+              <p className="text-xs text-amber-700 ml-5">
+                이 파일에는 귀속월 컬럼이 없습니다. 전체 직원에 적용할 귀속월을 입력해주세요.
+              </p>
+              <div className="flex items-center gap-3 ml-5">
+                <input
+                  type="month"
+                  className="input w-44"
+                  value={manualMonth}
+                  onChange={e => setManualMonth(e.target.value)}
+                  disabled={isUploading}
+                  placeholder="YYYY-MM"
+                />
+                {manualMonth && (
+                  <span className="badge badge-blue text-xs">{manualMonth} 적용 예정</span>
+                )}
+                {!manualMonth && (
+                  <span className="text-xs text-red-500">귀속월을 선택해야 업로드할 수 있습니다</span>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
@@ -257,8 +300,9 @@ export function PayrollLedgerUpload({ role, defaultCompanyId, companies = [] }: 
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {rows.map(row => {
-                    const hasNoMonth = !row.accrualMonth
-                    const hasNoId    = !row.rawName && !row.rawEmployeeNumber
+                    const displayMonth = needsManualMonth ? manualMonth || null : row.accrualMonth
+                    const hasNoMonth   = !displayMonth
+                    const hasNoId      = !row.rawName && !row.rawEmployeeNumber
 
                     return (
                       <tr
@@ -276,9 +320,9 @@ export function PayrollLedgerUpload({ role, defaultCompanyId, companies = [] }: 
                           {row.rawEmployeeNumber || <span className="text-slate-300">—</span>}
                         </td>
                         <td className="px-3 py-2 text-slate-600">
-                          {row.accrualMonth
-                            ? <span className="badge badge-blue text-xs">{row.accrualMonth}</span>
-                            : <span className="text-red-400 italic">없음</span>
+                          {displayMonth
+                            ? <span className="badge badge-blue text-xs">{displayMonth}</span>
+                            : <span className="text-amber-400 italic">미입력</span>
                           }
                         </td>
                         <td className="px-3 py-2 text-right text-slate-600">
