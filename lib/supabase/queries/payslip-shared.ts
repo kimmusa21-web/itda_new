@@ -46,6 +46,7 @@ export interface PayInfoRow {
     name: string
     email: string
     birthdate: string | null
+    employee_number: string | null
     Date_of_joining: string | null
     quit_date: string | null
     department: string | null
@@ -116,7 +117,7 @@ export function mapRowToPayslip(row: PayInfoRow): PayslipDetail {
     employee: {
       name: emp?.name ?? '',
       birthDateMasked: birthMasked,
-      employeeNo: `EMP-${String(row.employee_id).padStart(4,'0')}`,
+      employeeNo: emp?.employee_number ?? `EMP-${String(row.employee_id).padStart(4,'0')}`,
       department: emp?.department ?? undefined,
       position: emp?.position ?? undefined,
       joinDate: emp?.Date_of_joining ?? undefined,

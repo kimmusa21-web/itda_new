@@ -14,7 +14,7 @@ export async function getMyPayslipsV2(): Promise<PayInfoV2[]> {
 
   const { data } = await supabase
     .from('pay_info_v2')
-    .select('*, employees(name,email,birthdate,Date_of_joining,department,position), companies(name)')
+    .select('*, employees(name,email,birthdate,employee_number,Date_of_joining,department,position), companies(name)')
     .eq('employee_id', emp.id)
     .order('accrual_month', { ascending: false })
   return (data ?? []) as PayInfoV2[]
@@ -32,7 +32,7 @@ export async function getMyPayslipV2ById(id: number): Promise<PayInfoV2 | null> 
 
   const { data } = await supabase
     .from('pay_info_v2')
-    .select('*, employees(name,email,birthdate,Date_of_joining,department,position), companies(name)')
+    .select('*, employees(name,email,birthdate,employee_number,Date_of_joining,department,position), companies(name)')
     .eq('id', id)
     .eq('employee_id', emp.id)
     .single()
@@ -68,7 +68,7 @@ export async function getAdminPayrollListV2(opts?: {
 }): Promise<PayInfoV2[]> {
   const supabase = createClient()
 
-  const select = '*, employees(name,email,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))'
+  const select = '*, employees(name,email,department,position,birthdate,employee_number,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))'
 
   let q = supabase.from('pay_info_v2').select(select).order('employee_id')
 
