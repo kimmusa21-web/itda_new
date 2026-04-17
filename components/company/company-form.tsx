@@ -33,6 +33,7 @@ const EMPTY: CompanyInput = {
   status:              'active',
   payslip_note:        null,
   payroll_day:         null,
+  payroll_start_day:   null,
 }
 
 /* ── 메인 컴포넌트 ─────────────────────────────────────────── */
@@ -145,7 +146,7 @@ export function CompanyForm({ mode, initialData }: CompanyFormProps) {
           </FieldWrap>
         </Row2>
         <Row2>
-          <FieldWrap label="매월 급여일">
+          <FieldWrap label="매월 급여일" hint="실제 급여를 지급하는 날짜 (예: 25)">
             <div className="relative">
               <input
                 type="number"
@@ -164,7 +165,25 @@ export function CompanyForm({ mode, initialData }: CompanyFormProps) {
               )}
             </div>
           </FieldWrap>
-          <div /> {/* spacer */}
+          <FieldWrap label="급여 정산 시작일" hint="정산기간 시작일 (예: 16 → 전월 16일~당월 15일). 비우면 1일 기준">
+            <div className="relative">
+              <input
+                type="number"
+                min={1}
+                max={31}
+                className={cls(false)}
+                placeholder="예: 16"
+                value={form.payroll_start_day ?? ''}
+                onChange={e => {
+                  const v = e.target.value === '' ? null : Math.min(31, Math.max(1, Number(e.target.value)))
+                  setForm(p => ({ ...p, payroll_start_day: v }))
+                }}
+              />
+              {form.payroll_start_day && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">일</span>
+              )}
+            </div>
+          </FieldWrap>
         </Row2>
         <Row2>
           <FieldWrap label="업태">
@@ -277,9 +296,9 @@ function Row2({ children }: { children: React.ReactNode }) {
 }
 
 function FieldWrap({
-  label, error, required, children,
+  label, error, required, hint, children,
 }: {
-  label: string; error?: string; required?: boolean; children: React.ReactNode
+  label: string; error?: string; required?: boolean; hint?: string; children: React.ReactNode
 }) {
   return (
     <div data-error={error ? true : undefined}>
@@ -288,6 +307,9 @@ function FieldWrap({
         {required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       {children}
+      {hint && !error && (
+        <p className="mt-1 text-[11px] text-slate-400">{hint}</p>
+      )}
       {error && (
         <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
           <AlertCircle size={11} />{error}

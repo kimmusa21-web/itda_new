@@ -17,6 +17,19 @@ import {
 } from '@/types/payslip'
 
 /* ────────────────────────────────────────────────────────
+   capWithQuitDate — 퇴사일로 정산종료일 캡
+   quitDate가 존재하고 periodEnd보다 앞서면 quitDate 반환
+──────────────────────────────────────────────────────── */
+function capWithQuitDate(
+  periodEnd: string | null | undefined,
+  quitDate:  string | null | undefined,
+): string | undefined {
+  if (!periodEnd) return undefined
+  if (!quitDate)  return periodEnd
+  return quitDate < periodEnd ? quitDate : periodEnd
+}
+
+/* ────────────────────────────────────────────────────────
    getCurrentEmployee
    우선순위:
      1. employees.user_id = auth.uid()       (초대 수락 완료)
@@ -121,7 +134,7 @@ export async function getAdminEmployeePayslipDetail(
       *,
       employees (
         name, email, department, position,
-        Date_of_joining, birthdate, company_id
+        Date_of_joining, birthdate, quit_date, company_id
       ),
       companies ( name, payslip_note, payroll_start_day )
     `)
@@ -143,6 +156,11 @@ export async function getAdminEmployeePayslipDetail(
   const { start: payrollPeriodStart, end: payrollPeriodEnd } =
     getPayrollPeriod(row.accrual_month, payrollStartDay)
 
+  // 퇴사자: 퇴사일이 정산종료일보다 앞서면 퇴사일로 캡
+  const quitDate = (row.employees as any)?.quit_date as string | null | undefined
+  const cappedEndDate        = capWithQuitDate(row.end_date ?? null, quitDate)
+  const cappedPayrollPeriodEnd = capWithQuitDate(payrollPeriodEnd, quitDate)
+
   return {
     id:           row.id,
     accrualMonth: row.accrual_month,
@@ -150,7 +168,7 @@ export async function getAdminEmployeePayslipDetail(
     workDays:     row.work_days != null ? Number(row.work_days) : null,
     overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : null,
     startDate: row.start_date ?? null,
-    endDate:   row.end_date   ?? null,
+    endDate:   cappedEndDate,
     overTime:                  row.Over_time                   ?? null,
     holidayWorkingHours:       row.Holiday_working_hours       ?? null,
     nightWorkHours:            row.night_work_hours            ?? null,
@@ -178,7 +196,7 @@ export async function getAdminEmployeePayslipDetail(
     companyName:        row.companies?.name ?? '',
     daysInMonth,
     payrollPeriodStart,
-    payrollPeriodEnd,
+    payrollPeriodEnd: cappedPayrollPeriodEnd,
   }
 }
 
@@ -199,7 +217,7 @@ export async function getEmployeePayslipById(
       *,
       employees (
         name, email, department, position,
-        Date_of_joining, birthdate, company_id
+        Date_of_joining, birthdate, quit_date, company_id
       ),
       companies ( name, payslip_note, payroll_start_day )
     `)
@@ -223,6 +241,11 @@ export async function getEmployeePayslipById(
   const { start: payrollPeriodStart, end: payrollPeriodEnd } =
     getPayrollPeriod(row.accrual_month, payrollStartDay)
 
+  // 퇴사자: 퇴사일이 정산종료일보다 앞서면 퇴사일로 캡
+  const quitDate2 = (row.employees as any)?.quit_date as string | null | undefined
+  const cappedEndDate2         = capWithQuitDate(row.end_date ?? null, quitDate2)
+  const cappedPayrollPeriodEnd2 = capWithQuitDate(payrollPeriodEnd, quitDate2)
+
   return {
     id:           row.id,
     accrualMonth: row.accrual_month,
@@ -230,9 +253,9 @@ export async function getEmployeePayslipById(
     workDays:     row.work_days != null ? Number(row.work_days) : null,
     overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : null,
 
-    // ★ 정산기간 — pay_info_v2 직접 저장값
+    // ★ 정산기간 — pay_info_v2 직접 저장값 (퇴사일 캡 적용)
     startDate: row.start_date ?? null,
-    endDate:   row.end_date   ?? null,
+    endDate:   cappedEndDate2,
 
     // ★ 근로시간/연차
     overTime:                  row.Over_time                   ?? null,
@@ -268,6 +291,6 @@ export async function getEmployeePayslipById(
     companyName:        row.companies?.name ?? '',
     daysInMonth,
     payrollPeriodStart,
-    payrollPeriodEnd,
+    payrollPeriodEnd: cappedPayrollPeriodEnd2,
   }
 }

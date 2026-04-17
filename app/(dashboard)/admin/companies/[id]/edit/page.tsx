@@ -44,6 +44,7 @@ export default async function AdminCompanyEditPage({ params }: Props) {
           status:              company.status ?? 'active',
           payslip_note:        company.payslip_note ?? null,
           payroll_day:         (company as any).payroll_day ?? null,
+          payroll_start_day:   (company as any).payroll_start_day ?? null,
         }}
       />
     </div>

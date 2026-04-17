@@ -35,6 +35,7 @@ export interface CompanyInput {
   status?: 'active' | 'inactive'
   payslip_note?: string | null
   payroll_day?: number | null
+  payroll_start_day?: number | null
 }
 
 /* ── 결과 타입 ──────────────────────────────────────────────── */
@@ -59,6 +60,9 @@ function normalizeInput(input: CompanyInput) {
     payslip_note:       input.payslip_note?.trim() || null,
     payroll_day:        input.payroll_day != null
                           ? Math.min(31, Math.max(1, Math.round(input.payroll_day)))
+                          : null,
+    payroll_start_day:  input.payroll_start_day != null
+                          ? Math.min(31, Math.max(1, Math.round(input.payroll_start_day)))
                           : null,
   }
 }
