@@ -7,6 +7,7 @@
 import { createClient }        from '@/lib/supabase/server'
 import { mapEarnings, mapDeductions } from '@/lib/payroll-labels'
 import { parsePayslipNote }   from '@/lib/payslip-defaults'
+import { getDefaultPayslipNotes } from '@/lib/supabase/queries/app-settings'
 import { getDaysInMonth, getPayrollPeriod } from '@/lib/payslip-utils'
 import {
   rowToListItem,
@@ -112,6 +113,7 @@ export async function getAdminEmployeePayslipDetail(
   employeeId: number,
 ): Promise<PayslipDetail | null> {
   const supabase = createClient()
+  const systemDefaultNotes = await getDefaultPayslipNotes()
 
   const { data, error } = await supabase
     .from('pay_info_v2')
@@ -161,7 +163,8 @@ export async function getAdminEmployeePayslipDetail(
     totalDeductions,
     netPay,
     calculationNotes: parsePayslipNote(
-      (row.companies as any)?.payslip_note ?? null
+      (row.companies as any)?.payslip_note ?? null,
+      systemDefaultNotes,
     ),
     employee: {
       name:       row.employees?.name       ?? '',
@@ -188,6 +191,7 @@ export async function getEmployeePayslipById(
   employeeId: number,
 ): Promise<PayslipDetail | null> {
   const supabase = createClient()
+  const systemDefaultNotes = await getDefaultPayslipNotes()
 
   const { data, error } = await supabase
     .from('pay_info_v2')
@@ -248,7 +252,8 @@ export async function getEmployeePayslipById(
     netPay,
 
     calculationNotes: parsePayslipNote(
-      (row.companies as any)?.payslip_note ?? null
+      (row.companies as any)?.payslip_note ?? null,
+      systemDefaultNotes,
     ),
 
     employee: {

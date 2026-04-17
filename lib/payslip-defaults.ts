@@ -10,7 +10,7 @@ export const DEFAULT_PAYSLIP_NOTES: string[] = [
   '연장근로수당: (기본급+식대)/209h × 연장근로시간 × 1.5',
   '야간근로수당: (기본급+식대)/209h × 야간근로시간 × 0.5',
   '휴일근로수당: (기본급+식대)/209h × 휴일근로시간 × 1.5',
-  '연차수당: (기본급+고정연장수당+식대)/209h × 잔여연차시간',
+  '연차수당: (기본급+고정연장수당+식대)/209h × 8시간 × 잔여연차시간',
   '국민연금: 소득월액 × 4.5%',
   '건강보험: 보수월액 × 3.545%',
   '장기요양보험: 건강보험료 × 12.81%',
@@ -25,11 +25,17 @@ export const DEFAULT_PAYSLIP_NOTE_PLACEHOLDER = DEFAULT_PAYSLIP_NOTES.join('\n')
 /**
  * DB에 저장된 payslip_note 문자열 → 화면 표시용 string[] 변환
  *
- * - null/빈 문자열 → DEFAULT_PAYSLIP_NOTES 반환
+ * - null/빈 문자열 → defaultNotes (전달된 경우) 또는 DEFAULT_PAYSLIP_NOTES 반환
  * - 줄바꿈(\n) 기준으로 분리, 공백 줄 제거
+ *
+ * @param note        회사별 커스텀 산출 근거 (companies.payslip_note)
+ * @param defaultNotes DB에서 가져온 시스템 기본값 (app_settings.default_payslip_note)
  */
-export function parsePayslipNote(note: string | null | undefined): string[] {
-  if (!note?.trim()) return DEFAULT_PAYSLIP_NOTES
+export function parsePayslipNote(
+  note: string | null | undefined,
+  defaultNotes?: string[],
+): string[] {
+  if (!note?.trim()) return defaultNotes ?? DEFAULT_PAYSLIP_NOTES
   return note
     .split('\n')
     .map(s => s.trim())
