@@ -17,6 +17,22 @@ import {
 } from '@/types/payslip'
 
 /* ────────────────────────────────────────────────────────
+   derivePaymentDate — 귀속월 + 급여지급일 → 실제 지급일
+   payrollDay=25, accrualMonth='2026-02' → '2026-02-25'
+   말일 초과는 해당 월 말일로 클램프
+──────────────────────────────────────────────────────── */
+function derivePaymentDate(
+  accrualMonth: string,
+  payrollDay:   number | null | undefined,
+): string | null {
+  if (!payrollDay) return null
+  const [year, month] = accrualMonth.split('-').map(Number)
+  const lastDay = new Date(year, month, 0).getDate()
+  const day = Math.min(payrollDay, lastDay)
+  return `${accrualMonth}-${String(day).padStart(2, '0')}`
+}
+
+/* ────────────────────────────────────────────────────────
    capWithQuitDate — 퇴사일로 정산종료일 캡
    quitDate가 존재하고 periodEnd보다 앞서면 quitDate 반환
 ──────────────────────────────────────────────────────── */
@@ -136,7 +152,7 @@ export async function getAdminEmployeePayslipDetail(
         name, email, department, position,
         Date_of_joining, birthdate, quit_date, company_id
       ),
-      companies ( name, payslip_note, payroll_start_day )
+      companies ( name, payslip_note, payroll_start_day, payroll_day )
     `)
     .eq('company_id', companyId)
     .eq('accrual_month', payMonth)
@@ -153,6 +169,7 @@ export async function getAdminEmployeePayslipDetail(
 
   const daysInMonth = getDaysInMonth(row.accrual_month)
   const payrollStartDay = ((row.companies as any)?.payroll_start_day ?? null) as number | null
+  const payrollDay      = ((row.companies as any)?.payroll_day      ?? null) as number | null
   const { start: payrollPeriodStart, end: payrollPeriodEnd } =
     getPayrollPeriod(row.accrual_month, payrollStartDay)
 
@@ -164,7 +181,7 @@ export async function getAdminEmployeePayslipDetail(
   return {
     id:           row.id,
     accrualMonth: row.accrual_month,
-    paymentDate:  row.payment_date ?? null,
+    paymentDate:  row.payment_date ?? derivePaymentDate(row.accrual_month, payrollDay),
     workDays:     row.work_days != null ? Number(row.work_days) : null,
     overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : null,
     startDate: row.start_date ?? null,
@@ -219,7 +236,7 @@ export async function getEmployeePayslipById(
         name, email, department, position,
         Date_of_joining, birthdate, quit_date, company_id
       ),
-      companies ( name, payslip_note, payroll_start_day )
+      companies ( name, payslip_note, payroll_start_day, payroll_day )
     `)
     .eq('id', id)
     .eq('employee_id', employeeId)   // ★ 본인 검증 — 다른 직원 id면 null 반환
@@ -238,6 +255,7 @@ export async function getEmployeePayslipById(
   // pay_info_v2에 start_date/end_date가 있으면 우선 사용, 없으면 company 기준 계산
   const daysInMonth = getDaysInMonth(row.accrual_month)
   const payrollStartDay = ((row.companies as any)?.payroll_start_day ?? null) as number | null
+  const payrollDay2     = ((row.companies as any)?.payroll_day      ?? null) as number | null
   const { start: payrollPeriodStart, end: payrollPeriodEnd } =
     getPayrollPeriod(row.accrual_month, payrollStartDay)
 
@@ -249,7 +267,7 @@ export async function getEmployeePayslipById(
   return {
     id:           row.id,
     accrualMonth: row.accrual_month,
-    paymentDate:  row.payment_date ?? null,
+    paymentDate:  row.payment_date ?? derivePaymentDate(row.accrual_month, payrollDay2),
     workDays:     row.work_days != null ? Number(row.work_days) : null,
     overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : null,
 
