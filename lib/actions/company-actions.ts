@@ -195,6 +195,31 @@ export async function getCompanyForEdit(id: number) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   어드민 전용: 특정 회사의 급여명세서 산출 근거 수정 (company ID 직접 지정)
+═══════════════════════════════════════════════════════════════ */
+export async function updateCompanyPayslipNoteById(
+  companyId: number,
+  payslipNote: string | null,
+): Promise<ActionResult> {
+  try {
+    const { supabase } = await requireAdmin()
+
+    const { error } = await supabase
+      .from('companies')
+      .update({ payslip_note: payslipNote?.trim() || null })
+      .eq('id', companyId)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath(`/admin/companies/${companyId}`)
+    revalidatePath(`/admin/companies/${companyId}/edit`)
+    return { success: true }
+  } catch (e: any) {
+    return { success: false, error: e.message }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    매니저 전용: 자기 회사의 급여명세서 산출 근거 수정
    매니저는 자신이 속한 company_id의 payslip_note만 수정 가능
 ═══════════════════════════════════════════════════════════════ */

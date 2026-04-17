@@ -1,6 +1,6 @@
 import { redirect, notFound }     from 'next/navigation'
 import Link                        from 'next/link'
-import { Building2, Users, Edit2, ArrowLeft, CreditCard } from 'lucide-react'
+import { Building2, Users, Edit2, ArrowLeft, CreditCard, FileText } from 'lucide-react'
 import { createClient }            from '@/lib/supabase/server'
 import { StartCompanyImpersonationButton } from '@/components/impersonation/start-impersonation-button'
 import {
@@ -10,6 +10,7 @@ import {
 } from '@/lib/supabase/queries/company-payroll'
 import { CompanyPayrollLedgerTable } from '@/components/company/company-payroll-ledger-table'
 import { CompanyEmployeeList }       from '@/components/company/company-employee-list'
+import { PayslipNoteEditor }         from '@/components/company/payslip-note-editor'
 import { cn }                        from '@/lib/utils'
 
 export async function generateMetadata({ params }: Props) {
@@ -139,6 +140,20 @@ export default async function AdminCompanyDetailPage({ params }: Props) {
           companyId={id}
           companyName={company.name}
         />
+      </section>
+
+      {/* ── 급여명세서 산출 근거 ── */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <FileText size={15} className="text-slate-400" />
+          <h2 className="text-sm font-semibold text-slate-700">급여명세서 산출 근거</h2>
+        </div>
+        <div className="card p-5">
+          <PayslipNoteEditor
+            initialNote={company.payslip_note}
+            companyId={id}
+          />
+        </div>
       </section>
 
     </div>
