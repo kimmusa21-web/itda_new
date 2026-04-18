@@ -5,6 +5,7 @@ import { Search, BarChart3, X }          from 'lucide-react'
 import { createClient }                  from '@/lib/supabase/client'
 import type { PayInfoV2 }                from '@/types'
 import { mapEarnings, mapDeductions }    from '@/lib/payroll-labels'
+import { parsePayslipNote }             from '@/lib/payslip-defaults'
 import { PayslipDetailView }             from '@/components/payslip/payslip-detail-v2'
 import { SendPayslipButton }             from '@/components/payroll/send-payslip-button'
 import { formatKRW, formatAccrualMonth } from '@/lib/payslip-utils'
@@ -51,7 +52,9 @@ function rowToDetail(row: PayInfoV2): PayslipDetail {
     totalEarnings,
     totalDeductions,
     netPay,
-    calculationNotes: row.calculation_notes ?? [],
+    calculationNotes: (row.calculation_notes ?? []).length > 0
+      ? row.calculation_notes!
+      : parsePayslipNote((row.companies as any)?.payslip_note ?? null),
     employee: {
       name:       row.employees?.name       ?? '',
       email:      row.employees?.email      ?? '',
