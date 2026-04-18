@@ -1,14 +1,14 @@
 'use client'
 /* ================================================================
    itda — 급여 표준 CSV 업로드 컴포넌트
-   admin: 회사 선택 → 파일 업로드
-   manager: 고정 company_id
+   admin: 회사 선택 → 귀속월 선택 → 파일 업로드
+   manager: 귀속월 선택 → 파일 업로드
 ================================================================ */
 
 import { useState, useRef } from 'react'
 import {
   Upload, Download, AlertCircle, FileText, X,
-  CheckCircle, XCircle, Loader2, RefreshCw,
+  CheckCircle, XCircle, Loader2, RefreshCw, CalendarDays,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -32,13 +32,34 @@ type Step = 'idle' | 'preview' | 'uploading' | 'done'
 export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Props) {
   const [step, setStep]               = useState<Step>('idle')
   const [companyId, setCompanyId]     = useState<number | ''>(defaultCompanyId ?? '')
+  const [selectedMonth, setSelectedMonth] = useState('')   // YYYY-MM, 선택 시 CSV pay_month 덮어쓰기
   const [fileName, setFileName]       = useState('')
   const [rows, setRows]               = useState<PayslipCsvRow[]>([])
   const [headerError, setHeaderError] = useState<string | null>(null)
-  const [previewErrors, setPreviewErrors] = useState<Record<number, PayslipCsvFailure[]>>({})
   const [result, setResult]           = useState<PayslipCsvResult | null>(null)
   const [authError, setAuthError]     = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  /* ── 귀속월 override 적용된 실효 행 ── */
+  const effectiveRows: PayslipCsvRow[] = selectedMonth
+    ? rows.map(r => ({ ...r, pay_month: selectedMonth }))
+    : rows
+
+  /* ── 유효성 검사 (effectiveRows 기준, 렌더 시 계산) ── */
+  const previewErrors: Record<number, PayslipCsvFailure[]> = {}
+  if (rows.length > 0) {
+    const { duplicates } = checkPayslipInternalDuplicates(effectiveRows)
+    effectiveRows.forEach((row, idx) => {
+      const rowNumber = idx + 2
+      const rowFails: PayslipCsvFailure[] = []
+      rowFails.push(...validatePayslipRow(row, rowNumber))
+      const key = `${row.email.toLowerCase()}|${row.pay_month}`
+      if (duplicates.has(key)) {
+        rowFails.push({ rowNumber, email: row.email, reason: `파일 내 중복 (${row.email} / ${row.pay_month})` })
+      }
+      if (rowFails.length > 0) previewErrors[rowNumber] = rowFails
+    })
+  }
 
   /* ── 파일 선택 ── */
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -71,35 +92,17 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
       return
     }
 
-    const { duplicates } = checkPayslipInternalDuplicates(parsed.rows)
-
-    const errors: Record<number, PayslipCsvFailure[]> = {}
-    parsed.rows.forEach((row, idx) => {
-      const rowNumber = idx + 2
-      const rowFails: PayslipCsvFailure[] = []
-
-      rowFails.push(...validatePayslipRow(row, rowNumber))
-
-      const key = `${row.email.toLowerCase()}|${row.pay_month}`
-      if (duplicates.has(key)) {
-        rowFails.push({ rowNumber, email: row.email, reason: `파일 내 중복 (${row.email} / ${row.pay_month})` })
-      }
-
-      if (rowFails.length > 0) errors[rowNumber] = rowFails
-    })
-
-    setPreviewErrors(errors)
     setRows(parsed.rows)
     setStep('preview')
   }
 
   /* ── 업로드 ── */
   async function handleUpload() {
-    if (!companyId || rows.length === 0) return
+    if (!companyId || effectiveRows.length === 0) return
 
     setStep('uploading')
     try {
-      const res = await uploadPayslipCsv({ companyId: companyId as number, rows, fileName })
+      const res = await uploadPayslipCsv({ companyId: companyId as number, rows: effectiveRows, fileName })
 
       if (res.authError) {
         setAuthError(res.authError)
@@ -123,15 +126,14 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
     setRows([])
     setFileName('')
     setHeaderError(null)
-    setPreviewErrors({})
     setResult(null)
     setAuthError(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const validRowCount   = rows.length - Object.keys(previewErrors).length
+  const validRowCount   = effectiveRows.length - Object.keys(previewErrors).length
   const invalidRowCount = Object.keys(previewErrors).length
-  const canUpload       = !!companyId && rows.length > 0 && validRowCount > 0
+  const canUpload       = !!companyId && effectiveRows.length > 0 && validRowCount > 0
   const isUploading     = step === 'uploading'
 
   if (step === 'done' && result) {
@@ -183,6 +185,39 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
           </select>
         </div>
       )}
+
+      {/* 귀속월 선택 */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+          <CalendarDays size={14} className="text-slate-400" />
+          귀속월
+          <span className="text-xs font-normal text-slate-400">(선택 — CSV 값을 이 월로 일괄 덮어씁니다)</span>
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="month"
+            className="input max-w-[180px]"
+            value={selectedMonth}
+            onChange={e => setSelectedMonth(e.target.value)}
+            disabled={isUploading}
+          />
+          {selectedMonth && (
+            <button
+              type="button"
+              onClick={() => setSelectedMonth('')}
+              className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1"
+              disabled={isUploading}
+            >
+              <X size={12} />초기화
+            </button>
+          )}
+        </div>
+        {selectedMonth && (
+          <p className="mt-1 text-[11px] text-blue-600">
+            전체 행의 귀속월을 <strong>{selectedMonth}</strong>로 적용합니다
+          </p>
+        )}
+      </div>
 
       {/* 파일 업로드 */}
       <div>
@@ -266,7 +301,9 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
                   <tr>
                     <th className="px-3 py-2.5 text-left text-slate-500 font-semibold w-10">행</th>
                     <th className="px-3 py-2.5 text-left text-slate-500 font-semibold">이메일</th>
-                    <th className="px-3 py-2.5 text-left text-slate-500 font-semibold">귀속월</th>
+                    <th className="px-3 py-2.5 text-left text-slate-500 font-semibold">
+                      귀속월{selectedMonth && <span className="ml-1 text-blue-500 font-normal text-[10px]">(일괄적용)</span>}
+                    </th>
                     <th className="px-3 py-2.5 text-right text-slate-500 font-semibold">기본급</th>
                     <th className="px-3 py-2.5 text-right text-slate-500 font-semibold">지급합계</th>
                     <th className="px-3 py-2.5 text-right text-slate-500 font-semibold">공제합계</th>
@@ -275,7 +312,7 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {rows.map((row, idx) => {
+                  {effectiveRows.map((row, idx) => {
                     const rowNumber = idx + 2
                     const errs      = previewErrors[rowNumber]
                     const hasError  = Boolean(errs?.length)
@@ -290,7 +327,10 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
                           {row.email || <span className="text-red-400 italic">없음</span>}
                         </td>
                         <td className="px-3 py-2 text-slate-600">
-                          {row.pay_month || <span className="text-red-400 italic">없음</span>}
+                          {row.pay_month
+                            ? <span className={selectedMonth ? 'text-blue-600 font-medium' : ''}>{row.pay_month}</span>
+                            : <span className="text-red-400 italic">없음</span>
+                          }
                         </td>
                         <td className="px-3 py-2 text-right text-slate-600">
                           {row.base_salary
