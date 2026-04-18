@@ -211,6 +211,139 @@ export function computeSeverance(params: {
   }
 }
 
+/* ================================================================
+   퇴직소득세 자동 계산
+   근거: 소득세법 제48조, 소득세법 시행령 제107조
+================================================================ */
+
+/** 근속월수 (입사월~퇴사월 포함 카운트) */
+export function computeServiceMonths(hireDateStr: string, retirementDateStr: string): number {
+  const hire = parseDate(hireDateStr)
+  const ret  = parseDate(retirementDateStr)
+  return (ret.getFullYear() - hire.getFullYear()) * 12
+       + (ret.getMonth()   - hire.getMonth())
+       + 1
+}
+
+/** 근속연수 = ceil(근속월수 / 12), 최소 1 */
+export function computeServiceYears(serviceMonths: number): number {
+  return Math.max(1, Math.ceil(serviceMonths / 12))
+}
+
+/**
+ * 근속년수별 퇴직소득공제
+ *  ≤  5년: 100만 × 근속연수
+ *  ≤ 10년: 500만 + (근속연수-5) × 200만
+ *  ≤ 20년: 1500만 + (근속연수-10) × 250만
+ *  > 20년: 4000만 + (근속연수-20) × 300만
+ */
+export function computeServiceYearDeduction(serviceYears: number): number {
+  if (serviceYears <=  5) return 1_000_000 * serviceYears
+  if (serviceYears <= 10) return  5_000_000 + (serviceYears -  5) * 2_000_000
+  if (serviceYears <= 20) return 15_000_000 + (serviceYears - 10) * 2_500_000
+  return                        40_000_000 + (serviceYears - 20) * 3_000_000
+}
+
+/**
+ * 환산급여 = (퇴직급여 - 근속년수별공제) × 12 / 근속연수
+ */
+export function computeConvertedSalary(
+  severancePay:         number,
+  serviceYearDeduction: number,
+  serviceYears:         number,
+): number {
+  return (severancePay - serviceYearDeduction) * 12 / serviceYears
+}
+
+/**
+ * 환산급여공제
+ *  ≤ 800만: 전액
+ *  ≤ 7,000만: 800만 + (초과 × 60%)
+ *  ≤ 10,000만: 4,520만 + (초과 × 55%)
+ *  ≤ 30,000만: 6,170만 + (초과 × 45%)
+ *  > 30,000만: 15,170만 + (초과 × 35%)
+ */
+export function computeConvertedSalaryDeduction(convertedSalary: number): number {
+  if (convertedSalary <=  8_000_000) return convertedSalary
+  if (convertedSalary <= 70_000_000) return  8_000_000 + (convertedSalary -   8_000_000) * 0.60
+  if (convertedSalary <= 100_000_000) return 45_200_000 + (convertedSalary -  70_000_000) * 0.55
+  if (convertedSalary <= 300_000_000) return 61_700_000 + (convertedSalary - 100_000_000) * 0.45
+  return                             151_700_000 + (convertedSalary - 300_000_000) * 0.35
+}
+
+/**
+ * 기본세율 적용 환산산출세액
+ *  ≤ 1,400만: × 6%
+ *  ≤ 5,000만: × 15% − 126만
+ *  ≤ 8,800만: × 24% − 576만
+ *  ≤ 1.5억: × 35% − 1,544만
+ *  ≤ 3억: × 38% − 1,994만
+ *  ≤ 5억: × 40% − 2,594만
+ *  ≤ 10억: × 42% − 3,594만
+ *  > 10억: × 45% − 6,594만
+ */
+export function computeConvertedTax(taxBase: number): number {
+  if (taxBase <=  14_000_000) return taxBase * 0.06
+  if (taxBase <=  50_000_000) return taxBase * 0.15 -  1_260_000
+  if (taxBase <=  88_000_000) return taxBase * 0.24 -  5_760_000
+  if (taxBase <= 150_000_000) return taxBase * 0.35 - 15_440_000
+  if (taxBase <= 300_000_000) return taxBase * 0.38 - 19_940_000
+  if (taxBase <= 500_000_000) return taxBase * 0.40 - 25_940_000
+  if (taxBase <= 1_000_000_000) return taxBase * 0.42 - 35_940_000
+  return                              taxBase * 0.45 - 65_940_000
+}
+
+/** 퇴직소득세 계산 결과 */
+export interface RetirementTaxResult {
+  serviceMonths:             number
+  serviceYears:              number
+  serviceYearDeduction:      number
+  convertedSalary:           number
+  convertedSalaryDeduction:  number
+  taxBase:                   number
+  convertedTax:              number
+  calculatedTax:             number
+  incomeTax:                 number   // 소득세 (10원 단위 절사)
+  residentTax:               number   // 주민세 (10원 단위 절사)
+  totalTax:                  number   // 납부세액
+}
+
+/**
+ * 퇴직소득세 자동 계산
+ * severancePay: 퇴직금액 (원)
+ */
+export function computeRetirementTax(
+  severancePay:    number,
+  hireDateStr:     string,
+  retirementDateStr: string,
+): RetirementTaxResult {
+  const serviceMonths           = computeServiceMonths(hireDateStr, retirementDateStr)
+  const serviceYears            = computeServiceYears(serviceMonths)
+  const serviceYearDeduction    = computeServiceYearDeduction(serviceYears)
+  const convertedSalary         = Math.max(0, computeConvertedSalary(severancePay, serviceYearDeduction, serviceYears))
+  const convertedSalaryDeduction = computeConvertedSalaryDeduction(convertedSalary)
+  const taxBase                 = Math.max(0, convertedSalary - convertedSalaryDeduction)
+  const convertedTax            = computeConvertedTax(taxBase)
+  const calculatedTax           = (convertedTax / 12) * serviceYears
+  const incomeTax               = Math.floor(calculatedTax / 10) * 10   // 10원 단위 절사
+  const residentTax             = Math.floor(incomeTax * 0.1  / 10) * 10 // 10원 단위 절사
+  const totalTax                = incomeTax + residentTax
+
+  return {
+    serviceMonths,
+    serviceYears,
+    serviceYearDeduction,
+    convertedSalary,
+    convertedSalaryDeduction,
+    taxBase,
+    convertedTax,
+    calculatedTax,
+    incomeTax,
+    residentTax,
+    totalTax,
+  }
+}
+
 /* ── 포맷 헬퍼 ── */
 export function fmtKRW(n: number): string {
   return Math.round(n).toLocaleString('ko-KR') + '원'
