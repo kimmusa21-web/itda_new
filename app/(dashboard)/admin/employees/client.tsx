@@ -6,7 +6,7 @@ import Link                                      from 'next/link'
 import { createClient }                          from '@/lib/supabase/client'
 import type { EmployeeRow }                      from '@/lib/supabase/queries/employee'
 import { formatDateShort, cn }                   from '@/lib/utils'
-import { createEmployeeAdmin }                   from '@/lib/actions/employee-admin-create'
+import { createEmployeeAdmin, deleteEmployeeAdmin } from '@/lib/actions/employee-admin-create'
 
 type Filter = 'active' | 'inactive' | 'all'
 
@@ -21,7 +21,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
   const [filter, setFilter]             = useState<Filter>('active')
   const [search, setSearch]             = useState('')
   const [company, setCompany]           = useState('')
-  const [modal, setModal]               = useState<'add' | 'edit' | 'quit' | 'rehire' | null>(null)
+  const [modal, setModal]               = useState<'add' | 'edit' | 'quit' | 'rehire' | 'delete' | null>(null)
   const [selected, setSelected]         = useState<EmployeeRow | null>(null)
   const [form, setForm]                 = useState<Partial<EmployeeRow>>({})
   const [saving, setSaving]             = useState(false)
@@ -86,6 +86,9 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
         await supabase.from('employees').update({
           is_active: true, quit_date: null,
         }).eq('id', selected.id)
+      } else if (modal === 'delete' && selected) {
+        const result = await deleteEmployeeAdmin(selected.id)
+        if (!result.success) throw new Error(result.error)
       }
       setModal(null)
       startTransition(reload)
@@ -247,12 +250,20 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
                             퇴사
                           </button>
                         ) : (
-                          <button
-                            onClick={() => { setSelected(emp); setModal('rehire') }}
-                            className="text-xs text-emerald-600 hover:underline"
-                          >
-                            재직으로 변경
-                          </button>
+                          <>
+                            <button
+                              onClick={() => { setSelected(emp); setModal('rehire') }}
+                              className="text-xs text-emerald-600 hover:underline"
+                            >
+                              재직으로 변경
+                            </button>
+                            <button
+                              onClick={() => { setSelected(emp); setModal('delete') }}
+                              className="text-xs text-red-400 hover:text-red-600 hover:underline"
+                            >
+                              삭제
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -320,12 +331,20 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
                       퇴사 처리
                     </button>
                   ) : (
-                    <button
-                      onClick={() => { setSelected(emp); setModal('rehire') }}
-                      className="flex-1 text-xs text-emerald-600 hover:underline py-1"
-                    >
-                      재직으로 변경
-                    </button>
+                    <>
+                      <button
+                        onClick={() => { setSelected(emp); setModal('rehire') }}
+                        className="flex-1 text-xs text-emerald-600 hover:underline py-1"
+                      >
+                        재직으로 변경
+                      </button>
+                      <button
+                        onClick={() => { setSelected(emp); setModal('delete') }}
+                        className="flex-1 text-xs text-red-400 hover:text-red-600 hover:underline py-1"
+                      >
+                        삭제
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -419,6 +438,35 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
             <button onClick={() => setModal(null)} className="btn-secondary flex-1">취소</button>
             <button onClick={save} className="btn-danger flex-1" disabled={saving}>
               {saving ? '처리중...' : '퇴사 처리'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* 직원 완전 삭제 확인 모달 */}
+      {modal === 'delete' && selected && (
+        <Modal title="직원 정보 삭제" onClose={() => setModal(null)}>
+          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+            <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
+            <p className="text-xs text-red-700 leading-relaxed">
+              이 작업은 되돌릴 수 없습니다. 직원 정보와 해당 직원의 모든 급여 데이터가 영구적으로 삭제됩니다.
+            </p>
+          </div>
+          <p className="text-sm text-slate-700 mb-1">
+            <span className="font-semibold">{selected.name}</span>님의 모든 정보를 삭제하시겠습니까?
+          </p>
+          {selected.quit_date && (
+            <p className="text-xs text-slate-400 mb-1">퇴사일: {selected.quit_date}</p>
+          )}
+          <p className="text-xs text-slate-400">이메일: {selected.email}</p>
+          <div className="flex gap-2 mt-5">
+            <button onClick={() => setModal(null)} className="btn-secondary flex-1">취소</button>
+            <button
+              onClick={save}
+              disabled={saving}
+              className="flex-1 px-4 py-2 rounded-xl text-sm font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+            >
+              {saving ? '삭제중...' : '영구 삭제'}
             </button>
           </div>
         </Modal>
