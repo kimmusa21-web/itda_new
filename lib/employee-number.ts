@@ -70,6 +70,35 @@ export async function generateUniqueEmployeeNumber(
 }
 
 /**
+ * employee_number가 null일 때 급여명세서 표시용 임시 사번 (결정론적, DB 호출 없음)
+ * 형식: 사업자 앞3자리 + 입사일YYMMDD + employee_id 기반 2소문자
+ * 실제 DB에 저장되지 않음 — 화면 표시 전용 fallback
+ */
+export function deriveEmployeeNumberDisplay(
+  bizNumber: string | null | undefined,
+  hireDate:  string | null | undefined,
+  employeeId: number,
+): string {
+  const biz = (bizNumber ?? '').replace(/[^0-9]/g, '').slice(0, 3).padEnd(3, '0')
+
+  let dateStr = '000000'
+  if (hireDate) {
+    const d = new Date(hireDate)
+    if (!isNaN(d.getTime())) {
+      const yy = String(d.getFullYear()).slice(2)
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      const dd = String(d.getDate()).padStart(2, '0')
+      dateStr = `${yy}${mm}${dd}`
+    }
+  }
+
+  // employee_id 기반 결정론적 2소문자 (aa ~ zz, 676가지)
+  const a = String.fromCharCode(97 + (Math.floor(employeeId / 26) % 26))
+  const b = String.fromCharCode(97 + (employeeId % 26))
+  return `${biz}${dateStr}${a}${b}`
+}
+
+/**
  * 배치 INSERT 전용 — 복수 행에 대해 중복 없는 사번 일괄 생성
  * DB 기존 사번 + 배치 내 중복 모두 방지
  *

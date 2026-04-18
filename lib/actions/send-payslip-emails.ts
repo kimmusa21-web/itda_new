@@ -11,6 +11,7 @@
 
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { sendPayslipNotificationEmail }       from '@/lib/email'
+import { toAccrualDate }                      from '@/lib/payslip-utils'
 
 export interface SendPayslipResult {
   sentCount:    number
@@ -75,7 +76,7 @@ export async function sendPayslipEmails(params: {
       employees ( id, name, email )
     `)
     .eq('company_id', params.companyId)
-    .eq('accrual_month', params.accrualMonth)
+    .eq('accrual_month', toAccrualDate(params.accrualMonth))
     .order('id')
 
   if (payslipError) {

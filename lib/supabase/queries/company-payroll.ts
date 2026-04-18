@@ -5,6 +5,7 @@
  */
 import { createClient } from '@/lib/supabase/server'
 import type { PayInfoV2 } from '@/types'
+import { toAccrualDate, toAccrualMonth } from '@/lib/payslip-utils'
 
 /* ── 공통 헬퍼 ─────────────────────────────────────────────── */
 function parseAmt(val: string | null | undefined): number {
@@ -116,7 +117,7 @@ export async function getCompanyPayrollLedgerSummaries(
     const earnings   = Math.round(Number(row.total_earnings   ?? 0))
     const deductions = Math.abs(Math.round(Number(row.total_deductions ?? 0)))
     const net        = Math.round(Number(row.net_pay          ?? 0))
-    const month      = row.accrual_month as string
+    const month      = toAccrualMonth(row.accrual_month as string)
 
     const existing = map.get(month)
     if (existing) {
@@ -174,7 +175,7 @@ export async function getMonthlyPayrollRows(
       '*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))',
     )
     .eq('company_id', companyId)
-    .eq('accrual_month', payMonth)
+    .eq('accrual_month', toAccrualDate(payMonth))
     .order('employee_id')
   return (data ?? []) as PayInfoV2[]
 }
@@ -195,7 +196,7 @@ export async function getEmployeePayslipForAdmin(
       '*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))',
     )
     .eq('company_id', companyId)
-    .eq('accrual_month', payMonth)
+    .eq('accrual_month', toAccrualDate(payMonth))
     .eq('employee_id', employeeId)
     .maybeSingle()
   if (error || !data) return null

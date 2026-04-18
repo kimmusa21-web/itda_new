@@ -12,6 +12,7 @@ import type {
   PayInfoPayload,
   PreviewRow,
 } from '@/types/payroll-upload'
+import { toAccrualDate } from '@/lib/payslip-utils'
 
 /* ────────────────────────────────────────────────────────
    parseCurrency
@@ -292,7 +293,7 @@ export function toPayInfoPayloads(
       return [{
         company_id:        companyId,
         employee_id:       emp.id,
-        accrual_month:     p.accrualMonth,
+        accrual_month:     toAccrualDate(p.accrualMonth ?? ''),
         payment_date:      p.paymentDate || null,
         work_days:         null,
         overtime_hours:    null,

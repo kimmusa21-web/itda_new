@@ -15,6 +15,7 @@
 ================================================================ */
 
 import { createClient } from '@/lib/supabase/server'
+import { toAccrualDate } from '@/lib/payslip-utils'
 import type {
   PayslipCsvRow,
   PayslipCsvResult,
@@ -156,7 +157,7 @@ function buildUpsertRecord(
   return {
     company_id:        companyId,
     employee_id:       employeeId,
-    accrual_month:     row.pay_month,
+    accrual_month:     toAccrualDate(row.pay_month),
     payment_date:      row.payment_date || null,
     start_date:        row.start_date   || null,
     end_date:          row.end_date     || null,

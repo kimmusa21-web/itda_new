@@ -5,6 +5,7 @@
 ================================================================ */
 
 import { createClient } from '@/lib/supabase/server'
+import { toAccrualDate } from '@/lib/payslip-utils'
 import {
   validateCsvRows,
   transformCsvRows,
@@ -65,7 +66,7 @@ export async function upsertPayInfo(
   const records = payloads.map(p => ({
     company_id:        p.company_id,
     employee_id:       p.employee_id,
-    accrual_month:     p.accrual_month,
+    accrual_month:     toAccrualDate(p.accrual_month),
     payment_date:      p.payment_date,
     work_days:         p.work_days,
     overtime_hours:    p.overtime_hours,

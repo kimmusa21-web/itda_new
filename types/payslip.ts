@@ -37,13 +37,14 @@ export interface PayInfoV2Row {
     email:           string
     department:      string | null
     position:        string | null
+    job:             string | null   // 업무내용
     birthdate:       string | null
     Date_of_joining: string | null
     quit_date:       string | null
     employee_number: string | null
     company_id:      number
   } | null
-  companies?: { name: string; payslip_note?: string | null; payroll_start_day?: number | null; payroll_day?: number | null } | null
+  companies?: { name: string; payslip_note?: string | null; payroll_start_day?: number | null; payroll_day?: number | null; biz_number?: string | null } | null
 }
 
 /* ── 목록용 — 금액 없음 ─────────────────────────────────── */
@@ -90,6 +91,7 @@ export interface PayslipDetail {
     email:       string
     department:  string | null
     position:    string | null
+    job?:        string | null   // 업무내용
     joinDate:    string | null
     birthDate:   string | null
     employeeNo:  string
@@ -109,7 +111,7 @@ export function rowToListItem(
   const paid  = !!row.payment_date && row.payment_date <= today
   return {
     id:           row.id,
-    accrualMonth: row.accrual_month,
+    accrualMonth: (row.accrual_month ?? '').slice(0, 7),  // YYYY-MM-DD → YYYY-MM
     paymentDate:  row.payment_date,
     status:       paid ? 'paid' : 'pending',
   }

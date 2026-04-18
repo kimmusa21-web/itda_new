@@ -1,6 +1,7 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
 import type { PayInfoV2 } from '@/types'
+import { toAccrualDate, toAccrualMonth } from '@/lib/payslip-utils'
 
 /** 직원: 본인 급여 목록 (최신순) */
 export async function getMyPayslipsV2(): Promise<PayInfoV2[]> {
@@ -46,7 +47,7 @@ export async function getCompanyPayrollV2(companyId: number, month: string): Pro
     .from('pay_info_v2')
     .select('*, employees(name,email,department,position)')
     .eq('company_id', companyId)
-    .eq('accrual_month', month)
+    .eq('accrual_month', toAccrualDate(month))
     .order('employee_id')
   return (data ?? []) as PayInfoV2[]
 }
@@ -57,7 +58,7 @@ export async function getAvailableMonthsV2(companyId?: number): Promise<string[]
   let q = supabase.from('pay_info_v2').select('accrual_month')
   if (companyId) q = q.eq('company_id', companyId)
   const { data } = await q.order('accrual_month', { ascending: false })
-  return [...new Set((data ?? []).map(r => r.accrual_month))]
+  return [...new Set((data ?? []).map(r => toAccrualMonth(r.accrual_month)))]
 }
 
 /** 어드민: 급여 목록 조회 (전체 or 회사 필터) */
@@ -73,7 +74,7 @@ export async function getAdminPayrollListV2(opts?: {
   let q = supabase.from('pay_info_v2').select(select).order('employee_id')
 
   if (opts?.companyId)    q = q.eq('company_id', opts.companyId)
-  if (opts?.accrualMonth) q = q.eq('accrual_month', opts.accrualMonth)
+  if (opts?.accrualMonth) q = q.eq('accrual_month', toAccrualDate(opts.accrualMonth))
 
   const { data } = await q
   return (data ?? []) as PayInfoV2[]

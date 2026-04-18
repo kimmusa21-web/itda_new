@@ -8,7 +8,8 @@ import { createClient }        from '@/lib/supabase/server'
 import { mapEarnings, mapDeductions } from '@/lib/payroll-labels'
 import { parsePayslipNote }   from '@/lib/payslip-defaults'
 import { getDefaultPayslipNotes } from '@/lib/supabase/queries/app-settings'
-import { getDaysInMonth, getPayrollPeriod } from '@/lib/payslip-utils'
+import { getDaysInMonth, getPayrollPeriod, toAccrualDate, toAccrualMonth } from '@/lib/payslip-utils'
+import { deriveEmployeeNumberDisplay } from '@/lib/employee-number'
 import {
   rowToListItem,
   type PayInfoV2Row,
@@ -102,7 +103,7 @@ export async function getEmployeePayslipsForHistory(
   return (data ?? []).map(r => ({
     id:           r.id,
     netPay:       Math.round(Number(r.net_pay ?? 0)),
-    accrualMonth: r.accrual_month,
+    accrualMonth: toAccrualMonth(r.accrual_month),
     paymentDate:  r.payment_date ?? null,
   }))
 }
@@ -149,13 +150,13 @@ export async function getAdminEmployeePayslipDetail(
     .select(`
       *,
       employees (
-        name, email, department, position,
+        name, email, department, position, job,
         Date_of_joining, birthdate, quit_date, employee_number, company_id
       ),
-      companies ( name, payslip_note, payroll_start_day, payroll_day )
+      companies ( name, payslip_note, payroll_start_day, payroll_day, biz_number )
     `)
     .eq('company_id', companyId)
-    .eq('accrual_month', payMonth)
+    .eq('accrual_month', toAccrualDate(payMonth))
     .eq('employee_id', employeeId)
     .maybeSingle()
 
@@ -180,7 +181,7 @@ export async function getAdminEmployeePayslipDetail(
 
   return {
     id:           row.id,
-    accrualMonth: row.accrual_month,
+    accrualMonth: toAccrualMonth(row.accrual_month),
     paymentDate:  row.payment_date ?? derivePaymentDate(row.accrual_month, payrollDay),
     workDays:     row.work_days != null ? Number(row.work_days) : null,
     overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : null,
@@ -206,9 +207,15 @@ export async function getAdminEmployeePayslipDetail(
       email:      row.employees?.email      ?? '',
       department: row.employees?.department ?? null,
       position:   row.employees?.position   ?? null,
+      job:        (row.employees as any)?.job ?? null,
       joinDate:   row.employees?.Date_of_joining ?? null,
       birthDate:  row.employees?.birthdate  ?? null,
-      employeeNo: row.employees?.employee_number ?? `EMP-${String(employeeId).padStart(4, '0')}`,
+      employeeNo: row.employees?.employee_number
+        ?? deriveEmployeeNumberDisplay(
+            (row.companies as any)?.biz_number,
+            row.employees?.Date_of_joining,
+            employeeId,
+          ),
     },
     companyName:        row.companies?.name ?? '',
     daysInMonth,
@@ -233,10 +240,10 @@ export async function getEmployeePayslipById(
     .select(`
       *,
       employees (
-        name, email, department, position,
+        name, email, department, position, job,
         Date_of_joining, birthdate, quit_date, employee_number, company_id
       ),
-      companies ( name, payslip_note, payroll_start_day, payroll_day )
+      companies ( name, payslip_note, payroll_start_day, payroll_day, biz_number )
     `)
     .eq('id', id)
     .eq('employee_id', employeeId)   // ★ 본인 검증 — 다른 직원 id면 null 반환
@@ -302,9 +309,15 @@ export async function getEmployeePayslipById(
       email:      row.employees?.email      ?? '',
       department: row.employees?.department ?? null,
       position:   row.employees?.position   ?? null,
+      job:        (row.employees as any)?.job ?? null,
       joinDate:   row.employees?.Date_of_joining ?? null,
       birthDate:  row.employees?.birthdate  ?? null,
-      employeeNo: row.employees?.employee_number ?? `EMP-${String(employeeId).padStart(4, '0')}`,
+      employeeNo: row.employees?.employee_number
+        ?? deriveEmployeeNumberDisplay(
+            (row.companies as any)?.biz_number,
+            row.employees?.Date_of_joining,
+            employeeId,
+          ),
     },
     companyName:        row.companies?.name ?? '',
     daysInMonth,

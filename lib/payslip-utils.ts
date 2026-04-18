@@ -1,4 +1,21 @@
 /**
+ * YYYY-MM (URL/표시) → YYYY-MM-01 (DB 저장)
+ * 이미 YYYY-MM-DD이면 그대로 반환
+ */
+export function toAccrualDate(month: string): string {
+  if (!month) return month
+  if (month.length >= 10) return month.slice(0, 10)
+  return `${month}-01`
+}
+
+/**
+ * YYYY-MM-DD (DB) or YYYY-MM → YYYY-MM (URL / 표시 / grouping 키)
+ */
+export function toAccrualMonth(dateOrMonth: string): string {
+  return (dateOrMonth ?? '').slice(0, 7)
+}
+
+/**
  * 원화 포맷 변환
  * formatKRW(9001480) → "9,001,480원"
  * formatKRW(-51635)  → "-51,635원"

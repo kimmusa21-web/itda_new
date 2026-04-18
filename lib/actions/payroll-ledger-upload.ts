@@ -7,6 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { upsertPayInfo } from '@/lib/payroll-upload'
+import { toAccrualDate } from '@/lib/payslip-utils'
 import type { ParsedLedgerRow } from '@/lib/payroll-ledger-utils'
 import { EARNINGS_DB_KEYS, DEDUCTIONS_DB_KEYS } from '@/lib/payroll-ledger-utils'
 import type { PayInfoPayload } from '@/types/payroll-upload'
@@ -173,7 +174,7 @@ export async function uploadPayrollLedger(params: {
     payloads.push({
       company_id:        params.companyId,
       employee_id:       employee.id,
-      accrual_month:     row.accrualMonth,
+      accrual_month:     toAccrualDate(row.accrualMonth ?? ''),
       payment_date:      row.paymentDate,
       work_days:         null,
       overtime_hours:    null,

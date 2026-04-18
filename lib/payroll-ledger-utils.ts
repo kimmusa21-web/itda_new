@@ -106,14 +106,14 @@ export function toNumber(value: unknown): number {
   return isNaN(n) ? 0 : n
 }
 
-// ── 귀속월 파싱 (YYYY-MM) ────────────────────────────────────
+// ── 귀속월 파싱 (DB 저장형식 YYYY-MM-DD, 해당 월 1일) ─────────
 export function parsePayMonth(value: unknown): string | null {
   const raw = String(value ?? '').trim()
   if (!raw) return null
   // "2025-03", "2025.03", "2025년 3월", "202503"
   const m = raw.match(/(\d{4})[년\-./\s]*(\d{1,2})/)
   if (!m) return null
-  return `${m[1]}-${m[2].padStart(2, '0')}`
+  return `${m[1]}-${m[2].padStart(2, '0')}-01`  // YYYY-MM-DD
 }
 
 // ── 지급일 파싱 (YYYY-MM-DD) ─────────────────────────────────
