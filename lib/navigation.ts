@@ -1,4 +1,4 @@
-import { Bell, Building2, Users, Upload, Home, BarChart3, MoreHorizontal, Wallet, User, FileText, UserPlus, ClipboardList, Eye, type LucideIcon } from 'lucide-react'
+import { Bell, Building2, Users, Upload, Home, BarChart3, MoreHorizontal, Wallet, User, FileText, UserPlus, ClipboardList, Eye, BadgeDollarSign, type LucideIcon } from 'lucide-react'
 import type { Role } from '@/types'
 
 export type { Role }
@@ -15,8 +15,9 @@ export const roleNavMap: RoleNavMap = {
     { label: '직원관리',   href: '/admin/employees',         icon: Users      },
     { label: '급여조회',   href: '/admin/payroll',           icon: BarChart3  },
     { label: '급여업로드', href: '/admin/payroll/upload',    icon: Upload     },
-    { label: '가입신청',   href: '/admin/employee-requests', icon: FileText   },
-    { label: '점검 모드',  href: '/admin/impersonation',     icon: Eye        },
+    { label: '가입신청',   href: '/admin/employee-requests', icon: FileText         },
+    { label: '퇴직금 산정', href: '/admin/severance',        icon: BadgeDollarSign  },
+    { label: '점검 모드',  href: '/admin/impersonation',     icon: Eye              },
   ],
   manager: [
     { label: '홈',         href: '/manager',                  icon: Home           },
@@ -78,6 +79,7 @@ export function getPageTitle(pathname: string): string {
     '/admin/payroll/upload':         '급여업로드',
     '/admin/employee-requests':      '직원 가입신청',
     '/admin/impersonation':          '점검 모드',
+    '/admin/severance':              '퇴직금 산정',
     '/admin/companies/new':          '회사 등록',
     '/auth/verify':                  '가입 인증',
     '/manager':                      '홈',
