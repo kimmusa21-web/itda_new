@@ -8,7 +8,7 @@ import { mapEarnings, mapDeductions }    from '@/lib/payroll-labels'
 import { parsePayslipNote }             from '@/lib/payslip-defaults'
 import { PayslipDetailView }             from '@/components/payslip/payslip-detail-v2'
 import { SendPayslipButton }             from '@/components/payroll/send-payslip-button'
-import { formatKRW, formatAccrualMonth } from '@/lib/payslip-utils'
+import { formatKRW, formatAccrualMonth, toAccrualDate, toAccrualMonth } from '@/lib/payslip-utils'
 import { getDaysInMonth, getPayrollPeriod } from '@/lib/payslip-utils'
 import type { PayslipDetail }            from '@/types/payslip'
 import LoadingState                      from '@/components/ui/loading-state'
@@ -103,7 +103,7 @@ export default function AdminPayrollClient({
       : supabase.from('pay_info_v2').select('accrual_month').order('accrual_month', { ascending: false })
     const { data: mData } = await monthQuery
     const newMonths = [...new Set(
-      (mData ?? []).map((r: { accrual_month: string }) => r.accrual_month)
+      (mData ?? []).map((r: { accrual_month: string }) => toAccrualMonth(r.accrual_month))
     )]
     setMonths(newMonths)
 
@@ -126,8 +126,8 @@ export default function AdminPayrollClient({
     if (!m) { setAllRows([]); return }
     const select = '*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id), companies(name,payslip_note,payroll_start_day,payroll_day)'
     const { data } = cid
-      ? await supabase.from('pay_info_v2').select(select).eq('company_id', cid).eq('accrual_month', m).order('employee_id')
-      : await supabase.from('pay_info_v2').select(select).eq('accrual_month', m).order('employee_id')
+      ? await supabase.from('pay_info_v2').select(select).eq('company_id', cid).eq('accrual_month', toAccrualDate(m)).order('employee_id')
+      : await supabase.from('pay_info_v2').select(select).eq('accrual_month', toAccrualDate(m)).order('employee_id')
     setAllRows((data ?? []) as PayInfoV2[])
   }
 

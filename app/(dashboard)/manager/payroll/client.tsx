@@ -9,7 +9,7 @@ import { mapEarnings, mapDeductions }    from '@/lib/payroll-labels'
 import { parsePayslipNote }             from '@/lib/payslip-defaults'
 import { PayslipDetailView }             from '@/components/payslip/payslip-detail-v2'
 import { SendPayslipButton }             from '@/components/payroll/send-payslip-button'
-import { formatKRW, formatAccrualMonth } from '@/lib/payslip-utils'
+import { formatKRW, formatAccrualMonth, toAccrualDate } from '@/lib/payslip-utils'
 import { getDaysInMonth, getPayrollPeriod } from '@/lib/payslip-utils'
 import type { PayslipDetail }            from '@/types/payslip'
 import LoadingState                      from '@/components/ui/loading-state'
@@ -93,7 +93,7 @@ export default function ManagerPayrollClient({
       .from('pay_info_v2')
       .select(select)
       .eq('company_id', companyId)
-      .eq('accrual_month', m)
+      .eq('accrual_month', toAccrualDate(m))
       .order('employee_id')
     setAllRows((data ?? []) as PayInfoV2[])
     setLoading(false)
