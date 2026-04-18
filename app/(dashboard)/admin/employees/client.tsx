@@ -7,6 +7,7 @@ import { createClient }                          from '@/lib/supabase/client'
 import type { EmployeeRow }                      from '@/lib/supabase/queries/employee'
 import { formatDateShort, cn }                   from '@/lib/utils'
 import { createEmployeeAdmin, deleteEmployeeAdmin } from '@/lib/actions/employee-admin-create'
+import EmployeeExportButton                      from '@/components/employees/employee-export-button'
 
 type Filter = 'active' | 'inactive' | 'all'
 
@@ -127,7 +128,8 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
           <h1 className="text-xl font-semibold text-slate-900">직원 관리</h1>
           <p className="text-sm text-slate-500 mt-0.5">전체 기업 직원 {employees.length}명</p>
         </div>
-        <div className="flex gap-2 flex-shrink-0">
+        <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
+          <EmployeeExportButton companies={companies} />
           <Link href="/admin/employees/upload" className="btn-secondary">
             <Upload size={15} />
             <span className="hidden sm:inline">CSV 대량 등록</span>

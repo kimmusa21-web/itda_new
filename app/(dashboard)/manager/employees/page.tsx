@@ -4,6 +4,7 @@ import { Plus, Upload } from 'lucide-react'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { getCompanyEmployees } from '@/lib/supabase/queries/employee'
 import { ManagerEmployeesClient } from './client'
+import EmployeeExportButton from '@/components/employees/employee-export-button'
 
 export const metadata = { title: '직원관리 | itda' }
 
@@ -30,7 +31,8 @@ export default async function ManagerEmployeesPage() {
             {companyName} · 재직 {employees.filter(e => e.is_active).length}명
           </p>
         </div>
-        <div className="flex gap-2 flex-shrink-0">
+        <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
+          <EmployeeExportButton companyId={companyId} companyName={companyName} />
           <Link href="/manager/employees/upload" className="btn-secondary">
             <Upload size={15} />
             CSV 대량 등록
