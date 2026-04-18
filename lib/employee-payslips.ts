@@ -183,7 +183,7 @@ export async function getAdminEmployeePayslipDetail(
     id:           row.id,
     accrualMonth: toAccrualMonth(row.accrual_month),
     paymentDate:  row.payment_date ?? derivePaymentDate(row.accrual_month, payrollDay),
-    workDays:     row.work_days != null ? Number(row.work_days) : null,
+    workDays:     row.work_days != null ? Number(row.work_days) : daysInMonth,
     overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : null,
     startDate: row.start_date ?? null,
     endDate:   cappedEndDate,
@@ -275,7 +275,7 @@ export async function getEmployeePayslipById(
     id:           row.id,
     accrualMonth: row.accrual_month,
     paymentDate:  row.payment_date ?? derivePaymentDate(row.accrual_month, payrollDay2),
-    workDays:     row.work_days != null ? Number(row.work_days) : null,
+    workDays:     row.work_days != null ? Number(row.work_days) : daysInMonth,
     overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : null,
 
     // ★ 정산기간 — pay_info_v2 직접 저장값 (퇴사일 캡 적용)

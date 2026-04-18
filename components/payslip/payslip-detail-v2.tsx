@@ -169,7 +169,7 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
           <InfoRow label="회사"     value={d.companyName}         />
           <InfoRow label="부서"     value={d.employee.department} />
           <InfoRow label="직위"     value={d.employee.position}   />
-          <InfoRow label="업무내용" value={d.employee.job}        />
+          <InfoRow label="직무"     value={d.employee.job}        />
           <InfoRow label="입사일"   value={d.employee.joinDate ? formatDateDot(d.employee.joinDate) : null} />
           <InfoRow label="사원번호" value={d.employee.employeeNo} />
         </InfoSection>

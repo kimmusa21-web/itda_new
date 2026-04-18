@@ -41,7 +41,7 @@ function rowToDetail(row: PayInfoV2): PayslipDetail {
     id:           row.id,
     accrualMonth: row.accrual_month,
     paymentDate:  row.payment_date ?? null,
-    workDays:     row.work_days != null ? Number(row.work_days) : null,
+    workDays:     row.work_days != null ? Number(row.work_days) : daysInMonth,
     overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : null,
     startDate:    (row as any).start_date ?? null,
     endDate:      (row as any).end_date   ?? null,

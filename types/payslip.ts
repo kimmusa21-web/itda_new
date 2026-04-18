@@ -37,7 +37,7 @@ export interface PayInfoV2Row {
     email:           string
     department:      string | null
     position:        string | null
-    job:             string | null   // 업무내용
+    job:             string | null   // 직무
     birthdate:       string | null
     Date_of_joining: string | null
     quit_date:       string | null
@@ -91,7 +91,7 @@ export interface PayslipDetail {
     email:       string
     department:  string | null
     position:    string | null
-    job?:        string | null   // 업무내용
+    job?:        string | null   // 직무
     joinDate:    string | null
     birthDate:   string | null
     employeeNo:  string

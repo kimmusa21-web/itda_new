@@ -16,7 +16,7 @@ export const LEDGER_COLUMN_MAP: Record<string, string> = {
   '직원명':      'name',
   '사원명':      'name',
 
-  // 귀속월 / 지급일
+  // 귀속월 / 지급일 / 근무일수
   '귀속월':      'accrual_month',
   '급여월':      'accrual_month',
   '지급월':      'accrual_month',
@@ -24,6 +24,15 @@ export const LEDGER_COLUMN_MAP: Record<string, string> = {
   '지급일':      'payment_date',
   '급여지급일':  'payment_date',
   '지급년월일':  'payment_date',
+  '근무일수':    'work_days',
+  '급여일수':    'work_days',
+  '정산시작일':  'start_date',
+  '시작일':      'start_date',
+  '정산시작':    'start_date',
+  '정산종료일':  'end_date',
+  '종료일':      'end_date',
+  '정산종료':    'end_date',
+  '정산마감일':  'end_date',
 
   // 지급 항목
   '기본급':          'base_salary',
@@ -136,6 +145,9 @@ export interface ParsedLedgerRow {
   rawEmployeeNumber:  string
   accrualMonth:       string | null
   paymentDate:        string | null
+  start_date:         string | null
+  end_date:           string | null
+  work_days:          number
   // 지급 항목
   base_salary:             number
   overtime_pay_fixed:      number
@@ -194,6 +206,9 @@ export function parseLedgerRows(
       rawEmployeeNumber: employeeNumber,
       accrualMonth:      parsePayMonth(mapped['accrual_month']),
       paymentDate:       parsePayDate(mapped['payment_date']),
+      start_date:        parsePayDate(mapped['start_date']),
+      end_date:          parsePayDate(mapped['end_date']),
+      work_days:         toNumber(mapped['work_days']),
       // 지급
       base_salary:              toNumber(mapped['base_salary']),
       overtime_pay_fixed:       toNumber(mapped['overtime_pay_fixed']),
@@ -281,6 +296,9 @@ export function parseMultiRowLedger(arrayRows: unknown[][]): ParsedLedgerRow[] {
       rawEmployeeNumber: empNum,
       accrualMonth:      null,   // 이 형식은 귀속월 컬럼 없음 → 수동 입력
       paymentDate:       null,
+      start_date:        null,
+      end_date:          null,
+      work_days:         0,      // 이 형식은 근무일수 컬럼 없음
 
       // 행1 지급 항목
       base_salary:          toNumber(r1[2]),

@@ -176,7 +176,9 @@ export async function uploadPayrollLedger(params: {
       employee_id:       employee.id,
       accrual_month:     toAccrualDate(row.accrualMonth ?? ''),
       payment_date:      row.paymentDate,
-      work_days:         null,
+      start_date:        row.start_date ?? null,
+      end_date:          row.end_date   ?? null,
+      work_days:         row.work_days !== 0 ? row.work_days : null,
       overtime_hours:    null,
       // 지급 개별 컬럼
       base_salary:              nvl(row.base_salary),

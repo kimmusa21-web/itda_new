@@ -22,7 +22,7 @@ export const STANDARD_CSV_COLUMNS: CsvColumnDef[] = [
   { key: 'payment_date',    label: '급여지급일',     required: false, group: 'period',   note: 'YYYY-MM-DD 형식' },
   { key: 'start_date',      label: '정산시작일',     required: false, group: 'period',   note: 'YYYY-MM-DD 형식' },
   { key: 'end_date',        label: '정산종료일',     required: false, group: 'period',   note: 'YYYY-MM-DD 형식' },
-  { key: 'work_days',       label: '급여일수',       required: false, group: 'period',   note: '숫자 (일)' },
+  { key: 'work_days',       label: '근무일수',       required: false, group: 'period',   note: '숫자 (일)' },
   // ── 지급 항목 ────────────────────────────────────────
   { key: 'base_salary',             label: '기본급',          required: true,  group: 'earnings' },
   { key: 'overtime_pay_fixed',      label: '고정연장수당',     required: false, group: 'earnings' },
