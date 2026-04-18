@@ -45,7 +45,7 @@ export async function getCompanyPayrollV2(companyId: number, month: string): Pro
   const supabase = createClient()
   const { data } = await supabase
     .from('pay_info_v2')
-    .select('*, employees(name,email,department,position)')
+    .select('*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id), companies(name,payslip_note,payroll_start_day,payroll_day)')
     .eq('company_id', companyId)
     .eq('accrual_month', toAccrualDate(month))
     .order('employee_id')
@@ -69,7 +69,7 @@ export async function getAdminPayrollListV2(opts?: {
 }): Promise<PayInfoV2[]> {
   const supabase = createClient()
 
-  const select = '*, employees(name,email,department,position,birthdate,employee_number,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))'
+  const select = '*, employees(name,email,department,position,birthdate,employee_number,Date_of_joining,quit_date,company_id), companies(name,payslip_note,payroll_start_day,payroll_day)'
 
   let q = supabase.from('pay_info_v2').select(select).order('employee_id')
 

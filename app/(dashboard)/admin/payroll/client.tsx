@@ -124,7 +124,7 @@ export default function AdminPayrollClient({
   /* ── 실제 데이터 패치 ── */
   async function fetchRows(cid: number | null, m: string) {
     if (!m) { setAllRows([]); return }
-    const select = '*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))'
+    const select = '*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id), companies(name,payslip_note,payroll_start_day,payroll_day)'
     const { data } = cid
       ? await supabase.from('pay_info_v2').select(select).eq('company_id', cid).eq('accrual_month', m).order('employee_id')
       : await supabase.from('pay_info_v2').select(select).eq('accrual_month', m).order('employee_id')

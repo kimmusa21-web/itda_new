@@ -88,7 +88,7 @@ export default function ManagerPayrollClient({
     setMonth(m)
     setLoading(true)
     setSearch('')
-    const select = '*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))'
+    const select = '*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id), companies(name,payslip_note,payroll_start_day,payroll_day)'
     const { data } = await supabase
       .from('pay_info_v2')
       .select(select)
