@@ -161,12 +161,14 @@ export function transformCsvRows(
   defaultMonth:   string,
   defaultPayDate: string | null,
 ): PreviewRow[] {
-  const emailKey    = mappings.find(m => m.db_key === 'email')?.csv_column_name          ?? 'email'
-  const monthKey    = mappings.find(m => m.db_key === 'accrual_month')?.csv_column_name  ?? 'accrual_month'
-  const dateKey     = mappings.find(m => m.db_key === 'payment_date')?.csv_column_name   ?? 'payment_date'
-  const totalPayKey = mappings.find(m => m.db_key === 'Total_payment')?.csv_column_name
-  const totalDeKey  = mappings.find(m => m.db_key === 'Total_deductible')?.csv_column_name
-  const netPayKey   = mappings.find(m => m.db_key === 'net_pay')?.csv_column_name
+  const emailKey        = mappings.find(m => m.db_key === 'email')?.csv_column_name          ?? 'email'
+  const monthKey        = mappings.find(m => m.db_key === 'accrual_month')?.csv_column_name  ?? 'accrual_month'
+  const dateKey         = mappings.find(m => m.db_key === 'payment_date')?.csv_column_name   ?? 'payment_date'
+  const startDateKey    = mappings.find(m => m.db_key === 'start_date')?.csv_column_name     ?? 'start_date'
+  const endDateKey      = mappings.find(m => m.db_key === 'end_date')?.csv_column_name       ?? 'end_date'
+  const totalPayKey     = mappings.find(m => m.db_key === 'Total_payment')?.csv_column_name
+  const totalDeKey      = mappings.find(m => m.db_key === 'Total_deductible')?.csv_column_name
+  const netPayKey       = mappings.find(m => m.db_key === 'net_pay')?.csv_column_name
 
   // ★ workDayKey, otKey는 현재 미사용이므로 제거 (빌드 경고 방지)
 
@@ -249,8 +251,10 @@ export function transformCsvRows(
     //     (row[dateKey] ?? '').trim() || defaultPayDate ?? ''
     //   수정 후 (정상):
     //     safeTrim(row[dateKey]) || (defaultPayDate ?? '')
-    const accrualMonth = safeTrim(row[monthKey]) || defaultMonth
-    const paymentDate  = safeTrim(row[dateKey])  || (defaultPayDate ?? '')
+    const accrualMonth = safeTrim(row[monthKey])    || defaultMonth
+    const paymentDate  = safeTrim(row[dateKey])     || (defaultPayDate ?? '')
+    const startDate    = safeTrim(row[startDateKey]) || undefined
+    const endDate      = safeTrim(row[endDateKey])   || undefined
 
     return {
       rowIndex:        rIdx,
@@ -258,6 +262,8 @@ export function transformCsvRows(
       employeeName:    emp.name,
       accrualMonth,
       paymentDate,
+      startDate,
+      endDate,
       earnings,
       deductions,
       totalEarnings,
@@ -295,6 +301,8 @@ export function toPayInfoPayloads(
         employee_id:       emp.id,
         accrual_month:     toAccrualDate(p.accrualMonth ?? ''),
         payment_date:      p.paymentDate || null,
+        start_date:        p.startDate   || null,
+        end_date:          p.endDate     || null,
         work_days:         null,
         overtime_hours:    null,
         // 지급 항목 개별 컬럼

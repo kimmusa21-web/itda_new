@@ -26,23 +26,23 @@ const TAB_DESCRIPTIONS: Record<Tab, string> = {
 }
 
 export function AdminUploadTabs({ companies, currentUserId }: Props) {
-  const [tab, setTab] = useState<Tab>('standard')
+  const [tab, setTab] = useState<Tab>('advanced')
 
   return (
     <div className="space-y-5">
       {/* 탭 헤더 */}
       <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit flex-wrap">
-        <TabButton active={tab === 'standard'} onClick={() => setTab('standard')}>
-          표준 CSV
-        </TabButton>
-        <TabButton active={tab === 'auto'}     onClick={() => setTab('auto')}>
-          자동 인식
+        <TabButton active={tab === 'advanced'} onClick={() => setTab('advanced')}>
+          고급 업로드
         </TabButton>
         <TabButton active={tab === 'ledger'}   onClick={() => setTab('ledger')}>
           급여대장
         </TabButton>
-        <TabButton active={tab === 'advanced'} onClick={() => setTab('advanced')}>
-          고급 업로드
+        <TabButton active={tab === 'auto'}     onClick={() => setTab('auto')}>
+          자동 인식
+        </TabButton>
+        <TabButton active={tab === 'standard'} onClick={() => setTab('standard')}>
+          표준 CSV
         </TabButton>
       </div>
 

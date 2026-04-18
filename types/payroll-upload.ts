@@ -45,6 +45,8 @@ export interface PayInfoPayload {
   employee_id:      number
   accrual_month:    string       // YYYY-MM
   payment_date:     string | null
+  start_date?:      string | null  // 정산시작일 YYYY-MM-DD
+  end_date?:        string | null  // 정산종료일 YYYY-MM-DD
   work_days:        number | null
   overtime_hours:   number | null
   // pay_info 흡수 컬럼 (선택)
@@ -103,6 +105,8 @@ export interface PreviewRow {
   employeeName:    string
   accrualMonth:    string
   paymentDate:     string
+  startDate?:      string   // 정산시작일 YYYY-MM-DD
+  endDate?:        string   // 정산종료일 YYYY-MM-DD
   earnings:        Record<string, number>
   deductions:      Record<string, number>
   totalEarnings:   number

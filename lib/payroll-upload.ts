@@ -68,6 +68,8 @@ export async function upsertPayInfo(
     employee_id:       p.employee_id,
     accrual_month:     toAccrualDate(p.accrual_month),
     payment_date:      p.payment_date,
+    start_date:        p.start_date ?? null,
+    end_date:          p.end_date   ?? null,
     work_days:         p.work_days,
     overtime_hours:    p.overtime_hours,
     Number_of_days:    p.Number_of_days   ?? null,
