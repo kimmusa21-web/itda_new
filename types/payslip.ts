@@ -40,6 +40,7 @@ export interface PayInfoV2Row {
     birthdate:       string | null
     Date_of_joining: string | null
     quit_date:       string | null
+    employee_number: string | null
     company_id:      number
   } | null
   companies?: { name: string; payslip_note?: string | null; payroll_start_day?: number | null; payroll_day?: number | null } | null

@@ -191,14 +191,14 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
                 value={d.paymentDate ? formatDateDot(d.paymentDate) : '-'}
               />
             </div>
-            {/* 2열 그리드: 당월일수 / 급여일수 */}
+            {/* 2열 그리드: 당월일수 / 근무일수 */}
             <div className="grid grid-cols-2 gap-3 mb-3">
               <PayInfoCell
                 label="당월일수"
                 value={d.daysInMonth != null ? `${d.daysInMonth}일` : '-'}
               />
               <PayInfoCell
-                label="급여일수"
+                label="근무일수"
                 value={d.workDays != null ? `${d.workDays}일` : '-'}
               />
             </div>

@@ -150,7 +150,7 @@ export async function getAdminEmployeePayslipDetail(
       *,
       employees (
         name, email, department, position,
-        Date_of_joining, birthdate, quit_date, company_id
+        Date_of_joining, birthdate, quit_date, employee_number, company_id
       ),
       companies ( name, payslip_note, payroll_start_day, payroll_day )
     `)
@@ -208,7 +208,7 @@ export async function getAdminEmployeePayslipDetail(
       position:   row.employees?.position   ?? null,
       joinDate:   row.employees?.Date_of_joining ?? null,
       birthDate:  row.employees?.birthdate  ?? null,
-      employeeNo: `EMP-${String(employeeId).padStart(4, '0')}`,
+      employeeNo: row.employees?.employee_number ?? `EMP-${String(employeeId).padStart(4, '0')}`,
     },
     companyName:        row.companies?.name ?? '',
     daysInMonth,
@@ -234,7 +234,7 @@ export async function getEmployeePayslipById(
       *,
       employees (
         name, email, department, position,
-        Date_of_joining, birthdate, quit_date, company_id
+        Date_of_joining, birthdate, quit_date, employee_number, company_id
       ),
       companies ( name, payslip_note, payroll_start_day, payroll_day )
     `)
@@ -304,7 +304,7 @@ export async function getEmployeePayslipById(
       position:   row.employees?.position   ?? null,
       joinDate:   row.employees?.Date_of_joining ?? null,
       birthDate:  row.employees?.birthdate  ?? null,
-      employeeNo: `EMP-${String(employeeId).padStart(4, '0')}`,
+      employeeNo: row.employees?.employee_number ?? `EMP-${String(employeeId).padStart(4, '0')}`,
     },
     companyName:        row.companies?.name ?? '',
     daysInMonth,
