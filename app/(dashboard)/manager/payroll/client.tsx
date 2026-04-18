@@ -2,7 +2,7 @@
 
 import { useState }                      from 'react'
 import { useRouter }                     from 'next/navigation'
-import { Search, X, BarChart3, ChevronRight } from 'lucide-react'
+import { Search, X, BarChart3, ChevronRight, Users, Calendar } from 'lucide-react'
 import { createClient }                  from '@/lib/supabase/client'
 import type { PayInfoV2 }                from '@/types'
 import { mapEarnings, mapDeductions }    from '@/lib/payroll-labels'
@@ -13,6 +13,7 @@ import { formatKRW, formatAccrualMonth } from '@/lib/payslip-utils'
 import { getDaysInMonth, getPayrollPeriod } from '@/lib/payslip-utils'
 import type { PayslipDetail }            from '@/types/payslip'
 import LoadingState                      from '@/components/ui/loading-state'
+import EmployeeHistoryPanel              from '@/components/payroll/employee-history-panel'
 
 interface Props {
   companyId:     number
@@ -79,6 +80,7 @@ export default function ManagerPayrollClient({
   const [search, setSearch]           = useState('')
   const [loading, setLoading]         = useState(false)
   const [detailRow, setDetailRow]     = useState<PayInfoV2 | null>(null)
+  const [view, setView]               = useState<'monthly' | 'employee'>('monthly')
 
   /* ── 월 변경 ── */
   async function onMonthChange(m: string) {
@@ -125,12 +127,42 @@ export default function ManagerPayrollClient({
   /* ── 메인 목록 ── */
   return (
     <div className="space-y-5">
-      <div>
-        <p className="text-xs text-slate-500">{companyName}</p>
-        <h1 className="text-xl font-semibold text-slate-900 mt-0.5">급여 조회</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs text-slate-500">{companyName}</p>
+          <h1 className="text-xl font-semibold text-slate-900 mt-0.5">급여 조회</h1>
+        </div>
+
+        {/* 조회 모드 탭 */}
+        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl flex-shrink-0">
+          <button
+            onClick={() => setView('monthly')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              view === 'monthly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+            }`}
+          >
+            <Calendar size={13} />
+            월별 조회
+          </button>
+          <button
+            onClick={() => setView('employee')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              view === 'employee' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+            }`}
+          >
+            <Users size={13} />
+            직원별 조회
+          </button>
+        </div>
       </div>
 
-      {/* 필터 */}
+      {/* ── 직원별 조회 패널 ── */}
+      {view === 'employee' && (
+        <EmployeeHistoryPanel companyId={companyId} />
+      )}
+
+      {/* 필터 (월별 조회 전용) */}
+      {view === 'monthly' && (<>
       <div className="flex flex-wrap items-center gap-3">
         {/* 월 선택 */}
         <select
@@ -302,6 +334,7 @@ export default function ManagerPayrollClient({
           })}
         </div>
       )}
+      </>)}
     </div>
   )
 }
