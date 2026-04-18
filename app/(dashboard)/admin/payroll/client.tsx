@@ -13,6 +13,7 @@ import { getDaysInMonth, getPayrollPeriod } from '@/lib/payslip-utils'
 import type { PayslipDetail }            from '@/types/payslip'
 import LoadingState                      from '@/components/ui/loading-state'
 import EmployeeHistoryPanel              from '@/components/payroll/employee-history-panel'
+import CompanyExportButton              from '@/components/payroll/company-export-button'
 
 /* ── 타입 ── */
 interface Company { id: number; name: string }
@@ -254,6 +255,14 @@ export default function AdminPayrollClient({
             employeeCount={rows.length}
           />
         )}
+
+        {/* 전직원 CSV 내보내기 */}
+        <CompanyExportButton
+          companyId={companyId}
+          companyName={(companies.find(c => c.id === companyId))?.name}
+          availableMonths={months}
+          currentMonth={month}
+        />
       </div>
 
       {/* 요약 통계 */}
