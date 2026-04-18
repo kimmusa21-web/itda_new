@@ -273,7 +273,7 @@ export const mockPayInfoV2: PayInfoV2[] = [
     ],
     upload_log_id: null,
     created_at: '2026-03-15T09:00:00Z', updated_at: '2026-03-15T09:00:00Z',
-    employees: { name: '이정민', email: 'olive8212@naver.com', Date_of_joining: '2025-07-14', department: '간호팀', position: '주임', birthdate: '820212' },
+    employees: { name: '이정민', email: 'olive8212@naver.com', employee_number: null, Date_of_joining: '2025-07-14', department: '간호팀', position: '주임', birthdate: '820212' },
     companies: { name: '브이에이성형외과' },
   },
   {
@@ -293,7 +293,7 @@ export const mockPayInfoV2: PayInfoV2[] = [
     calculation_notes: ['월급제 기준 산정', '국민연금 4.5% 적용'],
     upload_log_id: null,
     created_at: '2026-03-15T09:00:00Z', updated_at: '2026-03-15T09:00:00Z',
-    employees: { name: '차혜진', email: 'neocha78@naver.com', Date_of_joining: '2025-02-14', department: '원무팀', position: '팀장', birthdate: '780928' },
+    employees: { name: '차혜진', email: 'neocha78@naver.com', employee_number: null, Date_of_joining: '2025-02-14', department: '원무팀', position: '팀장', birthdate: '780928' },
     companies: { name: '브이에이성형외과' },
   },
   {
@@ -306,7 +306,7 @@ export const mockPayInfoV2: PayInfoV2[] = [
     calculation_notes: ['월급제 기준 산정'],
     upload_log_id: null,
     created_at: '2026-02-15T09:00:00Z', updated_at: '2026-02-15T09:00:00Z',
-    employees: { name: '이정민', email: 'olive8212@naver.com', Date_of_joining: '2025-07-14', department: '간호팀', position: '주임', birthdate: '820212' },
+    employees: { name: '이정민', email: 'olive8212@naver.com', employee_number: null, Date_of_joining: '2025-07-14', department: '간호팀', position: '주임', birthdate: '820212' },
     companies: { name: '브이에이성형외과' },
   },
 ]
