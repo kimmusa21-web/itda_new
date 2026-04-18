@@ -2,15 +2,13 @@
 
 import { useState }                      from 'react'
 import { useRouter }                     from 'next/navigation'
-import { Search, X, BarChart3, ChevronRight, Users, Calendar } from 'lucide-react'
+import { Search, X, BarChart3, ChevronRight, Users, Calendar, Loader2 } from 'lucide-react'
 import { createClient }                  from '@/lib/supabase/client'
 import type { PayInfoV2 }                from '@/types'
-import { mapEarnings, mapDeductions }    from '@/lib/payroll-labels'
-import { parsePayslipNote }             from '@/lib/payslip-defaults'
+import { getAdminEmployeePayslipDetail } from '@/lib/employee-payslips'
 import { PayslipDetailView }             from '@/components/payslip/payslip-detail-v2'
 import { SendPayslipButton }             from '@/components/payroll/send-payslip-button'
-import { formatKRW, formatAccrualMonth, toAccrualDate } from '@/lib/payslip-utils'
-import { getDaysInMonth, getPayrollPeriod } from '@/lib/payslip-utils'
+import { formatKRW, formatAccrualMonth, toAccrualDate, toAccrualMonth } from '@/lib/payslip-utils'
 import type { PayslipDetail }            from '@/types/payslip'
 import LoadingState                      from '@/components/ui/loading-state'
 import EmployeeHistoryPanel              from '@/components/payroll/employee-history-panel'
@@ -24,53 +22,6 @@ interface Props {
   initialRows:   PayInfoV2[]
 }
 
-/* ── PayInfoV2 → PayslipDetail 변환 (클라이언트용) ── */
-function rowToDetail(row: PayInfoV2): PayslipDetail {
-  const totalEarnings   = Math.round(Number(row.total_earnings   ?? 0))
-  const totalDeductions = Math.abs(Math.round(Number(row.total_deductions ?? 0)))
-  const netPay          = Math.round(Number(row.net_pay ?? 0))
-
-  const daysInMonth = getDaysInMonth(row.accrual_month)
-  const payrollStartDay = (row.companies as any)?.payroll_start_day ?? null
-  const { start: payrollPeriodStart, end: payrollPeriodEnd } =
-    getPayrollPeriod(row.accrual_month, payrollStartDay)
-
-  return {
-    id:           row.id,
-    accrualMonth: row.accrual_month,
-    paymentDate:  row.payment_date ?? null,
-    workDays:     row.work_days != null ? Number(row.work_days) : daysInMonth,
-    overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : null,
-    startDate:    (row as any).start_date ?? null,
-    endDate:      (row as any).end_date   ?? null,
-    overTime:                  row.Over_time                   ?? null,
-    holidayWorkingHours:       row.Holiday_working_hours       ?? null,
-    nightWorkHours:            row.night_work_hours            ?? null,
-    remainingAnnualLeaveHours: row.Remaining_annual_leave_hours ?? null,
-    earnings:     mapEarnings(row.earnings   ?? {}),
-    deductions:   mapDeductions(row.deductions ?? {}),
-    totalEarnings,
-    totalDeductions,
-    netPay,
-    calculationNotes: (row.calculation_notes ?? []).length > 0
-      ? row.calculation_notes!
-      : parsePayslipNote((row.companies as any)?.payslip_note ?? null),
-    employee: {
-      name:       row.employees?.name       ?? '',
-      email:      row.employees?.email      ?? '',
-      department: row.employees?.department ?? null,
-      position:   row.employees?.position   ?? null,
-      joinDate:   row.employees?.Date_of_joining ?? null,
-      birthDate:  row.employees?.birthdate  ?? null,
-      employeeNo: row.employees?.employee_number ?? `EMP-${String(row.employee_id).padStart(4, '0')}`,
-    },
-    companyName:       (row.companies as any)?.name ?? '',
-    daysInMonth,
-    payrollPeriodStart,
-    payrollPeriodEnd,
-  }
-}
-
 export default function ManagerPayrollClient({
   companyId, companyName, initialMonths, initialMonth, initialRows,
 }: Props) {
@@ -79,16 +30,17 @@ export default function ManagerPayrollClient({
   const [month, setMonth]             = useState(initialMonth)
   const [allRows, setAllRows]         = useState(initialRows)
   const [search, setSearch]           = useState('')
-  const [loading, setLoading]         = useState(false)
-  const [detailRow, setDetailRow]     = useState<PayInfoV2 | null>(null)
-  const [view, setView]               = useState<'monthly' | 'employee'>('monthly')
+  const [loading, setLoading]             = useState(false)
+  const [detail, setDetail]               = useState<PayslipDetail | null>(null)
+  const [detailLoading, setDetailLoading] = useState<string | null>(null) // row.id
+  const [view, setView]                   = useState<'monthly' | 'employee'>('monthly')
 
   /* ── 월 변경 ── */
   async function onMonthChange(m: string) {
     setMonth(m)
     setLoading(true)
     setSearch('')
-    const select = '*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id), companies(name,payslip_note,payroll_start_day,payroll_day)'
+    const select = '*, employees(name,email,employee_number,department,position,job,birthdate,Date_of_joining,quit_date,company_id), companies(name,payslip_note,payroll_start_day,payroll_day)'
     const { data } = await supabase
       .from('pay_info_v2')
       .select(select)
@@ -113,14 +65,22 @@ export default function ManagerPayrollClient({
   const totalDeduct = rows.reduce((s, r) => s + Math.abs(Math.round(Number(r.total_deductions ?? 0))), 0)
   const totalNet    = rows.reduce((s, r) => s + Math.round(Number(r.net_pay          ?? 0)), 0)
 
+  /* ── 명세서 상세 불러오기 (서버 액션) ── */
+  async function openDetail(row: PayInfoV2) {
+    const key = String(row.id)
+    setDetailLoading(key)
+    const d = await getAdminEmployeePayslipDetail(companyId, toAccrualMonth(row.accrual_month), row.employee_id)
+    setDetailLoading(null)
+    if (d) setDetail(d)
+  }
+
   /* ── 상세 뷰 ── */
-  if (detailRow) {
-    const detail = rowToDetail(detailRow)
+  if (detail) {
     return (
       <PayslipDetailView
         detail={detail}
         backLabel="목록으로"
-        onBack={() => setDetailRow(null)}
+        onBack={() => setDetail(null)}
       />
     )
   }
@@ -291,7 +251,14 @@ export default function ManagerPayrollClient({
                       <td className="px-4 py-3.5 text-red-500 whitespace-nowrap">-{formatKRW(Math.abs(Math.round(Number(row.total_deductions ?? 0))))}</td>
                       <td className="px-4 py-3.5 font-semibold text-blue-600 whitespace-nowrap">{formatKRW(Math.round(Number(row.net_pay ?? 0)))}</td>
                       <td className="px-4 py-3.5">
-                        <button onClick={() => setDetailRow(row)} className="text-xs text-blue-600 hover:underline whitespace-nowrap">명세서 보기</button>
+                        <button
+                          onClick={() => openDetail(row)}
+                          disabled={detailLoading === String(row.id)}
+                          className="flex items-center gap-1 text-xs text-blue-600 hover:underline whitespace-nowrap disabled:opacity-50"
+                        >
+                          {detailLoading === String(row.id) && <Loader2 size={11} className="animate-spin" />}
+                          명세서 보기
+                        </button>
                       </td>
                     </tr>
                   )
@@ -333,9 +300,11 @@ export default function ManagerPayrollClient({
                   </div>
                 </div>
                 <button
-                  onClick={() => setDetailRow(row)}
-                  className="w-full text-xs font-medium text-blue-600 hover:text-blue-700 py-1 border-t border-slate-100"
+                  onClick={() => openDetail(row)}
+                  disabled={detailLoading === String(row.id)}
+                  className="w-full flex items-center justify-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 py-1 border-t border-slate-100 disabled:opacity-50"
                 >
+                  {detailLoading === String(row.id) && <Loader2 size={11} className="animate-spin" />}
                   명세서 상세 보기 →
                 </button>
               </div>
