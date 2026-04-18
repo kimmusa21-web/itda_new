@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Loader2,
   XCircle,
+  FileDown,
 } from 'lucide-react'
 import { UploadSettingsCard }    from './upload-settings-card'
 import { FileDropzone }          from './file-dropzone'
@@ -172,6 +173,25 @@ export function PayrollUploadPage({ companies, currentUserId: _currentUserId, hi
     setUploadLogId(null)
   }
 
+  /* ── 양식 CSV 다운로드 ── */
+  function handleTemplateDownload() {
+    if (mappings.length === 0) return
+    // label_ko 우선, 없으면 csv_column_name
+    const headers = mappings.map(m => m.label_ko || m.csv_column_name)
+    const BOM = '\uFEFF'
+    const csv = BOM + headers.join(',') + '\r\n'
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    const cname = companies.find(c => c.id === companyId)?.name ?? '양식'
+    a.href     = url
+    a.download = `급여업로드_양식_${cname}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const canValidate = companyId > 0 && accrualMonth !== '' && csvRows.length > 0 && mappings.length > 0
   const canUpload   = (phase === 'validated' && (validation?.canUpload ?? false)) as boolean
   const stepIdx     = phase === 'setup' ? 0 : phase === 'validated' || phase === 'failed' ? 1 : 2
@@ -309,6 +329,15 @@ export function PayrollUploadPage({ companies, currentUserId: _currentUserId, hi
             className="btn-secondary flex items-center gap-1.5 px-3 text-sm"
           >
             <RefreshCw size={14} />초기화
+          </button>
+
+          <button
+            onClick={handleTemplateDownload}
+            disabled={mappings.length === 0}
+            title={mappings.length === 0 ? '회사를 먼저 선택하세요' : '한글 헤더 CSV 양식 다운로드'}
+            className="btn-secondary flex items-center gap-1.5 px-3 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <FileDown size={14} />양식
           </button>
 
           <button

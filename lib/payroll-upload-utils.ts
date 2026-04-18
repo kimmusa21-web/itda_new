@@ -50,6 +50,27 @@ function safeTrim(value: string | undefined | null): string {
 }
 
 /* ────────────────────────────────────────────────────────
+   getColStr
+   CSV 행에서 값을 읽을 때 csv_column_name 우선, 없으면 label_ko 로 재시도
+   → 한글 헤더로 다운받은 양식도 업로드 가능
+──────────────────────────────────────────────────────── */
+function getColStr(
+  row:     CsvRow,
+  mapping: ColumnMapping | undefined,
+  fallback: string,
+): string {
+  if (!mapping) return safeTrim(row[fallback])
+  const v = row[mapping.csv_column_name]
+             ?? (mapping.label_ko != null ? row[mapping.label_ko] : undefined)
+  return safeTrim(v)
+}
+
+function getColRaw(row: CsvRow, mapping: ColumnMapping): string | undefined {
+  return row[mapping.csv_column_name]
+      ?? (mapping.label_ko != null ? row[mapping.label_ko] : undefined)
+}
+
+/* ────────────────────────────────────────────────────────
    validateCsvRows
    ★ 핵심 도메인 규칙:
      - 시스템 미등록 이메일 → severity:'error' → canUpload:false → 전체 중단
@@ -63,9 +84,9 @@ export function validateCsvRows(
 ): ValidationResult {
   const errors: ValidationError[] = []
 
-  const emailKey = mappings.find(m => m.db_key === 'email')?.csv_column_name ?? 'email'
-  const monthKey = mappings.find(m => m.db_key === 'accrual_month')?.csv_column_name ?? 'accrual_month'
-  const dateKey  = mappings.find(m => m.db_key === 'payment_date')?.csv_column_name  ?? 'payment_date'
+  const emailMap = mappings.find(m => m.db_key === 'email')
+  const monthMap = mappings.find(m => m.db_key === 'accrual_month')
+  const dateMap  = mappings.find(m => m.db_key === 'payment_date')
 
   const companyEmailSet = new Set(
     employees
@@ -80,7 +101,7 @@ export function validateCsvRows(
   for (let i = 0; i < rows.length; i++) {
     const row  = rows[i]
     const rIdx = i + 2   // 헤더 제외, 1-based
-    const email = safeTrim(row[emailKey]).toLowerCase()
+    const email = getColStr(row, emailMap, 'email').toLowerCase()
     let rowOk = true
 
     // 이메일 누락
@@ -111,7 +132,7 @@ export function validateCsvRows(
     }
 
     // 귀속월 형식 검사
-    const month = safeTrim(row[monthKey])
+    const month = getColStr(row, monthMap, 'accrual_month')
     if (month && !isValidMonth(month)) {
       errors.push({
         rowIndex: rIdx,
@@ -123,7 +144,7 @@ export function validateCsvRows(
     }
 
     // 지급일 형식 검사
-    const pd = safeTrim(row[dateKey])
+    const pd = getColStr(row, dateMap, 'payment_date')
     if (pd && !isValidDate(pd)) {
       errors.push({
         rowIndex: rIdx,
@@ -161,14 +182,14 @@ export function transformCsvRows(
   defaultMonth:   string,
   defaultPayDate: string | null,
 ): PreviewRow[] {
-  const emailKey        = mappings.find(m => m.db_key === 'email')?.csv_column_name          ?? 'email'
-  const monthKey        = mappings.find(m => m.db_key === 'accrual_month')?.csv_column_name  ?? 'accrual_month'
-  const dateKey         = mappings.find(m => m.db_key === 'payment_date')?.csv_column_name   ?? 'payment_date'
-  const startDateKey    = mappings.find(m => m.db_key === 'start_date')?.csv_column_name     ?? 'start_date'
-  const endDateKey      = mappings.find(m => m.db_key === 'end_date')?.csv_column_name       ?? 'end_date'
-  const totalPayKey     = mappings.find(m => m.db_key === 'Total_payment')?.csv_column_name
-  const totalDeKey      = mappings.find(m => m.db_key === 'Total_deductible')?.csv_column_name
-  const netPayKey       = mappings.find(m => m.db_key === 'net_pay')?.csv_column_name
+  const emailMap     = mappings.find(m => m.db_key === 'email')
+  const monthMap     = mappings.find(m => m.db_key === 'accrual_month')
+  const dateMap      = mappings.find(m => m.db_key === 'payment_date')
+  const startDateMap = mappings.find(m => m.db_key === 'start_date')
+  const endDateMap   = mappings.find(m => m.db_key === 'end_date')
+  const totalPayMap  = mappings.find(m => m.db_key === 'Total_payment')
+  const totalDeMap   = mappings.find(m => m.db_key === 'Total_deductible')
+  const netPayMap    = mappings.find(m => m.db_key === 'net_pay')
 
   // ★ workDayKey, otKey는 현재 미사용이므로 제거 (빌드 경고 방지)
 
@@ -188,8 +209,9 @@ export function transformCsvRows(
 
   return rows.map((row, i) => {
     const rIdx  = i + 2
-    const email = safeTrim(row[emailKey]).toLowerCase()
+    const email = getColStr(row, emailMap, 'email').toLowerCase()
     const emp   = empMap.get(email)
+
 
     // 무효/무시 행 — 빠른 반환
     if (!email || !emp || !companyEmails.has(email)) {
@@ -219,42 +241,37 @@ export function transformCsvRows(
     // ── earnings JSONB 빌드 ──────────────────────────────
     const earnings: Record<string, number> = {}
     for (const m of earningMaps) {
-      const v = parseCurrency(row[m.csv_column_name])
+      const v = parseCurrency(getColRaw(row, m))
       if (v !== 0) earnings[m.db_key] = v
     }
 
     // ── deductions JSONB 빌드 ────────────────────────────
     const deductions: Record<string, number> = {}
     for (const m of deductionMaps) {
-      const v = parseCurrency(row[m.csv_column_name])
+      const v = parseCurrency(getColRaw(row, m))
       if (v !== 0) deductions[m.db_key] = v
     }
 
     // ── 합계 계산 ─────────────────────────────────────────
     const totalEarnings =
-      totalPayKey != null
-        ? parseCurrency(row[totalPayKey])
+      totalPayMap != null
+        ? parseCurrency(getColRaw(row, totalPayMap))
         : Object.values(earnings).reduce((s, v) => s + v, 0)
 
     const totalDeductions =
-      totalDeKey != null
-        ? parseCurrency(row[totalDeKey])
+      totalDeMap != null
+        ? parseCurrency(getColRaw(row, totalDeMap))
         : Object.values(deductions).reduce((s, v) => s + v, 0)
 
     const netPay =
-      netPayKey != null
-        ? parseCurrency(row[netPayKey])
+      netPayMap != null
+        ? parseCurrency(getColRaw(row, netPayMap))
         : totalEarnings - totalDeductions
 
-    // ── ★ 핵심 수정: || 와 ?? 혼용 방지 ──────────────────
-    //   수정 전 (Syntax Error):
-    //     (row[dateKey] ?? '').trim() || defaultPayDate ?? ''
-    //   수정 후 (정상):
-    //     safeTrim(row[dateKey]) || (defaultPayDate ?? '')
-    const accrualMonth = safeTrim(row[monthKey])    || defaultMonth
-    const paymentDate  = safeTrim(row[dateKey])     || (defaultPayDate ?? '')
-    const startDate    = safeTrim(row[startDateKey]) || undefined
-    const endDate      = safeTrim(row[endDateKey])   || undefined
+    const accrualMonth = getColStr(row, monthMap,     'accrual_month') || defaultMonth
+    const paymentDate  = getColStr(row, dateMap,      'payment_date')  || (defaultPayDate ?? '')
+    const startDate    = getColStr(row, startDateMap, 'start_date')    || undefined
+    const endDate      = getColStr(row, endDateMap,   'end_date')      || undefined
 
     return {
       rowIndex:        rIdx,
@@ -305,6 +322,7 @@ export function toPayInfoPayloads(
         end_date:          p.endDate     || null,
         work_days:         null,
         overtime_hours:    null,
+        Total_tax_salary:  nvl(e.Total_tax_salary),
         // 지급 항목 개별 컬럼
         base_salary:               nvl(e.base_salary),
         overtime_pay_fixed:        nvl(e.overtime_pay_fixed),
