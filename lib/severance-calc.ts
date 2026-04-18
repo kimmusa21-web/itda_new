@@ -304,7 +304,7 @@ export interface RetirementTaxResult {
   convertedTax:              number
   calculatedTax:             number
   incomeTax:                 number   // 소득세 (10원 단위 절사)
-  residentTax:               number   // 주민세 (10원 단위 절사)
+  residentTax:               number   // 주민세 (1원 단위 절사)
   totalTax:                  number   // 납부세액
 }
 
@@ -326,7 +326,7 @@ export function computeRetirementTax(
   const convertedTax            = computeConvertedTax(taxBase)
   const calculatedTax           = (convertedTax / 12) * serviceYears
   const incomeTax               = Math.floor(calculatedTax / 10) * 10   // 10원 단위 절사
-  const residentTax             = Math.floor(incomeTax * 0.1  / 10) * 10 // 10원 단위 절사
+  const residentTax             = Math.floor(incomeTax * 0.1)             // 1원 단위 절사
   const totalTax                = incomeTax + residentTax
 
   return {
