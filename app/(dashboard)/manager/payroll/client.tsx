@@ -57,7 +57,7 @@ function rowToDetail(row: PayInfoV2): PayslipDetail {
       position:   row.employees?.position   ?? null,
       joinDate:   row.employees?.Date_of_joining ?? null,
       birthDate:  row.employees?.birthdate  ?? null,
-      employeeNo: `EMP-${String(row.employee_id).padStart(4, '0')}`,
+      employeeNo: row.employees?.employee_number ?? `EMP-${String(row.employee_id).padStart(4, '0')}`,
     },
     companyName:       (row.companies as any)?.name ?? '',
     daysInMonth,
@@ -82,7 +82,7 @@ export default function ManagerPayrollClient({
     setMonth(m)
     setLoading(true)
     setSearch('')
-    const select = '*, employees(name,email,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))'
+    const select = '*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))'
     const { data } = await supabase
       .from('pay_info_v2')
       .select(select)

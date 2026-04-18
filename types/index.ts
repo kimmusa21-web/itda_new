@@ -118,6 +118,7 @@ export interface PayInfoV2 {
   employees?: {
     name: string
     email: string
+    employee_number: string | null
     Date_of_joining: string | null
     department: string | null
     position: string | null
