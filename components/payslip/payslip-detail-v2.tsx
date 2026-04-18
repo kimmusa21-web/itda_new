@@ -219,16 +219,14 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
         </div>
 
         {/* ── 근로시간 / 연차 정보 ── */}
-        {(d.overTime != null || d.holidayWorkingHours != null || d.nightWorkHours != null || d.remainingAnnualLeaveHours != null) && (
-          <InfoSection icon={<Timer size={14} className="text-blue-500" />} title="근로시간 / 연차">
-            <div className="grid grid-cols-2 gap-3 py-2">
-              <WorkTimeRow label="연장근로시간(분)" value={d.overTime} />
-              <WorkTimeRow label="휴일근로시간(분)" value={d.holidayWorkingHours} />
-              <WorkTimeRow label="야간근로시간(분)" value={d.nightWorkHours} />
-              <WorkTimeRow label="잔여연차시간(분)" value={d.remainingAnnualLeaveHours} />
-            </div>
-          </InfoSection>
-        )}
+        <InfoSection icon={<Timer size={14} className="text-blue-500" />} title="근로시간 / 연차">
+          <div className="grid grid-cols-2 gap-3 py-2">
+            <WorkTimeRow label="연장근로시간(분)" value={d.overTime} />
+            <WorkTimeRow label="휴일근로시간(분)" value={d.holidayWorkingHours} />
+            <WorkTimeRow label="야간근로시간(분)" value={d.nightWorkHours} />
+            <WorkTimeRow label="잔여연차시간(분)" value={d.remainingAnnualLeaveHours} />
+          </div>
+        </InfoSection>
 
         {/* ── 지급 내역 ── */}
         <div className="card overflow-hidden">
@@ -320,7 +318,7 @@ function PayInfoCell({ label, value, wide }: { label: string; value: string; wid
 }
 
 function WorkTimeRow({ label, value }: { label: string; value: number | null | undefined }) {
-  const display = value != null ? String(value) : '-'
+  const display = value != null ? String(value) : '0'
   return (
     <div className="flex flex-col items-center justify-center bg-slate-50 rounded-xl py-3 px-2 text-center">
       <span className="text-lg font-bold text-slate-900 leading-none">{display}</span>
