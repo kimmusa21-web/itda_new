@@ -38,7 +38,7 @@ export function isValidDate(v: string): boolean {
 
 export function isValidMonth(v: string): boolean {
   if (!v || typeof v !== 'string') return false
-  return /^\d{4}-\d{2}$/.test(v)
+  return /^\d{4}-(0[1-9]|1[0-2])(-\d{2})?$/.test(v)
 }
 
 /* ────────────────────────────────────────────────────────

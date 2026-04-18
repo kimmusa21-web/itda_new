@@ -72,9 +72,9 @@ export function getInitials(name: string | null | undefined): string {
   return name.slice(0, 2)
 }
 
-/** YYYY-MM 형식 확인 */
+/** YYYY-MM 또는 YYYY-MM-DD 형식 확인 */
 export function isValidMonth(value: string): boolean {
-  return /^\d{4}-\d{2}$/.test(value)
+  return /^\d{4}-(0[1-9]|1[0-2])(-\d{2})?$/.test(value)
 }
 
 /** YYYY-MM-DD 형식 확인 */

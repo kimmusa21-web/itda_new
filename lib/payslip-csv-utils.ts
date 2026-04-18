@@ -74,7 +74,7 @@ export async function parsePayslipCsv(file: File): Promise<PayslipParseResult> {
 
 /* ── 행 검증 ────────────────────────────────────────────────── */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])(-\d{2})?$/
 const DATE_RE  = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/
 
 /** 숫자 파싱 (음수 허용 여부 선택) */
