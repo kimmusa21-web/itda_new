@@ -63,7 +63,8 @@ export function formatPeriod(start: string, end: string): string {
  * getDaysInMonth('2026-03') → 31
  */
 export function getDaysInMonth(payMonth: string): number {
-  const [year, month] = payMonth.split('-').map(Number)
+  const ym = payMonth.slice(0, 7)   // YYYY-MM-DD → YYYY-MM
+  const [year, month] = ym.split('-').map(Number)
   // new Date(year, month, 0) = 해당 월의 마지막 날 (day 0 of next month)
   return new Date(year, month, 0).getDate()
 }
@@ -83,14 +84,15 @@ export function getPayrollPeriod(
   payMonth: string,
   payrollStartDay: number | null | undefined,
 ): { start: string; end: string } {
-  const [year, month] = payMonth.split('-').map(Number)
+  const ym = payMonth.slice(0, 7)   // YYYY-MM-DD → YYYY-MM
+  const [year, month] = ym.split('-').map(Number)
 
   // Fallback: 해당 월 1일 ~ 말일
   if (!payrollStartDay || payrollStartDay <= 1) {
     const lastDay = new Date(year, month, 0).getDate()
     return {
-      start: `${payMonth}-01`,
-      end:   `${payMonth}-${String(lastDay).padStart(2, '0')}`,
+      start: `${ym}-01`,
+      end:   `${ym}-${String(lastDay).padStart(2, '0')}`,
     }
   }
 
@@ -105,7 +107,7 @@ export function getPayrollPeriod(
 
   const prevMonthStr = `${String(prevYear).padStart(4, '0')}-${String(prevMonth).padStart(2, '0')}`
   const start = `${prevMonthStr}-${String(clampedStart).padStart(2, '0')}`
-  const end   = `${payMonth}-${String(payrollStartDay - 1).padStart(2, '0')}`
+  const end   = `${ym}-${String(payrollStartDay - 1).padStart(2, '0')}`
 
   return { start, end }
 }
