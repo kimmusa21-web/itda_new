@@ -7,7 +7,7 @@ import { EmployeeBasicSection } from './employee-basic-section'
 import { EmployeeOrgSection }   from './employee-org-section'
 import { EmployeeWorkSection }  from './employee-work-section'
 import { EmployeeSalarySection } from './employee-salary-section'
-import { createEmployeeRegistrationRequest } from '@/lib/employee-requests'
+import { createEmployeeWithInvite } from '@/lib/actions/employee-invite-create'
 import {
   validateRequired, validateEmail, validatePhone,
   validateBirthdate, validateDate, validateSalaryAmount,
@@ -44,29 +44,32 @@ const INITIAL: EmployeeCreateInput = {
 
 type SubmitState = 'idle' | 'loading' | 'success' | 'error'
 
-/* ── 서버 액션 래퍼 (알림 포함) ──────────────────────── */
+/* ── 서버 액션 래퍼 ───────────────────────────────────── */
 async function realCreateEmployeeRequest(
   data: EmployeeCreateInput,
   companyId: number,
 ): Promise<{ success: boolean; error?: string }> {
-  return createEmployeeRegistrationRequest(companyId, {
-    name:          data.name,
-    email:         data.email,
-    birthdate:     data.birthdate || undefined,
-    gender:        data.gender,
-    phone:         data.phone || undefined,
-    department:    data.department || undefined,
-    position:      data.position || undefined,
-    job:           data.job || undefined,
-    grade:         data.grade || undefined,
-    role_title:    data.jobTitle || undefined,
-    work_details:  data.jobDescription || undefined,
-    work_location: data.workLocation || undefined,
-    join_date:     data.joinDate || undefined,
-    salary_type:   data.salaryType,
-    salary_amount: data.salaryAmount ? Number(data.salaryAmount) : undefined,
-    salary_basis:  data.salaryBasis,
-  })
+  return createEmployeeWithInvite(
+    {
+      name:           data.name,
+      email:          data.email,
+      birthdate:      data.birthdate     || undefined,
+      gender:         data.gender,
+      phone:          data.phone         || undefined,
+      department:     data.department    || undefined,
+      position:       data.position      || undefined,
+      job:            data.job           || undefined,
+      grade:          data.grade         || undefined,
+      jobTitle:       data.jobTitle      || undefined,
+      jobDescription: data.jobDescription || undefined,
+      workLocation:   data.workLocation  || undefined,
+      joinDate:       data.joinDate,
+      salaryType:     data.salaryType,
+      salaryAmount:   data.salaryAmount  || undefined,
+      salaryBasis:    data.salaryBasis,
+    },
+    companyId,
+  )
 }
 
 /* ── 메인 폼 컴포넌트 ─────────────────────────────────── */
@@ -138,12 +141,13 @@ export function EmployeeForm({ companyId, companyName }: Props) {
         <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5">
           <CheckCircle2 size={32} className="text-emerald-600" />
         </div>
-        <h2 className="text-lg font-bold text-slate-900 mb-2">가입신청이 등록되었습니다</h2>
+        <h2 className="text-lg font-bold text-slate-900 mb-2">초대 이메일이 발송되었습니다</h2>
         <p className="text-sm text-slate-500 mb-1">
           <span className="font-semibold text-slate-700">{form.name}</span> ({form.email})
         </p>
         <p className="text-sm text-slate-500 mb-6">
-          어드민 승인 후 초대 이메일이 발송됩니다
+          직원이 이메일 링크를 클릭하여 비밀번호를 설정하면 가입이 완료됩니다.
+          (초대 링크는 24시간 유효)
         </p>
         <div className="flex gap-3 justify-center">
           <button onClick={handleReset} className="btn-secondary">
@@ -165,7 +169,7 @@ export function EmployeeForm({ companyId, companyName }: Props) {
         <p className="text-xs text-slate-400 mb-1">{companyName} · 직원 관리</p>
         <h1 className="text-2xl font-bold text-slate-900">직원 등록</h1>
         <p className="text-sm text-slate-500 mt-1">
-          직원 정보를 입력하면 가입신청이 생성되며, 승인 후 계정이 생성됩니다
+          직원 정보를 입력하면 즉시 초대 이메일이 발송됩니다
         </p>
       </div>
 
@@ -173,8 +177,8 @@ export function EmployeeForm({ companyId, companyName }: Props) {
       <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
         <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
         <p className="text-xs text-blue-700">
-          <span className="font-semibold">가입신청 → 어드민 승인 → 초대 이메일 발송</span> 순서로 진행됩니다.
-          직원은 초대 이메일의 링크를 통해 비밀번호를 직접 설정합니다.
+          <span className="font-semibold">등록 즉시 초대 이메일 발송</span> — 직원이 이메일 링크를 클릭하여
+          비밀번호를 설정하면 가입이 완료됩니다. 초대 링크는 24시간 유효합니다.
         </p>
       </div>
 
@@ -219,7 +223,7 @@ export function EmployeeForm({ companyId, companyName }: Props) {
           {submit === 'loading' ? (
             <><Loader2 size={16} className="animate-spin" />처리 중...</>
           ) : (
-            '가입신청 등록'
+            '직원 등록 및 초대 발송'
           )}
         </button>
       </div>

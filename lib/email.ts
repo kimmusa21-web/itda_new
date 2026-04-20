@@ -27,37 +27,24 @@ export interface EmailPayload {
 */
 async function sendRawEmail(payload: EmailPayload): Promise<{ success: boolean; error?: string }> {
 
-  // ── [Resend 실제 발송] ──────────────────────────────────────
-  // const { Resend } = await import('resend')
-  // const resend = new Resend(process.env.RESEND_API_KEY)
-  // const { error } = await resend.emails.send({
-  //   from: 'itda <noreply@itda.kr>',
-  //   to:      payload.to,
-  //   subject: payload.subject,
-  //   html:    payload.html,
-  //   text:    payload.text,
-  // })
-  // if (error) return { success: false, error: error.message }
-  // return { success: true }
+  // ── [Resend — RESEND_API_KEY가 있으면 실제 발송] ─────────────
+  if (process.env.RESEND_API_KEY) {
+    const { Resend } = await import('resend')
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    const from = process.env.EMAIL_FROM ?? 'itda <noreply@itda.kr>'
+    const { error } = await resend.emails.send({
+      from,
+      to:      payload.to,
+      subject: payload.subject,
+      html:    payload.html,
+      text:    payload.text,
+    })
+    if (error) return { success: false, error: error.message }
+    return { success: true }
+  }
 
-  // ── [Nodemailer / SMTP] ──────────────────────────────────────
-  // const nodemailer = await import('nodemailer')
-  // const transporter = nodemailer.default.createTransport({
-  //   host: process.env.SMTP_HOST,
-  //   port: Number(process.env.SMTP_PORT ?? 587),
-  //   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  // })
-  // await transporter.sendMail({
-  //   from:    `"itda" <${process.env.SMTP_FROM ?? 'noreply@itda.kr'}>`,
-  //   to:      payload.to,
-  //   subject: payload.subject,
-  //   html:    payload.html,
-  //   text:    payload.text,
-  // })
-  // return { success: true }
-
-  // ── [MVP: 콘솔 mock] ────────────────────────────────────────
-  console.log('━━━ [EMAIL MOCK] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+  // ── [콘솔 mock — API KEY 미설정 시 fallback] ─────────────────
+  console.log('━━━ [EMAIL MOCK — RESEND_API_KEY 미설정] ━━━━━━')
   console.log(`To:      ${payload.to}`)
   console.log(`Subject: ${payload.subject}`)
   console.log(`Body:\n${payload.text ?? payload.html.replace(/<[^>]+>/g, '')}`)

@@ -49,7 +49,7 @@ export async function POST(req: Request) {
   /* ── 3. 초대 토큰 조회 ────────────────────────────────────── */
   const { data: invite, error: inviteErr } = await supabaseAdmin
     .from('employee_invites')
-    .select('id, company_id, email, name, expires_at, used_at')
+    .select('id, company_id, employee_id, email, name, expires_at, used_at')
     .eq('token', token.trim())
     .maybeSingle()
 
@@ -117,17 +117,31 @@ export async function POST(req: Request) {
 
   const authUserId = newUser.user.id
 
-  /* ── 7. employees 연결 (company_id + email 매칭) ──────────── */
-  const { data: employeeRow, error: empErr } = await supabaseAdmin
-    .from('employees')
-    .select('id, name, department, position, company_id')
-    .eq('company_id', invite.company_id)
-    .ilike('email', normalizedEmail)
-    .is('user_id', null)           // 아직 연결 안 된 직원
-    .maybeSingle()
+  /* ── 7. employees 연결 ────────────────────────────────────── */
+  // 우선순위: invite.employee_id(직접 초대) → company_id+email 매칭(승인 플로우 fallback)
+  let employeeRow: { id: number; name: string; department: string | null; position: string | null; company_id: number } | null = null
 
-  if (empErr) {
-    console.error('[complete-invite] employees 조회 오류:', empErr.message)
+  if (invite.employee_id) {
+    // 직접 초대 플로우: employee_id로 직접 연결
+    const { data, error } = await supabaseAdmin
+      .from('employees')
+      .select('id, name, department, position, company_id')
+      .eq('id', invite.employee_id)
+      .is('user_id', null)
+      .maybeSingle()
+    if (error) console.error('[complete-invite] employees 조회(id) 오류:', error.message)
+    employeeRow = data ?? null
+  } else {
+    // 기존 승인 플로우 fallback: company_id + email 매칭
+    const { data, error } = await supabaseAdmin
+      .from('employees')
+      .select('id, name, department, position, company_id')
+      .eq('company_id', invite.company_id)
+      .ilike('email', normalizedEmail)
+      .is('user_id', null)
+      .maybeSingle()
+    if (error) console.error('[complete-invite] employees 조회(email) 오류:', error.message)
+    employeeRow = data ?? null
   }
 
   if (employeeRow) {

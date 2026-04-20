@@ -4,10 +4,11 @@
    실제 Supabase 데이터 기반 (사번 검색 포함)
 ================================================================ */
 
-import { useState }             from 'react'
-import { Search, Users, Mail, CalendarDays, Hash, X } from 'lucide-react'
+import { useState, useTransition } from 'react'
+import { Search, Users, Mail, CalendarDays, Hash, X, Send, Loader2 } from 'lucide-react'
 import type { EmployeeRow }     from '@/lib/supabase/queries/employee'
 import { formatDateShort, cn, getInitials } from '@/lib/utils'
+import { resendEmployeeInvite } from '@/lib/actions/employee-invite-create'
 
 type Filter = 'active' | 'inactive' | 'all'
 
@@ -114,6 +115,26 @@ function EmployeeListItem({ emp }: { emp: EmployeeRow }) {
   const initials = getInitials(emp.name ?? '?')
   const isLinked = !!emp.user_id
 
+  // 초대 대기 중 (등록됐지만 아직 가입 미완료)
+  const isInvited = !isLinked && !emp.is_active
+
+  const [isPending, startTransition] = useTransition()
+  const [resendMsg, setResendMsg]    = useState<{ ok: boolean; text: string } | null>(null)
+
+  function handleResend() {
+    setResendMsg(null)
+    startTransition(async () => {
+      const result = await resendEmployeeInvite(emp.id, emp.company_id)
+      setResendMsg(
+        result.success
+          ? { ok: true,  text: '초대 이메일을 재발송했습니다.' }
+          : { ok: false, text: result.error ?? '재발송 실패' },
+      )
+      // 3초 후 메시지 제거
+      setTimeout(() => setResendMsg(null), 3000)
+    })
+  }
+
   return (
     <div className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all">
       {/* 아바타 */}
@@ -128,26 +149,32 @@ function EmployeeListItem({ emp }: { emp: EmployeeRow }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium text-slate-900">{emp.name}</span>
-          {/* 사번 */}
           {emp.employee_number && (
             <span className="flex items-center gap-0.5 text-xs text-slate-400 font-mono">
               <Hash size={10} />
               {emp.employee_number}
             </span>
           )}
-          <span className={cn(
-            'text-xs px-2 py-0.5 rounded-full font-medium',
-            emp.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500',
-          )}>
-            {emp.is_active ? '재직' : '퇴사'}
-          </span>
-          {/* 계정 연결 여부 */}
-          <span className={cn(
-            'text-xs px-2 py-0.5 rounded-full font-medium',
-            isLinked ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700',
-          )}>
-            {isLinked ? '계정 연결됨' : '인증 대기'}
-          </span>
+          {/* 재직/퇴사 뱃지 */}
+          {emp.is_active ? (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-100 text-emerald-700">
+              재직
+            </span>
+          ) : (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-500">
+              퇴사
+            </span>
+          )}
+          {/* 계정 상태 뱃지 */}
+          {isLinked ? (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">
+              가입완료
+            </span>
+          ) : isInvited ? (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
+              초대 대기
+            </span>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap text-xs text-slate-500">
@@ -168,7 +195,38 @@ function EmployeeListItem({ emp }: { emp: EmployeeRow }) {
             </span>
           )}
         </div>
+
+        {/* 재발송 결과 메시지 */}
+        {resendMsg && (
+          <p className={cn(
+            'mt-1.5 text-xs font-medium',
+            resendMsg.ok ? 'text-emerald-600' : 'text-red-500',
+          )}>
+            {resendMsg.text}
+          </p>
+        )}
       </div>
+
+      {/* 초대 재발송 버튼 (가입 미완료 직원만 표시) */}
+      {!isLinked && (
+        <button
+          onClick={handleResend}
+          disabled={isPending}
+          title="초대 이메일 재발송"
+          className={cn(
+            'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors flex-shrink-0',
+            isPending
+              ? 'border-slate-200 text-slate-300 cursor-not-allowed'
+              : 'border-blue-200 text-blue-600 hover:bg-blue-50',
+          )}
+        >
+          {isPending
+            ? <Loader2 size={13} className="animate-spin" />
+            : <Send size={13} />
+          }
+          재발송
+        </button>
+      )}
     </div>
   )
 }
