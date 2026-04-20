@@ -8,7 +8,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { createCompany, updateCompany, type CompanyInput } from '@/lib/actions/company-actions'
-import { DEFAULT_PAYSLIP_NOTE_PLACEHOLDER } from '@/lib/payslip-defaults'
+import { PayslipNoteEditor } from '@/components/company/payslip-note-editor'
 
 /* ── 타입 ─────────────────────────────────────────────────── */
 interface CompanyFormProps {
@@ -218,33 +218,15 @@ export function CompanyForm({ mode, initialData }: CompanyFormProps) {
         </FieldWrap>
       </Section>
 
-      {/* 산출 근거 */}
-      <Section title="급여명세서 산출 근거">
-        <div>
-          <p className="text-xs text-slate-500 mb-2">
-            직원이 급여명세서 하단에서 확인할 수 있는 산출 기준 안내 문구입니다.
-            비워두면 시스템 기본값이 표시됩니다. 줄바꿈으로 항목을 구분하세요.
-          </p>
-          <textarea
-            className="input h-44 resize-y font-mono text-xs leading-relaxed"
-            placeholder={DEFAULT_PAYSLIP_NOTE_PLACEHOLDER}
-            value={form.payslip_note ?? ''}
-            onChange={onChange('payslip_note')}
+      {/* 산출 근거 — 수정 모드에서만 표시 (create 시에는 회사 ID 없음) */}
+      {mode === 'edit' && initialData?.id != null && (
+        <Section title="급여명세서 산출 근거">
+          <PayslipNoteEditor
+            initialOverrides={initialData.payslip_note_overrides ?? null}
+            companyId={initialData.id}
           />
-          {form.payslip_note && (
-            <p className="mt-1 text-[11px] text-slate-400 text-right">
-              {form.payslip_note.split('\n').filter(Boolean).length}개 항목 ·{' '}
-              <button
-                type="button"
-                className="underline hover:text-slate-600"
-                onClick={() => setForm(p => ({ ...p, payslip_note: null }))}
-              >
-                초기화 (기본값 사용)
-              </button>
-            </p>
-          )}
-        </div>
-      </Section>
+        </Section>
+      )}
 
       {/* API 에러 */}
       {submitState === 'error' && apiError && (

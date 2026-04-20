@@ -6,9 +6,9 @@
 
 import { createClient }        from '@/lib/supabase/server'
 import { mapEarnings, mapDeductions } from '@/lib/payroll-labels'
-import { parsePayslipNote }   from '@/lib/payslip-defaults'
+import { getEffectivePayslipRules } from '@/lib/payslip-defaults'
 import { getDefaultPayslipNotes } from '@/lib/supabase/queries/app-settings'
-import { getDaysInMonth, getPayrollPeriod, toAccrualDate, toAccrualMonth } from '@/lib/payslip-utils'
+import { getDaysInMonth, getEffectivePayrollPeriod, toAccrualDate, toAccrualMonth } from '@/lib/payslip-utils'
 import { deriveEmployeeNumberDisplay } from '@/lib/employee-number'
 import {
   rowToListItem,
@@ -153,7 +153,7 @@ export async function getAdminEmployeePayslipDetail(
         name, email, department, position, job,
         Date_of_joining, birthdate, quit_date, employee_number, company_id
       ),
-      companies ( name, payslip_note, payroll_start_day, payroll_day, biz_number )
+      companies ( name, payslip_note, payslip_note_overrides, payroll_start_day, payroll_day, biz_number )
     `)
     .eq('company_id', companyId)
     .eq('accrual_month', toAccrualDate(payMonth))
@@ -168,16 +168,19 @@ export async function getAdminEmployeePayslipDetail(
   const totalDeductions = Math.abs(Math.round(Number(row.total_deductions)))
   const netPay          = Math.round(Number(row.net_pay))
 
-  const daysInMonth = getDaysInMonth(row.accrual_month)
-  const payrollStartDay = ((row.companies as any)?.payroll_start_day ?? null) as number | null
-  const payrollDay      = ((row.companies as any)?.payroll_day      ?? null) as number | null
-  const { start: payrollPeriodStart, end: payrollPeriodEnd } =
-    getPayrollPeriod(row.accrual_month, payrollStartDay)
+  const daysInMonth     = getDaysInMonth(row.accrual_month)
+  const payrollStartDay = (row.companies as any)?.payroll_start_day as number | null ?? null
+  const payrollDay      = (row.companies as any)?.payroll_day      as number | null ?? null
 
-  // 퇴사자: 퇴사일이 정산종료일보다 앞서면 퇴사일로 캡
+  // ★ 정산기간: 1차 DB 저장값, 2차 회사 기준 계산
   const quitDate = (row.employees as any)?.quit_date as string | null | undefined
-  const cappedEndDate        = capWithQuitDate(row.end_date ?? null, quitDate)
-  const cappedPayrollPeriodEnd = capWithQuitDate(payrollPeriodEnd, quitDate)
+  const { start: rawPeriodStart, end: rawPeriodEnd } = getEffectivePayrollPeriod(
+    row.accrual_month,
+    payrollStartDay,
+    row.start_date,
+    row.end_date,
+  )
+  const periodEnd = capWithQuitDate(rawPeriodEnd, quitDate)
 
   return {
     id:           row.id,
@@ -185,8 +188,8 @@ export async function getAdminEmployeePayslipDetail(
     paymentDate:  row.payment_date ?? derivePaymentDate(row.accrual_month, payrollDay),
     workDays:     row.work_days != null ? Number(row.work_days) : daysInMonth,
     overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : null,
-    startDate: row.start_date ?? null,
-    endDate:   cappedEndDate,
+    startDate: rawPeriodStart,
+    endDate:   periodEnd,
     overTime:                  row.Over_time                   ?? null,
     holidayWorkingHours:       row.Holiday_working_hours       ?? null,
     nightWorkHours:            row.night_work_hours            ?? null,
@@ -198,8 +201,10 @@ export async function getAdminEmployeePayslipDetail(
     totalEarnings,
     totalDeductions,
     netPay,
-    calculationNotes: parsePayslipNote(
+    // ★ 산출근거: 1차 항목별 override, 2차 전체 텍스트 override, 3차 시스템 기본값
+    calculationNotes: getEffectivePayslipRules(
       (row.companies as any)?.payslip_note ?? null,
+      (row.companies as any)?.payslip_note_overrides ?? null,
       systemDefaultNotes,
     ),
     employee: {
@@ -217,10 +222,10 @@ export async function getAdminEmployeePayslipDetail(
             employeeId,
           ),
     },
-    companyName:        row.companies?.name ?? '',
+    companyName:  row.companies?.name ?? '',
     daysInMonth,
-    payrollPeriodStart,
-    payrollPeriodEnd: cappedPayrollPeriodEnd,
+    payrollPeriodStart: rawPeriodStart,
+    payrollPeriodEnd:   periodEnd,
   }
 }
 
@@ -243,7 +248,7 @@ export async function getEmployeePayslipById(
         name, email, department, position, job,
         Date_of_joining, birthdate, quit_date, employee_number, company_id
       ),
-      companies ( name, payslip_note, payroll_start_day, payroll_day, biz_number )
+      companies ( name, payslip_note, payslip_note_overrides, payroll_start_day, payroll_day, biz_number )
     `)
     .eq('id', id)
     .eq('employee_id', employeeId)   // ★ 본인 검증 — 다른 직원 id면 null 반환
@@ -253,54 +258,52 @@ export async function getEmployeePayslipById(
 
   const row = data as PayInfoV2Row
 
-  // total_deductions는 음수(환급 포함)일 수 있음 → abs로 표시
   const totalEarnings   = Math.round(Number(row.total_earnings))
   const totalDeductions = Math.abs(Math.round(Number(row.total_deductions)))
   const netPay          = Math.round(Number(row.net_pay))
 
-  // ── 당월일수 + 정산기간 ──
-  // pay_info_v2에 start_date/end_date가 있으면 우선 사용, 없으면 company 기준 계산
-  const daysInMonth = getDaysInMonth(row.accrual_month)
-  const payrollStartDay = ((row.companies as any)?.payroll_start_day ?? null) as number | null
-  const payrollDay2     = ((row.companies as any)?.payroll_day      ?? null) as number | null
-  const { start: payrollPeriodStart, end: payrollPeriodEnd } =
-    getPayrollPeriod(row.accrual_month, payrollStartDay)
+  const daysInMonth     = getDaysInMonth(row.accrual_month)
+  const payrollStartDay = (row.companies as any)?.payroll_start_day as number | null ?? null
+  const payrollDay      = (row.companies as any)?.payroll_day      as number | null ?? null
 
-  // 퇴사자: 퇴사일이 정산종료일보다 앞서면 퇴사일로 캡
-  const quitDate2 = (row.employees as any)?.quit_date as string | null | undefined
-  const cappedEndDate2         = capWithQuitDate(row.end_date ?? null, quitDate2)
-  const cappedPayrollPeriodEnd2 = capWithQuitDate(payrollPeriodEnd, quitDate2)
+  // ★ 정산기간: 1차 DB 저장값, 2차 회사 기준 계산
+  const quitDate = (row.employees as any)?.quit_date as string | null | undefined
+  const { start: rawPeriodStart, end: rawPeriodEnd } = getEffectivePayrollPeriod(
+    row.accrual_month,
+    payrollStartDay,
+    row.start_date,
+    row.end_date,
+  )
+  const periodEnd = capWithQuitDate(rawPeriodEnd, quitDate)
 
   return {
     id:           row.id,
     accrualMonth: row.accrual_month,
-    paymentDate:  row.payment_date ?? derivePaymentDate(row.accrual_month, payrollDay2),
+    paymentDate:  row.payment_date ?? derivePaymentDate(row.accrual_month, payrollDay),
     workDays:     row.work_days != null ? Number(row.work_days) : daysInMonth,
     overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : null,
 
-    // ★ 정산기간 — pay_info_v2 직접 저장값 (퇴사일 캡 적용)
-    startDate: row.start_date ?? null,
-    endDate:   cappedEndDate2,
+    startDate: rawPeriodStart,
+    endDate:   periodEnd,
 
-    // ★ 근로시간/연차
     overTime:                  row.Over_time                   ?? null,
     holidayWorkingHours:       row.Holiday_working_hours       ?? null,
     nightWorkHours:            row.night_work_hours            ?? null,
     remainingAnnualLeaveHours: row.Remaining_annual_leave_hours ?? null,
 
-    // ★ pay_info 흡수 필드
     numberOfDays:   (row as any).Number_of_days != null ? Number((row as any).Number_of_days) : null,
     totalTaxSalary: (row as any).Total_tax_salary != null ? Number((row as any).Total_tax_salary) : null,
 
-    // 금액 (상세에서만 노출)
     earnings:     mapEarnings(row.earnings ?? {}),
     deductions:   mapDeductions(row.deductions ?? {}),
     totalEarnings,
     totalDeductions,
     netPay,
 
-    calculationNotes: parsePayslipNote(
+    // ★ 산출근거: 1차 항목별 override, 2차 전체 텍스트 override, 3차 시스템 기본값
+    calculationNotes: getEffectivePayslipRules(
       (row.companies as any)?.payslip_note ?? null,
+      (row.companies as any)?.payslip_note_overrides ?? null,
       systemDefaultNotes,
     ),
 
@@ -319,9 +322,9 @@ export async function getEmployeePayslipById(
             employeeId,
           ),
     },
-    companyName:        row.companies?.name ?? '',
+    companyName:  row.companies?.name ?? '',
     daysInMonth,
-    payrollPeriodStart,
-    payrollPeriodEnd: cappedPayrollPeriodEnd2,
+    payrollPeriodStart: rawPeriodStart,
+    payrollPeriodEnd:   periodEnd,
   }
 }

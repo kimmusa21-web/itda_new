@@ -150,7 +150,7 @@ export default async function AdminCompanyDetailPage({ params }: Props) {
         </div>
         <div className="card p-5">
           <PayslipNoteEditor
-            initialNote={company.payslip_note}
+            initialOverrides={company.payslip_note_overrides}
             companyId={id}
           />
         </div>

@@ -214,20 +214,23 @@ export function normalizePayMonth(raw: string): string {
   if (!raw) return ''
   const trimmed = raw.trim()
 
-  // 이미 YYYY-MM
-  if (/^\d{4}-\d{2}$/.test(trimmed)) return trimmed
+  // 이미 YYYY-MM-DD → 01로 고정
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed.slice(0, 7) + '-01'
 
-  // 2026년 04월 → 2026-04
+  // 이미 YYYY-MM → YYYY-MM-01
+  if (/^\d{4}-\d{2}$/.test(trimmed)) return `${trimmed}-01`
+
+  // 2026년 04월 → 2026-04-01
   const kr = trimmed.match(/(\d{4})년\s*(\d{1,2})월/)
-  if (kr) return `${kr[1]}-${kr[2].padStart(2, '0')}`
+  if (kr) return `${kr[1]}-${kr[2].padStart(2, '0')}-01`
 
-  // 2026.04 또는 2026/04
+  // 2026.04 또는 2026/04 → 2026-04-01
   const dot = trimmed.match(/(\d{4})[./](\d{1,2})/)
-  if (dot) return `${dot[1]}-${dot[2].padStart(2, '0')}`
+  if (dot) return `${dot[1]}-${dot[2].padStart(2, '0')}-01`
 
-  // 202604
+  // 202604 → 2026-04-01
   const compact = trimmed.match(/^(\d{4})(\d{2})$/)
-  if (compact) return `${compact[1]}-${compact[2]}`
+  if (compact) return `${compact[1]}-${compact[2]}-01`
 
   return trimmed
 }

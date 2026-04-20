@@ -42,9 +42,10 @@ export default async function AdminCompanyEditPage({ params }: Props) {
           address:             company.address ?? '',
           'tax invoice email': company['tax invoice email'] ?? '',
           status:              company.status ?? 'active',
-          payslip_note:        company.payslip_note ?? null,
-          payroll_day:         (company as any).payroll_day ?? null,
-          payroll_start_day:   (company as any).payroll_start_day ?? null,
+          payslip_note:            company.payslip_note ?? null,
+          payslip_note_overrides:  (company as any).payslip_note_overrides ?? null,
+          payroll_day:             (company as any).payroll_day ?? null,
+          payroll_start_day:       (company as any).payroll_start_day ?? null,
         }}
       />
     </div>

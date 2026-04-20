@@ -44,7 +44,14 @@ export interface PayInfoV2Row {
     employee_number: string | null
     company_id:      number
   } | null
-  companies?: { name: string; payslip_note?: string | null; payroll_start_day?: number | null; payroll_day?: number | null; biz_number?: string | null } | null
+  companies?: {
+    name:                    string
+    payslip_note?:           string | null
+    payslip_note_overrides?: Record<string, string> | null
+    payroll_start_day?:      number | null
+    payroll_day?:            number | null
+    biz_number?:             string | null
+  } | null
 }
 
 /* ── 목록용 — 금액 없음 ─────────────────────────────────── */

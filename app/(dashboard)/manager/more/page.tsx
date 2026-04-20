@@ -13,7 +13,7 @@ export default async function ManagerMorePage() {
 
   const { data: company } = await supabase
     .from('companies')
-    .select('name, Telephone, "tax invoice email", contact_name, contact_email, payslip_note')
+    .select('name, Telephone, "tax invoice email", contact_name, contact_email, payslip_note, payslip_note_overrides')
     .eq('id', ctx.companyId)
     .single()
 
@@ -44,7 +44,9 @@ export default async function ManagerMorePage() {
           <FileText size={15} className="text-slate-500" />
           <h3 className="text-sm font-semibold text-slate-700">급여명세서 산출 근거</h3>
         </div>
-        <PayslipNoteEditor initialNote={(company as any)?.payslip_note ?? null} />
+        <PayslipNoteEditor
+          initialOverrides={(company as any)?.payslip_note_overrides ?? null}
+        />
       </div>
     </div>
   )

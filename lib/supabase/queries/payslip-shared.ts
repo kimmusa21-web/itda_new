@@ -1,6 +1,6 @@
 import type { PayslipDetail, EarningItem, DeductionItem } from '@/lib/mock-payslip'
-import { parsePayslipNote } from '@/lib/payslip-defaults'
-import { getDaysInMonth, getPayrollPeriod } from '@/lib/payslip-utils'
+import { getEffectivePayslipRules } from '@/lib/payslip-defaults'
+import { getDaysInMonth, getEffectivePayrollPeriod } from '@/lib/payslip-utils'
 
 export interface PayInfoRow {
   id: number
@@ -106,8 +106,15 @@ export function mapRowToPayslip(row: PayInfoRow): PayslipDetail {
   // ── 당월일수 + 정산기간 ──
   const payrollStartDay = ((emp?.companies as any)?.payroll_start_day ?? null) as number | null
   const daysInMonth     = getDaysInMonth(row.accrual_month)
+
+  // ★ 정산기간: 1차 DB 저장값(Start_date/End_date), 2차 회사 기준 계산
   const { start: payrollPeriodStart, end: payrollPeriodEnd } =
-    getPayrollPeriod(row.accrual_month, payrollStartDay)
+    getEffectivePayrollPeriod(
+      row.accrual_month,
+      payrollStartDay,
+      row.Start_date ?? null,
+      row.End_date   ?? null,
+    )
 
   return {
     id: `ps-${row.id}`,
@@ -125,8 +132,8 @@ export function mapRowToPayslip(row: PayInfoRow): PayslipDetail {
       employmentType: '정규직',
     },
     workInfo: {
-      periodStart: row.Start_date ?? row.accrual_month + '-01',
-      periodEnd:   row.End_date   ?? row.accrual_month + '-28',
+      periodStart: payrollPeriodStart,
+      periodEnd:   payrollPeriodEnd,
       workDays:   row.working_days ?? 0,
       totalDays:  row.Number_of_days ?? 0,
       paidLeaveDays: 0,
@@ -140,8 +147,10 @@ export function mapRowToPayslip(row: PayInfoRow): PayslipDetail {
     totalEarnings,
     totalDeductions: Math.abs(totalDeductions),
     netPay,
-    calculationNotes: parsePayslipNote(
-      (emp?.companies as any)?.payslip_note ?? null
+    // ★ 산출근거: 1차 항목별 override, 2차 전체 텍스트 override, 3차 시스템 기본값
+    calculationNotes: getEffectivePayslipRules(
+      (emp?.companies as any)?.payslip_note ?? null,
+      (emp?.companies as any)?.payslip_note_overrides ?? null,
     ),
     daysInMonth,
     payrollPeriodStart,

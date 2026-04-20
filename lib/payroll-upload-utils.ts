@@ -38,7 +38,16 @@ export function isValidDate(v: string): boolean {
 
 export function isValidMonth(v: string): boolean {
   if (!v || typeof v !== 'string') return false
+  // YYYY-MM 또는 YYYY-MM-DD (YYYY-MM-01 포함) 모두 허용
   return /^\d{4}-(0[1-9]|1[0-2])(-\d{2})?$/.test(v)
+}
+
+/** YYYY-MM → YYYY-MM-01, YYYY-MM-DD → 그대로 */
+export function normalizePayMonth(v: string): string | null {
+  if (!v) return null
+  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(v))       return `${v}-01`
+  if (/^\d{4}-(0[1-9]|1[0-2])-\d{2}$/.test(v)) return v
+  return null
 }
 
 /* ────────────────────────────────────────────────────────
@@ -137,7 +146,7 @@ export function validateCsvRows(
       errors.push({
         rowIndex: rIdx,
         email: email || undefined,
-        reason: `귀속월 형식 오류: "${month}" (YYYY-MM 필요)`,
+        reason: `귀속월 형식 오류: "${month}" (YYYY-MM 또는 YYYY-MM-DD 필요)`,
         severity: 'error',
       })
       rowOk = false
@@ -268,7 +277,8 @@ export function transformCsvRows(
         ? parseCurrency(getColRaw(row, netPayMap))
         : totalEarnings - totalDeductions
 
-    const accrualMonth = getColStr(row, monthMap,     'accrual_month') || defaultMonth
+    const rawMonth     = getColStr(row, monthMap, 'accrual_month') || defaultMonth
+    const accrualMonth = normalizePayMonth(rawMonth) ?? rawMonth
     const paymentDate  = getColStr(row, dateMap,      'payment_date')  || (defaultPayDate ?? '')
     const startDate    = getColStr(row, startDateMap, 'start_date')    || undefined
     const endDate      = getColStr(row, endDateMap,   'end_date')      || undefined

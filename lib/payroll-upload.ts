@@ -183,6 +183,9 @@ export async function uploadPayrollCsv(params: {
 }> {
   const supabase = createClient()
 
+  /* ── accrualMonth 정규화: YYYY-MM → YYYY-MM-01 ── */
+  const accrualMonth = toAccrualDate(params.accrualMonth)
+
   /* ── 어드민 권한 확인 ── */
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, message: '인증이 필요합니다' }
@@ -207,10 +210,9 @@ export async function uploadPayrollCsv(params: {
   const validation = validateCsvRows(params.rows, employees, mappings, params.companyId)
 
   if (!validation.canUpload) {
-    // 검증 실패 → 로그만 기록하고 중단
     await createUploadLog({
       company_id:    params.companyId,
-      accrual_month: params.accrualMonth,
+      accrual_month: accrualMonth,          // ★ 정규화된 값
       payment_date:  params.paymentDate,
       file_name:     params.fileName,
       uploaded_by:   user.id,
@@ -232,14 +234,14 @@ export async function uploadPayrollCsv(params: {
   /* ── 변환 ── */
   const previews = transformCsvRows(
     params.rows, employees, mappings,
-    params.companyId, params.accrualMonth, params.paymentDate,
+    params.companyId, accrualMonth, params.paymentDate, // ★ 정규화된 값
   )
   const payloads = toPayInfoPayloads(previews, employees, params.companyId)
 
-  /* ── upload_logs 선생성 (성공 예상으로 먼저 기록) ── */
+  /* ── upload_logs 선생성 ── */
   const logId = await createUploadLog({
     company_id:    params.companyId,
-    accrual_month: params.accrualMonth,
+    accrual_month: accrualMonth,            // ★ 정규화된 값
     payment_date:  params.paymentDate,
     file_name:     params.fileName,
     uploaded_by:   user.id,
@@ -255,7 +257,6 @@ export async function uploadPayrollCsv(params: {
   const upsertResult = await upsertPayInfo(payloads, logId ?? undefined)
 
   if (!upsertResult.success) {
-    // upsert 실패 → 로그 status를 failed로 업데이트
     if (logId) {
       await supabase
         .from('upload_logs')
@@ -270,7 +271,7 @@ export async function uploadPayrollCsv(params: {
 
   return {
     success:        true,
-    message:        `${upsertResult.upsertedCount}명의 급여 데이터가 저장되었습니다 (귀속월: ${params.accrualMonth})`,
+    message:        `${upsertResult.upsertedCount}명의 급여 데이터가 저장되었습니다 (귀속월: ${accrualMonth.slice(0, 7)})`,
     upsertedCount:  upsertResult.upsertedCount,
     logId:          logId ?? undefined,
     validationResult: validation,

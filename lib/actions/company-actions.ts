@@ -34,6 +34,7 @@ export interface CompanyInput {
   'tax invoice email'?: string
   status?: 'active' | 'inactive'
   payslip_note?: string | null
+  payslip_note_overrides?: Record<string, string> | null
   payroll_day?: number | null
   payroll_start_day?: number | null
 }
@@ -57,7 +58,8 @@ function normalizeInput(input: CompanyInput) {
     address:            input.address?.trim() || null,
     'tax invoice email': input['tax invoice email']?.trim() || null,
     status:             input.status ?? 'active',
-    payslip_note:       input.payslip_note?.trim() || null,
+    payslip_note:            input.payslip_note?.trim() || null,
+    payslip_note_overrides:  input.payslip_note_overrides ?? null,
     payroll_day:        input.payroll_day != null
                           ? Math.min(31, Math.max(1, Math.round(input.payroll_day)))
                           : null,
@@ -256,6 +258,60 @@ export async function updateCompanyPayslipNote(
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/manager/more')
+    return { success: true }
+  } catch (e: any) {
+    return { success: false, error: e.message }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   산출근거 항목별 override 저장 (admin / manager 공용)
+   companyId가 있으면 admin 모드, 없으면 매니저 본인 회사 기준
+═══════════════════════════════════════════════════════════════ */
+export async function updatePayslipNoteOverrides(
+  overrides: Record<string, string> | null,
+  companyId?: number,
+): Promise<ActionResult> {
+  try {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: '인증이 필요합니다' }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile || !['admin', 'manager'].includes(profile.role)) {
+      return { success: false, error: '권한이 없습니다' }
+    }
+
+    // admin: companyId 직접 지정 가능 / manager: 본인 회사만
+    const targetId = profile.role === 'admin' && companyId != null
+      ? companyId
+      : profile.company_id
+
+    if (!targetId) return { success: false, error: '회사 정보가 없습니다' }
+
+    // 빈 override 제거 (빈 문자열 항목은 null로 처리)
+    const cleaned: Record<string, string> | null = overrides
+      ? Object.fromEntries(
+          Object.entries(overrides).filter(([, v]) => v?.trim())
+        )
+      : null
+    const toSave = cleaned && Object.keys(cleaned).length > 0 ? cleaned : null
+
+    const { error } = await supabase
+      .from('companies')
+      .update({ payslip_note_overrides: toSave })
+      .eq('id', targetId)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/manager/more')
+    revalidatePath(`/admin/companies/${targetId}`)
+    revalidatePath(`/admin/companies/${targetId}/edit`)
     return { success: true }
   } catch (e: any) {
     return { success: false, error: e.message }

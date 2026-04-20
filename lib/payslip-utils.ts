@@ -70,6 +70,26 @@ export function getDaysInMonth(payMonth: string): number {
 }
 
 /**
+ * 정산기간 최종 결정 — 공통 유틸
+ *
+ * 우선순위:
+ *   1. CSV 업로드 저장값(savedStartDate, savedEndDate) 존재 → 그대로 사용
+ *   2. 없으면 회사 급여정산시작일(payrollStartDay) 기준 계산
+ *   3. payrollStartDay도 없으면 귀속월 전체(1일~말일)
+ */
+export function getEffectivePayrollPeriod(
+  accrualMonth:    string,
+  payrollStartDay: number | null | undefined,
+  savedStartDate?: string | null,
+  savedEndDate?:   string | null,
+): { start: string; end: string } {
+  if (savedStartDate && savedEndDate) {
+    return { start: savedStartDate, end: savedEndDate }
+  }
+  return getPayrollPeriod(accrualMonth, payrollStartDay)
+}
+
+/**
  * 급여 정산기간 계산
  *
  * payrollStartDay = 15, payMonth = '2026-05'
