@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   User, Mail, Phone, CalendarDays, Users2, Briefcase,
   Award, Shield, Wrench, MapPin, KeyRound, LogOut,
-  Hash, Building2, Check, Loader2, AlertCircle, CheckCircle2, Pencil, X,
+  Hash, Building2, Check, Loader2, AlertCircle, CheckCircle2, Pencil, X, MailCheck,
 } from 'lucide-react'
 import { updateEmployeeProfile } from '@/lib/actions/employee-profile-actions'
 import { changePassword } from '@/lib/actions/staff-profile-actions'
@@ -38,10 +38,14 @@ export function ProfileClient(props: Props) {
   const [saving,       setSaving]       = useState(false)
   const [msg,          setMsg]          = useState<{ ok: boolean; text: string } | null>(null)
 
-  const [pwMode,    setPwMode]    = useState(false)
-  const [newPw,     setNewPw]     = useState('')
-  const [confirmPw, setConfirmPw] = useState('')
-  const [pwSaving,  setPwSaving]  = useState(false)
+  const [pwMode,      setPwMode]      = useState(false)
+  const [newPw,       setNewPw]       = useState('')
+  const [confirmPw,   setConfirmPw]   = useState('')
+  const [pwSaving,    setPwSaving]    = useState(false)
+
+  const [emailMode,   setEmailMode]   = useState(false)
+  const [newEmail,    setNewEmail]    = useState('')
+  const [emailSaving, setEmailSaving] = useState(false)
 
   const initials = props.name.length >= 2 ? props.name.slice(0, 2) : props.name || '?'
 
@@ -56,6 +60,26 @@ export function ProfileClient(props: Props) {
       router.refresh()
     } else {
       setMsg({ ok: false, text: result.error })
+    }
+  }
+
+  async function handleEmailChange() {
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!newEmail.trim()) { setMsg({ ok: false, text: '새 이메일을 입력해주세요' }); return }
+    if (!EMAIL_RE.test(newEmail.trim())) { setMsg({ ok: false, text: '올바른 이메일 형식이 아닙니다' }); return }
+    if (newEmail.trim().toLowerCase() === props.email.toLowerCase()) {
+      setMsg({ ok: false, text: '현재 이메일과 동일합니다' }); return
+    }
+    setEmailSaving(true)
+    setMsg(null)
+    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
+    setEmailSaving(false)
+    if (error) {
+      setMsg({ ok: false, text: '이메일 변경 실패: ' + error.message })
+    } else {
+      setMsg({ ok: true, text: `${newEmail.trim()}로 확인 링크를 발송했습니다. 메일함을 확인해주세요.` })
+      setEmailMode(false)
+      setNewEmail('')
     }
   }
 
@@ -171,6 +195,53 @@ export function ProfileClient(props: Props) {
             <Row icon={Hash} label="사번"><Val mono>{props.employeeNumber}</Val></Row>
           )}
         </Section>
+      </div>
+
+      {/* 이메일 변경 */}
+      <div className="card p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <MailCheck size={15} className="text-slate-400" />
+            이메일 변경
+          </div>
+          {!emailMode ? (
+            <button onClick={() => { setEmailMode(true); setMsg(null) }}
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+              변경
+            </button>
+          ) : (
+            <button onClick={() => { setEmailMode(false); setNewEmail(''); setMsg(null) }}
+              className="text-xs text-slate-500 hover:text-slate-700">
+              취소
+            </button>
+          )}
+        </div>
+        {!emailMode && (
+          <p className="text-xs text-slate-400">현재: {props.email}</p>
+        )}
+        {emailMode && (
+          <div className="space-y-2 pt-1">
+            <p className="text-xs text-slate-400">현재 이메일: <span className="text-slate-600">{props.email}</span></p>
+            <input
+              type="email"
+              value={newEmail}
+              onChange={e => setNewEmail(e.target.value)}
+              placeholder="새 이메일 주소"
+              className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <p className="text-xs text-slate-400 leading-relaxed">
+              새 이메일로 확인 링크가 발송됩니다. 링크 클릭 후 이메일이 변경됩니다.
+            </p>
+            <button
+              onClick={handleEmailChange}
+              disabled={emailSaving}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-60 transition-colors"
+            >
+              {emailSaving ? <Loader2 size={14} className="animate-spin" /> : <MailCheck size={14} />}
+              확인 링크 발송
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 비밀번호 변경 */}
