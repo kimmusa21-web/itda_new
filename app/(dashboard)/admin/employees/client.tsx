@@ -71,14 +71,14 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
         })
         if (!result.success) throw new Error(result.error)
       } else if (modal === 'edit' && selected) {
-        // 사번(employee_number)은 수정 불가 — 자동 생성 값 유지
-        await supabase.from('employees').update({
+        const { error: editErr } = await supabase.from('employees').update({
           name: form.name, email: form.email, birthdate: form.birthdate,
           department: form.department, position: form.position, job: form.job,
           Date_of_joining: form.Date_of_joining, Tel: form.Tel, Sex: form.Sex,
           Grade: form.Grade, Role: form.Role,
           'Working place': form['Working place'], 'Work details': form['Work details'],
         }).eq('id', selected.id)
+        if (editErr) throw new Error(editErr.message)
       } else if (modal === 'quit' && selected) {
         await supabase.from('employees').update({
           quit_date: form.quit_date, is_active: false,
@@ -405,8 +405,8 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
               <label className="block text-xs font-medium text-slate-600 mb-1">성별</label>
               <select className="input" value={form.Sex ?? ''} onChange={f('Sex')}>
                 <option value="">선택</option>
-                <option value="남">남</option>
-                <option value="여">여</option>
+                <option value="M">남성</option>
+                <option value="F">여성</option>
               </select>
             </div>
           </div>
