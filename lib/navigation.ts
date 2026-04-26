@@ -1,4 +1,4 @@
-import { Bell, Building2, Users, Upload, Home, BarChart3, MoreHorizontal, Wallet, User, FileText, UserPlus, ClipboardList, Eye, BadgeDollarSign, type LucideIcon } from 'lucide-react'
+import { Bell, Building2, Users, Upload, Home, BarChart3, MoreHorizontal, Wallet, User, FileText, UserPlus, ClipboardList, Eye, BadgeDollarSign, Settings, type LucideIcon } from 'lucide-react'
 import type { Role } from '@/types'
 
 export type { Role }
@@ -9,15 +9,16 @@ export type RoleNavMap = Record<Role, NavItem[]>
 /** 데스크톱 사이드바 전체 메뉴 */
 export const roleNavMap: RoleNavMap = {
   admin: [
-    { label: '대시보드',   href: '/admin',                   icon: Home       },
-    { label: '기업신청',   href: '/admin/requests',          icon: Bell       },
-    { label: '기업관리',   href: '/admin/companies',         icon: Building2  },
-    { label: '직원관리',   href: '/admin/employees',         icon: Users      },
-    { label: '급여조회',   href: '/admin/payroll',           icon: BarChart3  },
-    { label: '급여업로드', href: '/admin/payroll/upload',    icon: Upload     },
-    { label: '가입신청',   href: '/admin/employee-requests', icon: FileText         },
-    { label: '퇴직금 산정', href: '/admin/severance',        icon: BadgeDollarSign  },
-    { label: '점검 모드',  href: '/admin/impersonation',     icon: Eye              },
+    { label: '대시보드',   href: '/admin',                   icon: Home            },
+    { label: '기업신청',   href: '/admin/requests',          icon: Bell            },
+    { label: '기업관리',   href: '/admin/companies',         icon: Building2       },
+    { label: '직원관리',   href: '/admin/employees',         icon: Users           },
+    { label: '급여조회',   href: '/admin/payroll',           icon: BarChart3       },
+    { label: '급여업로드', href: '/admin/payroll/upload',    icon: Upload          },
+    { label: '가입신청',   href: '/admin/employee-requests', icon: FileText        },
+    { label: '퇴직금 산정', href: '/admin/severance',        icon: BadgeDollarSign },
+    { label: '점검 모드',  href: '/admin/impersonation',     icon: Eye             },
+    { label: '내 정보',    href: '/admin/profile',           icon: Settings        },
   ],
   manager: [
     { label: '홈',         href: '/manager',                  icon: Home           },
@@ -27,6 +28,7 @@ export const roleNavMap: RoleNavMap = {
     { label: '급여업로드', href: '/manager/payroll/upload',   icon: Upload         },
     { label: '급여조회',   href: '/manager/payroll',          icon: BarChart3      },
     { label: '더보기',     href: '/manager/more',             icon: MoreHorizontal },
+    { label: '내 정보',    href: '/manager/profile',          icon: Settings       },
   ],
   employee: [
     { label: '홈',      href: '/employee',          icon: Home   },
@@ -80,6 +82,8 @@ export function getPageTitle(pathname: string): string {
     '/admin/employee-requests':      '직원 가입신청',
     '/admin/impersonation':          '점검 모드',
     '/admin/severance':              '퇴직금 산정',
+    '/admin/profile':                '내 정보',
+    '/manager/profile':              '내 정보',
     '/admin/companies/new':          '회사 등록',
     '/auth/verify':                  '가입 인증',
     '/manager':                      '홈',
