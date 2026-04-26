@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
       emp.name            ?? '',
       emp.email           ?? '',
       emp.birthdate       ?? '',
-      emp.Sex             ?? '',
+      emp.Sex === 'M' || emp.Sex === '남' ? '남성' : emp.Sex === 'F' || emp.Sex === '여' ? '여성' : (emp.Sex ?? ''),
       emp.department      ?? '',
       emp.position        ?? '',
       emp.Grade           ?? '',

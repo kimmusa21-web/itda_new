@@ -105,7 +105,9 @@ export function ProfileClient(props: Props) {
     router.push('/login')
   }
 
-  const genderLabel = props.gender === 'M' ? '남성' : props.gender === 'F' ? '여성' : '-'
+  const genderLabel =
+    props.gender === 'M' || props.gender === '남' ? '남성' :
+    props.gender === 'F' || props.gender === '여' ? '여성' : '-'
 
   return (
     <div className="space-y-5 max-w-xl">

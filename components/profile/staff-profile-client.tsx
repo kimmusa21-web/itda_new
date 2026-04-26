@@ -192,7 +192,7 @@ export function StaffProfileClient(props: StaffProfileProps) {
                 {GENDER_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             ) : (
-              <Value>{props.gender === 'M' ? '남성' : props.gender === 'F' ? '여성' : '-'}</Value>
+              <Value>{props.gender === 'M' || props.gender === '남' ? '남성' : props.gender === 'F' || props.gender === '여' ? '여성' : '-'}</Value>
             )}
           </Field>
         </Section>
