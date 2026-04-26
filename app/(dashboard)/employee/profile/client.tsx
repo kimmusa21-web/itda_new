@@ -1,186 +1,225 @@
 'use client'
 
 import { useState } from 'react'
-import { Building2, CalendarDays, Briefcase, UserCircle2, Mail, Phone, KeyRound, LogOut, Pencil, X, Check, Loader2, Hash } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { formatDateShort } from '@/lib/utils'
+import {
+  User, Mail, Phone, CalendarDays, Users2, Briefcase,
+  Award, Shield, Wrench, MapPin, KeyRound, LogOut,
+  Hash, Building2, Check, Loader2, AlertCircle, CheckCircle2, Pencil, X,
+} from 'lucide-react'
 import { updateEmployeeProfile } from '@/lib/actions/employee-profile-actions'
+import { changePassword } from '@/lib/actions/staff-profile-actions'
 
 interface Props {
   empId:          number | null
   name:           string
   email:          string
   employeeNumber: string | null
-  phoneNumber:    string
+  phone:          string
   department:     string | null
   position:       string | null
   joinDate:       string | null
+  birthdate:      string | null
+  gender:         string | null
+  grade:          string | null
+  roleTitle:      string | null
+  job:            string | null
+  workLocation:   string | null
   company:        string
 }
 
-export function ProfileClient({ empId, name, email, employeeNumber, phoneNumber, department, position, joinDate, company }: Props) {
+export function ProfileClient(props: Props) {
   const router   = useRouter()
   const supabase = createClient()
 
-  const [editing,    setEditing]    = useState(false)
-  const [editEmail,  setEditEmail]  = useState(email)
-  const [editPhone,  setEditPhone]  = useState(phoneNumber)
-  const [saving,     setSaving]     = useState(false)
-  const [errMsg,     setErrMsg]     = useState<string | null>(null)
-  const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [editingPhone, setEditingPhone] = useState(false)
+  const [phone,        setPhone]        = useState(props.phone ?? '')
+  const [saving,       setSaving]       = useState(false)
+  const [msg,          setMsg]          = useState<{ ok: boolean; text: string } | null>(null)
 
-  const initials = name.length >= 2 ? name.slice(0, 2) : name || '?'
+  const [pwMode,    setPwMode]    = useState(false)
+  const [newPw,     setNewPw]     = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [pwSaving,  setPwSaving]  = useState(false)
+
+  const initials = props.name.length >= 2 ? props.name.slice(0, 2) : props.name || '?'
+
+  async function handleSavePhone() {
+    setSaving(true)
+    setMsg(null)
+    const result = await updateEmployeeProfile({ phoneNumber: phone })
+    setSaving(false)
+    if (result.success) {
+      setMsg({ ok: true, text: '저장되었습니다' })
+      setEditingPhone(false)
+      router.refresh()
+    } else {
+      setMsg({ ok: false, text: result.error })
+    }
+  }
+
+  async function handlePwChange() {
+    if (newPw.length < 8) { setMsg({ ok: false, text: '비밀번호는 8자 이상이어야 합니다' }); return }
+    if (newPw !== confirmPw) { setMsg({ ok: false, text: '비밀번호가 일치하지 않습니다' }); return }
+    setPwSaving(true)
+    setMsg(null)
+    const result = await changePassword(newPw)
+    setPwSaving(false)
+    if (result.success) {
+      setMsg({ ok: true, text: '비밀번호가 변경되었습니다' })
+      setPwMode(false)
+      setNewPw('')
+      setConfirmPw('')
+    } else {
+      setMsg({ ok: false, text: result.error })
+    }
+  }
 
   async function handleLogout() {
     await supabase.auth.signOut()
     router.push('/login')
   }
 
-  function handleEditToggle() {
-    if (editing) {
-      setEditEmail(email)
-      setEditPhone(phoneNumber)
-      setErrMsg(null)
-    }
-    setEditing(v => !v)
-    setSuccessMsg(null)
-  }
-
-  async function handleSave() {
-    setSaving(true)
-    setErrMsg(null)
-    setSuccessMsg(null)
-
-    const result = await updateEmployeeProfile({
-      email:       editEmail,
-      phoneNumber: editPhone,
-    })
-
-    setSaving(false)
-    if (result.success) {
-      setSuccessMsg('정보가 저장되었습니다')
-      setEditing(false)
-      router.refresh()
-    } else {
-      setErrMsg(result.error)
-    }
-  }
+  const genderLabel = props.gender === 'M' ? '남성' : props.gender === 'F' ? '여성' : '-'
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-xl">
       <div>
         <h1 className="text-xl font-semibold text-slate-900">내 정보</h1>
         <p className="text-sm text-slate-500 mt-0.5">소속 및 개인 정보를 확인하세요</p>
       </div>
 
-      {/* 아바타 + 이름 */}
+      {/* 아바타 */}
       <div className="card p-5 flex flex-col items-center gap-3">
-        <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-xl font-bold text-white">
+        <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-2xl font-bold text-white">
           {initials}
         </div>
         <div className="text-center">
-          <p className="text-lg font-semibold text-slate-900">{name}</p>
-          <p className="text-sm text-slate-500 mt-0.5">{email}</p>
+          <p className="text-lg font-semibold text-slate-900">{props.name}</p>
+          <p className="text-sm text-slate-500 mt-0.5">{props.email}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-center">
-          {position   && <span className="badge badge-blue">{position}</span>}
-          {department && <span className="badge badge-gray">{department}</span>}
+          {props.position   && <span className="badge badge-blue">{props.position}</span>}
+          {props.department && <span className="badge badge-gray">{props.department}</span>}
         </div>
       </div>
 
-      {/* 정보 행 */}
+      {/* 알림 메시지 */}
+      {msg && (
+        <div className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium ${
+          msg.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                 : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {msg.ok ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
+          {msg.text}
+        </div>
+      )}
+
       <div className="card divide-y divide-slate-100">
-        <InfoSection title="소속 정보">
-          <InfoRow icon={Building2}    label="소속 회사" value={company    || '-'} />
-          <InfoRow icon={Briefcase}    label="부서"       value={department || '-'} />
-          <InfoRow icon={UserCircle2}  label="직위"       value={position   || '-'} />
-          <InfoRow icon={CalendarDays} label="입사일"     value={joinDate ? formatDateShort(joinDate) : '-'} />
-          {employeeNumber && (
-            <InfoRow icon={Hash} label="사번" value={employeeNumber} mono />
-          )}
-        </InfoSection>
-
-        {/* 연락처 — 수정 가능 */}
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">연락처</p>
-            {empId && (
-              <button
-                onClick={handleEditToggle}
-                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700"
-              >
-                {editing ? <><X size={13} />취소</> : <><Pencil size={13} />수정</>}
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-3">
-            {editing ? (
-              <>
-                <EditRow
-                  icon={Mail}
-                  label="이메일"
-                  value={editEmail}
-                  onChange={setEditEmail}
-                  type="email"
-                  placeholder="이메일 주소"
-                />
-                <EditRow
-                  icon={Phone}
-                  label="전화번호"
-                  value={editPhone}
-                  onChange={setEditPhone}
+        {/* 기본 정보 */}
+        <Section title="기본 정보">
+          <Row icon={User}        label="이름">    <Val>{props.name    || '-'}</Val></Row>
+          <Row icon={Mail}        label="이메일">  <Val>{props.email   || '-'}</Val></Row>
+          <Row icon={Phone}       label="전화번호">
+            {editingPhone ? (
+              <div className="flex items-center gap-2 flex-1">
+                <input
                   type="tel"
-                  placeholder="전화번호 (선택)"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="전화번호"
+                  className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
-                {errMsg && (
-                  <p className="text-xs text-red-500 pl-1">{errMsg}</p>
-                )}
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-60 transition-colors"
-                >
-                  {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                <button onClick={handleSavePhone} disabled={saving}
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
+                  {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
                   저장
                 </button>
-              </>
+                <button onClick={() => { setEditingPhone(false); setPhone(props.phone ?? '') }}
+                  className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600">
+                  <X size={13} />취소
+                </button>
+              </div>
             ) : (
-              <>
-                <InfoRow icon={Mail}  label="이메일"   value={email       || '-'} />
-                <InfoRow icon={Phone} label="전화번호" value={phoneNumber || '-'} />
-                {successMsg && (
-                  <p className="text-xs text-green-600 pl-1">{successMsg}</p>
+              <div className="flex items-center gap-2 flex-1">
+                <Val>{props.phone || '-'}</Val>
+                {props.empId && (
+                  <button onClick={() => { setEditingPhone(true); setMsg(null) }}
+                    className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700">
+                    <Pencil size={12} />수정
+                  </button>
                 )}
-              </>
+              </div>
             )}
-          </div>
-        </div>
+          </Row>
+          <Row icon={CalendarDays} label="생년월일"><Val>{props.birthdate  || '-'}</Val></Row>
+          <Row icon={Users2}       label="성별">    <Val>{genderLabel}</Val></Row>
+        </Section>
+
+        {/* 직무 정보 */}
+        <Section title="직무 정보">
+          <Row icon={Building2}  label="소속 회사"><Val>{props.company    || '-'}</Val></Row>
+          <Row icon={Briefcase}  label="부서">     <Val>{props.department || '-'}</Val></Row>
+          <Row icon={Award}      label="직위">     <Val>{props.position   || '-'}</Val></Row>
+          <Row icon={Shield}     label="직급">     <Val>{props.grade      || '-'}</Val></Row>
+          <Row icon={User}       label="직책">     <Val>{props.roleTitle  || '-'}</Val></Row>
+          <Row icon={Wrench}     label="직무">     <Val>{props.job        || '-'}</Val></Row>
+          <Row icon={MapPin}     label="근무지">   <Val>{props.workLocation || '-'}</Val></Row>
+          <Row icon={CalendarDays} label="입사일"> <Val>{props.joinDate   || '-'}</Val></Row>
+          {props.employeeNumber && (
+            <Row icon={Hash} label="사번"><Val mono>{props.employeeNumber}</Val></Row>
+          )}
+        </Section>
       </div>
 
-      {/* 액션 버튼 */}
-      <div className="space-y-2.5">
-        <button
-          onClick={() => alert('이메일로 비밀번호 재설정 링크가 발송됩니다')}
-          className="btn-secondary w-full justify-start gap-3 py-3.5 rounded-xl"
-        >
-          <KeyRound size={17} className="text-slate-500" />
-          비밀번호 변경
-        </button>
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border border-red-100 bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 active:scale-[0.99] transition-all"
-        >
-          <LogOut size={17} />
-          로그아웃
-        </button>
+      {/* 비밀번호 변경 */}
+      <div className="card p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <KeyRound size={15} className="text-slate-400" />
+            비밀번호 변경
+          </div>
+          {!pwMode ? (
+            <button onClick={() => { setPwMode(true); setMsg(null) }}
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+              변경
+            </button>
+          ) : (
+            <button onClick={() => { setPwMode(false); setNewPw(''); setConfirmPw(''); setMsg(null) }}
+              className="text-xs text-slate-500 hover:text-slate-700">
+              취소
+            </button>
+          )}
+        </div>
+        {pwMode && (
+          <div className="space-y-2 pt-1">
+            <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)}
+              placeholder="새 비밀번호 (8자 이상)"
+              className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            <input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)}
+              placeholder="새 비밀번호 확인"
+              className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            <button onClick={handlePwChange} disabled={pwSaving}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-slate-800 text-white text-sm font-medium hover:bg-slate-900 disabled:opacity-60 transition-colors">
+              {pwSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+              비밀번호 변경
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* 로그아웃 */}
+      <button onClick={handleLogout}
+        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border border-red-100 bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 transition-all">
+        <LogOut size={17} />
+        로그아웃
+      </button>
     </div>
   )
 }
 
-function InfoSection({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="p-4">
       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{title}</p>
@@ -189,37 +228,20 @@ function InfoSection({ title, children }: { title: string; children: React.React
   )
 }
 
-function InfoRow({ icon: Icon, label, value, mono }: { icon: React.ElementType; label: string; value: string; mono?: boolean }) {
+function Row({ icon: Icon, label, children }: { icon: React.ElementType; label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3">
-      <Icon size={16} className="text-slate-400 flex-shrink-0" />
+      <Icon size={15} className="text-slate-400 flex-shrink-0" />
       <span className="text-sm text-slate-500 w-20 flex-shrink-0">{label}</span>
-      <span className={`text-sm font-medium text-slate-800 flex-1 ${mono ? 'font-mono' : ''}`}>{value}</span>
+      {children}
     </div>
   )
 }
 
-function EditRow({
-  icon: Icon, label, value, onChange, type, placeholder,
-}: {
-  icon: React.ElementType
-  label: string
-  value: string
-  onChange: (v: string) => void
-  type?: string
-  placeholder?: string
-}) {
+function Val({ children, mono, className }: { children: React.ReactNode; mono?: boolean; className?: string }) {
   return (
-    <div className="flex items-center gap-3">
-      <Icon size={16} className="text-slate-400 flex-shrink-0" />
-      <span className="text-sm text-slate-500 w-20 flex-shrink-0">{label}</span>
-      <input
-        type={type ?? 'text'}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400"
-      />
-    </div>
+    <span className={`text-sm font-medium text-slate-800 flex-1 ${mono ? 'font-mono' : ''} ${className ?? ''}`}>
+      {children}
+    </span>
   )
 }

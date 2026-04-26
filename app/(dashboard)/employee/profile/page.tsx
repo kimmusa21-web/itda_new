@@ -20,10 +20,8 @@ export default async function EmployeeProfilePage() {
   const role = profile?.role
   if (role !== 'employee' && role !== 'admin') redirect(`/${role ?? 'login'}`)
 
-  // 유효 직원 컨텍스트 조회
   const empCtx = await getEffectiveEmployeeContext()
 
-  // 회사 이름 조회
   let companyName = ''
   if (empCtx?.companyId) {
     const { data: co } = await supabase
@@ -37,10 +35,16 @@ export default async function EmployeeProfilePage() {
       name={empCtx?.employeeName ?? (profile?.email?.split('@')[0] ?? '')}
       email={empCtx?.employeeEmail ?? (profile?.email ?? '')}
       employeeNumber={empCtx?.employeeNumber ?? null}
-      phoneNumber={''}
+      phone={empCtx?.phone ?? ''}
       department={empCtx?.department ?? null}
       position={empCtx?.position ?? null}
       joinDate={empCtx?.dateOfJoining ?? null}
+      birthdate={empCtx?.birthdate ?? null}
+      gender={empCtx?.gender ?? null}
+      grade={empCtx?.grade ?? null}
+      roleTitle={empCtx?.roleTitle ?? null}
+      job={empCtx?.job ?? null}
+      workLocation={empCtx?.workLocation ?? null}
       company={companyName}
     />
   )

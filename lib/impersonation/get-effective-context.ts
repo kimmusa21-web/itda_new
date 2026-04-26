@@ -73,6 +73,12 @@ export interface EmployeeContext {
   position:        string | null
   dateOfJoining:   string | null
   birthdate:       string | null
+  phone:           string | null
+  gender:          string | null
+  grade:           string | null
+  roleTitle:       string | null
+  job:             string | null
+  workLocation:    string | null
   isImpersonating: boolean
 }
 
@@ -97,7 +103,7 @@ export async function getEffectiveEmployeeContext(): Promise<EmployeeContext | n
   ) {
     const { data: emp } = await supabase
       .from('employees')
-      .select('id, name, email, employee_number, company_id, department, position, Date_of_joining, birthdate')
+      .select('id, name, email, employee_number, company_id, department, position, Date_of_joining, birthdate, Tel, Sex, Grade, Role, job, "Working place"')
       .eq('id', impersonation.employeeId)
       .single()
 
@@ -113,6 +119,12 @@ export async function getEffectiveEmployeeContext(): Promise<EmployeeContext | n
       position:       emp.position,
       dateOfJoining:  emp.Date_of_joining,
       birthdate:      emp.birthdate,
+      phone:          (emp as Record<string, unknown>).Tel as string | null ?? null,
+      gender:         (emp as Record<string, unknown>).Sex as string | null ?? null,
+      grade:          (emp as Record<string, unknown>).Grade as string | null ?? null,
+      roleTitle:      (emp as Record<string, unknown>).Role as string | null ?? null,
+      job:            (emp as Record<string, unknown>).job as string | null ?? null,
+      workLocation:   (emp as Record<string, unknown>)['Working place'] as string | null ?? null,
       isImpersonating: true,
     }
   }
@@ -120,7 +132,7 @@ export async function getEffectiveEmployeeContext(): Promise<EmployeeContext | n
   // 실제 employee: 1순위 user_id, 2순위 email 매칭
   const { data: byUid } = await supabase
     .from('employees')
-    .select('id, name, email, employee_number, company_id, department, position, Date_of_joining, birthdate')
+    .select('id, name, email, employee_number, company_id, department, position, Date_of_joining, birthdate, Tel, Sex, Grade, Role, job, "Working place"')
     .eq('user_id', user.id)
     .eq('is_active', true)
     .maybeSingle()
@@ -136,6 +148,12 @@ export async function getEffectiveEmployeeContext(): Promise<EmployeeContext | n
       position:       byUid.position,
       dateOfJoining:  byUid.Date_of_joining,
       birthdate:      byUid.birthdate,
+      phone:          (byUid as Record<string, unknown>).Tel as string | null ?? null,
+      gender:         (byUid as Record<string, unknown>).Sex as string | null ?? null,
+      grade:          (byUid as Record<string, unknown>).Grade as string | null ?? null,
+      roleTitle:      (byUid as Record<string, unknown>).Role as string | null ?? null,
+      job:            (byUid as Record<string, unknown>).job as string | null ?? null,
+      workLocation:   (byUid as Record<string, unknown>)['Working place'] as string | null ?? null,
       isImpersonating: false,
     }
   }
@@ -144,7 +162,7 @@ export async function getEffectiveEmployeeContext(): Promise<EmployeeContext | n
 
   const { data: byEmail } = await supabase
     .from('employees')
-    .select('id, name, email, employee_number, company_id, department, position, Date_of_joining, birthdate')
+    .select('id, name, email, employee_number, company_id, department, position, Date_of_joining, birthdate, Tel, Sex, Grade, Role, job, "Working place"')
     .ilike('email', user.email)
     .eq('is_active', true)
     .maybeSingle()
@@ -161,6 +179,12 @@ export async function getEffectiveEmployeeContext(): Promise<EmployeeContext | n
     position:       byEmail.position,
     dateOfJoining:  byEmail.Date_of_joining,
     birthdate:      byEmail.birthdate,
+    phone:          (byEmail as Record<string, unknown>).Tel as string | null ?? null,
+    gender:         (byEmail as Record<string, unknown>).Sex as string | null ?? null,
+    grade:          (byEmail as Record<string, unknown>).Grade as string | null ?? null,
+    roleTitle:      (byEmail as Record<string, unknown>).Role as string | null ?? null,
+    job:            (byEmail as Record<string, unknown>).job as string | null ?? null,
+    workLocation:   (byEmail as Record<string, unknown>)['Working place'] as string | null ?? null,
     isImpersonating: false,
   }
 }
