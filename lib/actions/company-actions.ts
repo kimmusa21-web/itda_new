@@ -265,6 +265,50 @@ export async function updateCompanyPayslipNote(
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   매니저 전용: 자기 회사 전체 정보 수정 (status 제외)
+═══════════════════════════════════════════════════════════════ */
+export async function updateCompanyByManager(
+  input: CompanyInput,
+): Promise<ActionResult> {
+  try {
+    if (!input.name?.trim()) return { success: false, error: '회사명은 필수입니다' }
+
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: '인증이 필요합니다' }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile || !['manager', 'admin'].includes(profile.role ?? '')) {
+      return { success: false, error: '매니저 권한이 필요합니다' }
+    }
+    if (!profile.company_id) return { success: false, error: '소속 회사 정보가 없습니다' }
+
+    const normalized = normalizeInput(input)
+    // 매니저는 status 변경 불가 — 필드에서 제외
+    const { status: _status, ...safePayload } = normalized
+
+    const { error } = await supabase
+      .from('companies')
+      .update(safePayload)
+      .eq('id', profile.company_id)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath('/manager/company')
+    revalidatePath(`/admin/companies/${profile.company_id}`)
+    revalidatePath(`/admin/companies/${profile.company_id}/edit`)
+    return { success: true }
+  } catch (e: any) {
+    return { success: false, error: e.message }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    산출근거 항목별 override 저장 (admin / manager 공용)
    companyId가 있으면 admin 모드, 없으면 매니저 본인 회사 기준
 ═══════════════════════════════════════════════════════════════ */
@@ -309,7 +353,7 @@ export async function updatePayslipNoteOverrides(
 
     if (error) return { success: false, error: error.message }
 
-    revalidatePath('/manager/more')
+    revalidatePath('/manager/company')
     revalidatePath(`/admin/companies/${targetId}`)
     revalidatePath(`/admin/companies/${targetId}/edit`)
     return { success: true }

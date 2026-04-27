@@ -7,13 +7,17 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
-import { createCompany, updateCompany, type CompanyInput } from '@/lib/actions/company-actions'
+import { createCompany, updateCompany, updateCompanyByManager, type CompanyInput } from '@/lib/actions/company-actions'
 import { PayslipNoteEditor } from '@/components/company/payslip-note-editor'
 
 /* ── 타입 ─────────────────────────────────────────────────── */
 interface CompanyFormProps {
   mode: 'create' | 'edit'
   initialData?: Partial<CompanyInput> & { id?: number }
+  successHref?: string
+  cancelHref?:  string
+  hideStatusField?: boolean
+  managerMode?: boolean   // true: updateCompanyByManager 사용 (admin 권한 불필요)
 }
 
 type SubmitState = 'idle' | 'loading' | 'success' | 'error'
@@ -37,7 +41,7 @@ const EMPTY: CompanyInput = {
 }
 
 /* ── 메인 컴포넌트 ─────────────────────────────────────────── */
-export function CompanyForm({ mode, initialData }: CompanyFormProps) {
+export function CompanyForm({ mode, initialData, successHref, cancelHref, hideStatusField, managerMode }: CompanyFormProps) {
   const router = useRouter()
   const [form, setForm]             = useState<CompanyInput>({ ...EMPTY, ...initialData })
   const [errors, setErrors]         = useState<Partial<Record<keyof CompanyInput, string>>>({})
@@ -80,10 +84,14 @@ export function CompanyForm({ mode, initialData }: CompanyFormProps) {
     setSubmitState('loading')
     setApiError('')
 
-    const result =
-      mode === 'create'
-        ? await createCompany(form)
-        : await updateCompany(initialData!.id!, form)
+    let result: { success: boolean; error?: string }
+    if (managerMode) {
+      result = await updateCompanyByManager(form)
+    } else if (mode === 'create') {
+      result = await createCompany(form)
+    } else {
+      result = await updateCompany(initialData!.id!, form)
+    }
 
     if (!result.success) {
       setApiError(result.error ?? '오류가 발생했습니다')
@@ -92,7 +100,7 @@ export function CompanyForm({ mode, initialData }: CompanyFormProps) {
     }
 
     setSubmitState('success')
-    setTimeout(() => router.push('/admin/companies'), 1200)
+    setTimeout(() => router.push(successHref ?? '/admin/companies'), 1200)
   }
 
   /* ── 성공 ──────────────────────────────────────────────── */
@@ -105,7 +113,7 @@ export function CompanyForm({ mode, initialData }: CompanyFormProps) {
         <h2 className="text-lg font-bold text-slate-900 mb-1">
           {mode === 'create' ? '회사가 등록되었습니다' : '수정이 완료되었습니다'}
         </h2>
-        <p className="text-sm text-slate-500">기업관리 목록으로 이동합니다...</p>
+        <p className="text-sm text-slate-500">{successHref ? '이동합니다...' : '기업관리 목록으로 이동합니다...'}</p>
       </div>
     )
   }
@@ -138,12 +146,14 @@ export function CompanyForm({ mode, initialData }: CompanyFormProps) {
           <FieldWrap label="대표자">
             <input className={cls(false)} placeholder="홍길동" value={form.representative ?? ''} onChange={onChange('representative')} />
           </FieldWrap>
-          <FieldWrap label="상태">
-            <select className={cls(false)} value={form.status} onChange={onChange('status')}>
-              <option value="active">운영중</option>
-              <option value="inactive">비활성</option>
-            </select>
-          </FieldWrap>
+          {!hideStatusField && (
+            <FieldWrap label="상태">
+              <select className={cls(false)} value={form.status} onChange={onChange('status')}>
+                <option value="active">운영중</option>
+                <option value="inactive">비활성</option>
+              </select>
+            </FieldWrap>
+          )}
         </Row2>
         <Row2>
           <FieldWrap label="매월 급여일" hint="실제 급여를 지급하는 날짜 (예: 25)">
@@ -240,7 +250,7 @@ export function CompanyForm({ mode, initialData }: CompanyFormProps) {
       <div className="flex gap-3 pt-2">
         <button
           type="button"
-          onClick={() => router.push('/admin/companies')}
+          onClick={() => router.push(cancelHref ?? '/admin/companies')}
           className="btn-secondary"
         >
           취소

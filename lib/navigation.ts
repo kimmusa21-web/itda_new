@@ -1,4 +1,4 @@
-import { Bell, Building2, Users, Upload, Home, BarChart3, MoreHorizontal, Wallet, User, UserPlus, ClipboardList, Eye, BadgeDollarSign, Settings, type LucideIcon } from 'lucide-react'
+import { Bell, Building2, Users, Upload, Home, BarChart3, Wallet, User, UserPlus, ClipboardList, Eye, BadgeDollarSign, Settings, type LucideIcon } from 'lucide-react'
 import type { Role } from '@/types'
 
 export type { Role }
@@ -26,7 +26,7 @@ export const roleNavMap: RoleNavMap = {
     { label: '초대내역',   href: '/manager/requests',         icon: ClipboardList  },
     { label: '급여업로드', href: '/manager/payroll/upload',   icon: Upload         },
     { label: '급여조회',   href: '/manager/payroll',          icon: BarChart3      },
-    { label: '더보기',     href: '/manager/more',             icon: MoreHorizontal },
+    { label: '기업관리',   href: '/manager/company',          icon: Building2      },
     { label: '내 정보',    href: '/manager/profile',          icon: Settings       },
   ],
   employee: [
@@ -46,11 +46,11 @@ export const mobileNavMap: RoleNavMap = {
     { label: '기업',     href: '/admin/companies',      icon: Building2 },
   ],
   manager: [
-    { label: '홈',       href: '/manager',               icon: Home          },
-    { label: '직원',     href: '/manager/employees',     icon: Users         },
-    { label: '급여조회', href: '/manager/payroll',       icon: BarChart3     },
-    { label: '업로드',   href: '/manager/payroll/upload',icon: Upload        },
-    { label: '초대',     href: '/manager/requests',      icon: ClipboardList },
+    { label: '홈',       href: '/manager',               icon: Home      },
+    { label: '직원',     href: '/manager/employees',     icon: Users     },
+    { label: '급여조회', href: '/manager/payroll',       icon: BarChart3 },
+    { label: '업로드',   href: '/manager/payroll/upload',icon: Upload    },
+    { label: '기업관리', href: '/manager/company',       icon: Building2 },
   ],
   employee: [
     { label: '홈',      href: '/employee',          icon: Home   },
@@ -91,6 +91,7 @@ export function getPageTitle(pathname: string): string {
     '/manager/employees/create':     '직원 등록 신청',
     '/manager/employees/upload':     '직원 CSV 대량 등록',
     '/manager/requests':             '초대 내역',
+    '/manager/company':              '기업관리',
     '/employee':                     '내 급여',
     '/employee/payslips':            '급여목록',
     '/employee/profile':             '내 정보',
