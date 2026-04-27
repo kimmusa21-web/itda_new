@@ -101,13 +101,15 @@ export async function createEmployeeWithInvite(
     .maybeSingle()
 
   if (existing) {
+    // 가입 완료된 재직 직원
     if (existing.is_active && existing.user_id) {
       return { success: false, error: '이미 가입 완료된 직원입니다' }
     }
-    if (existing.is_active && !existing.user_id) {
-      return { success: false, error: '이미 등록된 이메일입니다. 초대 재발송을 이용하세요.' }
+    // 초대 발송됐으나 미가입 (is_active=true or false, user_id=null)
+    if (!existing.user_id) {
+      return { success: false, error: '이미 초대가 발송된 이메일입니다. 초대 재발송을 이용하세요.' }
     }
-    // is_active=false (퇴사): 재등록 허용
+    // is_active=false && user_id 있음 → 퇴사 직원: 재등록 허용 (UPDATE)
   }
 
   /* ── 4. 사번 생성 ────────────────────────────────────────── */
@@ -125,32 +127,50 @@ export async function createEmployeeWithInvite(
     }
   }
 
-  /* ── 5. 직원 INSERT (is_active=false, user_id=null) ──────── */
-  const { data: employee, error: empError } = await service
-    .from('employees')
-    .insert({
-      company_id:       companyId,
-      user_id:          null,
-      name:             input.name.trim(),
-      email:            normalizedEmail,
-      birthdate:        input.birthdate    || null,
-      Sex:              input.gender === 'male' ? 'M' : input.gender === 'female' ? 'F' : null,
-      Tel:              input.phone        || null,
-      department:       input.department   || null,
-      position:         input.position     || null,
-      job:              input.job          || null,
-      Grade:            input.grade        || null,
-      Date_of_joining:  input.joinDate     || null,
-      'Work details':   input.jobDescription || null,
-      'Working place':  input.workLocation || null,
-      employee_number:  employeeNumber,
-      is_active:        false,
-    })
-    .select('id, name, email')
-    .single()
+  /* ── 5. 직원 INSERT or UPDATE (is_active=false, user_id=null) ── */
+  const employeePayload = {
+    user_id:          null,
+    name:             input.name.trim(),
+    birthdate:        input.birthdate    || null,
+    Sex:              input.gender === 'male' ? 'M' : input.gender === 'female' ? 'F' : null,
+    Tel:              input.phone        || null,
+    department:       input.department   || null,
+    position:         input.position     || null,
+    job:              input.job          || null,
+    Grade:            input.grade        || null,
+    Date_of_joining:  input.joinDate     || null,
+    'Work details':   input.jobDescription || null,
+    'Working place':  input.workLocation || null,
+    employee_number:  employeeNumber,
+    is_active:        false,
+  }
+
+  let employee: { id: number; name: string; email: string } | null = null
+  let empError: { message: string } | null = null
+
+  if (existing) {
+    // 퇴사 직원 재등록: 기존 레코드 업데이트
+    const { data, error } = await service
+      .from('employees')
+      .update(employeePayload)
+      .eq('id', existing.id)
+      .select('id, name, email')
+      .single()
+    employee = data
+    empError = error
+  } else {
+    // 신규 직원 등록
+    const { data, error } = await service
+      .from('employees')
+      .insert({ company_id: companyId, email: normalizedEmail, ...employeePayload })
+      .select('id, name, email')
+      .single()
+    employee = data
+    empError = error
+  }
 
   if (empError || !employee) {
-    console.error('[createEmployeeWithInvite] employees INSERT 실패:', empError?.message)
+    console.error('[createEmployeeWithInvite] employees 저장 실패:', empError?.message)
     return { success: false, error: empError?.message ?? '직원 등록에 실패했습니다' }
   }
 
@@ -180,8 +200,8 @@ export async function createEmployeeWithInvite(
   /* ── 7. 초대 이메일 발송 ─────────────────────────────────── */
   const emailResult = await sendInviteEmail(normalizedEmail, employee.name, token)
   if (!emailResult.success) {
-    // 이메일 실패는 경고만 — 토큰이 살아 있으므로 재발송 가능
-    console.warn('[createEmployeeWithInvite] 이메일 발송 실패 (재발송 가능):', emailResult.error)
+    console.error('[createEmployeeWithInvite] 이메일 발송 실패:', emailResult.error)
+    return { success: false, error: `직원은 등록됐으나 초대 이메일 발송에 실패했습니다: ${emailResult.error}` }
   }
 
   revalidatePath('/manager/employees')

@@ -28,6 +28,7 @@ export interface EmailPayload {
 async function sendRawEmail(payload: EmailPayload): Promise<{ success: boolean; error?: string }> {
 
   // ── [Resend — RESEND_API_KEY가 있으면 실제 발송] ─────────────
+  console.log('[EMAIL] RESEND_API_KEY 존재 여부:', !!process.env.RESEND_API_KEY)
   if (process.env.RESEND_API_KEY) {
     const { Resend } = await import('resend')
     const resend = new Resend(process.env.RESEND_API_KEY)
