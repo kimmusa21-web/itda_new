@@ -126,9 +126,11 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
           Sex:             form.Sex ?? null,
           Grade:           form.Grade ?? null,
           Role:            form.Role ?? null,
-          'Working place': form['Working place'] ?? null,
-          'Work details':  form['Work details'] ?? null,
-          is_active:       true,
+          'Working place':   form['Working place'] ?? null,
+          'Work details':    form['Work details'] ?? null,
+          is_active:         true,
+          is_contract:       form.is_contract ?? false,
+          contract_end_date: form.contract_end_date ?? null,
         })
         if (!result.success) throw new Error(result.error)
       } else if (modal === 'edit' && selected) {
@@ -138,6 +140,8 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
           Date_of_joining: form.Date_of_joining, Tel: form.Tel, Sex: form.Sex,
           Grade: form.Grade, Role: form.Role,
           'Working place': form['Working place'], 'Work details': form['Work details'],
+          is_contract:       form.is_contract ?? false,
+          contract_end_date: form.contract_end_date ?? null,
         }).eq('id', selected.id)
         if (editErr) throw new Error(editErr.message)
       } else if (modal === 'quit' && selected) {
@@ -472,6 +476,41 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
                 <option value="F">여성</option>
               </select>
             </div>
+            {/* 고용 형태 */}
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-slate-600 mb-1">고용 형태</label>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={!!form.is_contract}
+                  onClick={() => setForm(p => ({
+                    ...p,
+                    is_contract: !p.is_contract,
+                    contract_end_date: p.is_contract ? null : p.contract_end_date,
+                  }))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                    form.is_contract ? 'bg-blue-500' : 'bg-slate-200'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    form.is_contract ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+                <span className="text-sm text-slate-700">{form.is_contract ? '계약직' : '정규직'}</span>
+              </div>
+            </div>
+            {form.is_contract && (
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-slate-600 mb-1">계약만료일</label>
+                <input
+                  className="input"
+                  type="date"
+                  value={form.contract_end_date ?? ''}
+                  onChange={e => setForm(p => ({ ...p, contract_end_date: e.target.value || null }))}
+                />
+              </div>
+            )}
           </div>
           <div className="flex gap-2 mt-5 pt-4 border-t border-slate-100">
             <button onClick={() => setModal(null)} className="btn-secondary flex-1">취소</button>

@@ -61,9 +61,11 @@ export interface EmployeeInviteInput {
   jobDescription?: string
   workLocation?:  string
   joinDate:       string
-  salaryType?:    'annual' | 'monthly'
-  salaryAmount?:  number | ''
-  salaryBasis?:   'gross' | 'net'
+  salaryType?:      'annual' | 'monthly'
+  salaryAmount?:    number | ''
+  salaryBasis?:     'gross' | 'net'
+  isContract?:      boolean
+  contractEndDate?: string
 }
 
 /* ================================================================
@@ -141,8 +143,10 @@ export async function createEmployeeWithInvite(
     Date_of_joining:  input.joinDate     || null,
     'Work details':   input.jobDescription || null,
     'Working place':  input.workLocation || null,
-    employee_number:  employeeNumber,
-    is_active:        false,
+    employee_number:   employeeNumber,
+    is_active:         false,
+    is_contract:       input.isContract ?? false,
+    contract_end_date: input.contractEndDate || null,
   }
 
   let employee: { id: number; name: string; email: string } | null = null

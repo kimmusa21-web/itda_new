@@ -83,6 +83,8 @@ export interface Employee {
   quit_date: string | null
   user_id: string | null
   is_active: boolean
+  is_contract: boolean
+  contract_end_date: string | null
 }
 
 // ── 급여 (MVP JSON 구조) ─────────────────────────────────────

@@ -34,6 +34,8 @@ export interface CreateEmployeeAdminInput {
   'Working place'?: string | null
   'Work details'?: string | null
   is_active?: boolean
+  is_contract?: boolean
+  contract_end_date?: string | null
 }
 
 export async function createEmployeeAdmin(
@@ -91,9 +93,11 @@ export async function createEmployeeAdmin(
     Date_of_joining: input.Date_of_joining  ?? null,
     'Working place': input['Working place'] ?? null,
     'Work details':  input['Work details']  ?? null,
-    employee_number: employeeNumber,
-    is_active:       input.is_active ?? true,
-    user_id:         null,
+    employee_number:   employeeNumber,
+    is_active:         input.is_active ?? true,
+    is_contract:       input.is_contract ?? false,
+    contract_end_date: input.contract_end_date ?? null,
+    user_id:           null,
   })
 
   if (error) {

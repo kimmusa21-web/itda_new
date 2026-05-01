@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell.exe -NoProfile -Command 'ls '\\\\''C:\\\\Program Files\\\\nodejs\\\\'\\\\'' 2>$null; ls '\\\\''C:\\\\Program Files \\(x86\\)\\\\nodejs\\\\'\\\\'' 2>$null')",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "Bash(grep -E '\\\\.\\(tsx|ts\\)$')",
+      "Bash(npx tsc:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\")",
+      "Read(//c/Users/swkim/AppData/Roaming/**)",
+      "Read(//c/Users/swkim/AppData/Local/**)",
+      "Read(//c/Users/swkim/**)",
+      "Read(//c/Program Files/nodejs/**)",
+      "Read(//c/Program Files \\(x86\\)/nodejs/**)",
+      "Bash(find /c -maxdepth 4 -name \"node.exe\")",
+      "Bash(powershell.exe -Command \"where.exe node\")",
+      "Bash(powershell.exe -Command \"Get-Command node\")",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'feat: 정산기간 우선순위 통일, 산출근거 항목별 override, 귀속월 YYYY-MM-01 저장 *)",
+      "Bash(git push *)",
+      "Bash(npm install *)",
+      "Bash(npm list *)",
+      "Bash(npm run *)",
+      "Bash(git stash *)",
+      "Bash(git commit -m ' *)",
+      "Bash(xargs grep *)",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
+      "Bash(git reset *)"
+    ]
+  }
+}

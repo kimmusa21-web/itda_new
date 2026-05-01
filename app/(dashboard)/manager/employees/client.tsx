@@ -210,17 +210,19 @@ function EditModal({ emp, onClose, onSaved }: {
   onSaved: (updated: EmployeeRow) => void
 }) {
   const [form, setForm] = useState<EmployeeEditInput>({
-    name:         emp.name         ?? '',
-    phone:        emp.Tel          ?? '',
-    birthdate:    emp.birthdate    ?? '',
-    gender:       emp.Sex          ?? '',
-    department:   emp.department   ?? '',
-    position:     emp.position     ?? '',
-    grade:        emp.Grade        ?? '',
-    roleTitle:    emp.Role         ?? '',
-    job:          emp.job          ?? '',
-    workLocation: emp['Working place'] ?? '',
-    joinDate:     emp.Date_of_joining  ?? '',
+    name:            emp.name              ?? '',
+    phone:           emp.Tel               ?? '',
+    birthdate:       emp.birthdate         ?? '',
+    gender:          emp.Sex               ?? '',
+    department:      emp.department        ?? '',
+    position:        emp.position          ?? '',
+    grade:           emp.Grade             ?? '',
+    roleTitle:       emp.Role              ?? '',
+    job:             emp.job               ?? '',
+    workLocation:    emp['Working place']  ?? '',
+    joinDate:        emp.Date_of_joining   ?? '',
+    isContract:      emp.is_contract       ?? false,
+    contractEndDate: emp.contract_end_date ?? '',
   })
   const [saving, setSaving] = useState(false)
   const [errMsg, setErrMsg] = useState<string | null>(null)
@@ -238,24 +240,27 @@ function EditModal({ emp, onClose, onSaved }: {
     if (result.success) {
       onSaved({
         ...emp,
-        name:            form.name,
-        Tel:             form.phone        || null,
-        birthdate:       form.birthdate    || null,
-        Sex:             form.gender       || null,
-        department:      form.department   || null,
-        position:        form.position     || null,
-        Grade:           form.grade        || null,
-        Role:            form.roleTitle    || null,
-        job:             form.job          || null,
-        'Working place': form.workLocation || null,
-        Date_of_joining: form.joinDate     || null,
+        name:              form.name,
+        Tel:               form.phone           || null,
+        birthdate:         form.birthdate        || null,
+        Sex:               form.gender           || null,
+        department:        form.department       || null,
+        position:          form.position         || null,
+        Grade:             form.grade            || null,
+        Role:              form.roleTitle        || null,
+        job:               form.job              || null,
+        'Working place':   form.workLocation     || null,
+        Date_of_joining:   form.joinDate         || null,
+        is_contract:       form.isContract,
+        contract_end_date: form.contractEndDate  || null,
       })
     } else {
       setErrMsg(result.error)
     }
   }
 
-  const fields: [string, keyof EmployeeEditInput, string][] = [
+  type StringKey = { [K in keyof EmployeeEditInput]: EmployeeEditInput[K] extends string ? K : never }[keyof EmployeeEditInput]
+  const fields: [string, StringKey, string][] = [
     ['이름 *',   'name',         'text'],
     ['전화번호', 'phone',        'tel'],
     ['생년월일', 'birthdate',    'date'],
@@ -299,6 +304,43 @@ function EditModal({ emp, onClose, onSaved }: {
               <option value="F">여성</option>
             </select>
           </div>
+          {/* 고용 형태 */}
+          <div className="col-span-2">
+            <label className="block text-xs font-medium text-slate-600 mb-2">고용 형태</label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.isContract}
+                onClick={() => {
+                  setForm(f => ({
+                    ...f,
+                    isContract: !f.isContract,
+                    contractEndDate: f.isContract ? '' : f.contractEndDate,
+                  }))
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  form.isContract ? 'bg-blue-500' : 'bg-slate-200'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  form.isContract ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+              <span className="text-sm text-slate-700">{form.isContract ? '계약직' : '정규직'}</span>
+            </div>
+          </div>
+          {form.isContract && (
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-slate-600 mb-1">계약만료일</label>
+              <input
+                className="input"
+                type="date"
+                value={form.contractEndDate}
+                onChange={e => set('contractEndDate', e.target.value)}
+              />
+            </div>
+          )}
         </div>
 
         {errMsg && (

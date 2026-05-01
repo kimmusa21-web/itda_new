@@ -20,6 +20,8 @@ export interface EmployeeRow {
   Sex: string | null
   'Working place': string | null
   'Work details': string | null
+  is_contract: boolean
+  contract_end_date: string | null
   companies?: { name: string } | null
 }
 

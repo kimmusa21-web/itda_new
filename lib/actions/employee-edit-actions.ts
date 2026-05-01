@@ -4,17 +4,19 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export interface EmployeeEditInput {
-  name:          string
-  phone:         string
-  birthdate:     string
-  gender:        string
-  department:    string
-  position:      string
-  grade:         string
-  roleTitle:     string
-  job:           string
-  workLocation:  string
-  joinDate:      string
+  name:            string
+  phone:           string
+  birthdate:       string
+  gender:          string
+  department:      string
+  position:        string
+  grade:           string
+  roleTitle:       string
+  job:             string
+  workLocation:    string
+  joinDate:        string
+  isContract:      boolean
+  contractEndDate: string
 }
 
 export type EmployeeEditResult = { success: true } | { success: false; error: string }
@@ -59,9 +61,11 @@ export async function updateEmployeeByManager(
       position:        data.position     || null,
       Grade:           data.grade        || null,
       Role:            data.roleTitle    || null,
-      job:             data.job          || null,
-      'Working place': data.workLocation || null,
-      Date_of_joining: data.joinDate     || null,
+      job:               data.job          || null,
+      'Working place':   data.workLocation || null,
+      Date_of_joining:   data.joinDate     || null,
+      is_contract:       data.isContract,
+      contract_end_date: data.contractEndDate || null,
     })
     .eq('id', employeeId)
 
