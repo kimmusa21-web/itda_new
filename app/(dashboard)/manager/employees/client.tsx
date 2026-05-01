@@ -224,6 +224,9 @@ function EditModal({ emp, onClose, onSaved }: {
     isContract:      emp.is_contract       ?? false,
     contractEndDate: emp.contract_end_date ?? '',
     weeklyWorkHours: emp.weekly_work_hours != null ? String(emp.weekly_work_hours) : '',
+    isForeigner:     emp.is_foreigner      ?? false,
+    nationality:     emp.nationality       ?? '',
+    visaType:        emp.visa_type         ?? '',
   })
   const [saving, setSaving] = useState(false)
   const [errMsg, setErrMsg] = useState<string | null>(null)
@@ -255,6 +258,9 @@ function EditModal({ emp, onClose, onSaved }: {
         is_contract:       form.isContract,
         contract_end_date: form.contractEndDate  || null,
         weekly_work_hours: form.weeklyWorkHours ? Number(form.weeklyWorkHours) : null,
+        is_foreigner:      form.isForeigner,
+        nationality:       form.nationality       || null,
+        visa_type:         form.visaType          || null,
       })
     } else {
       setErrMsg(result.error)
@@ -307,6 +313,55 @@ function EditModal({ emp, onClose, onSaved }: {
               <option value="F">여성</option>
             </select>
           </div>
+          {/* 외국인 여부 */}
+          <div className="col-span-2">
+            <label className="block text-xs font-medium text-slate-600 mb-2">외국인 여부</label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.isForeigner}
+                onClick={() => {
+                  setForm(f => ({
+                    ...f,
+                    isForeigner: !f.isForeigner,
+                    nationality: f.isForeigner ? '' : f.nationality,
+                    visaType:    f.isForeigner ? '' : f.visaType,
+                  }))
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  form.isForeigner ? 'bg-blue-500' : 'bg-slate-200'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  form.isForeigner ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+              <span className="text-sm text-slate-700">{form.isForeigner ? '외국인' : '내국인'}</span>
+            </div>
+          </div>
+          {form.isForeigner && (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">국가</label>
+                <input
+                  className="input"
+                  placeholder="예: 미국, 중국, 베트남"
+                  value={form.nationality}
+                  onChange={e => set('nationality', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">비자유형</label>
+                <input
+                  className="input"
+                  placeholder="예: E-7, F-4, H-2"
+                  value={form.visaType}
+                  onChange={e => set('visaType', e.target.value)}
+                />
+              </div>
+            </>
+          )}
           {/* 고용 형태 */}
           <div className="col-span-2">
             <label className="block text-xs font-medium text-slate-600 mb-2">고용 형태</label>

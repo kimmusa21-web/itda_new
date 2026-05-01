@@ -67,6 +67,9 @@ export interface EmployeeInviteInput {
   isContract?:      boolean
   contractEndDate?: string
   weeklyWorkHours?: number | null
+  isForeigner?:     boolean
+  nationality?:     string
+  visaType?:        string
 }
 
 /* ================================================================
@@ -150,6 +153,9 @@ export async function createEmployeeWithInvite(
     is_contract:       input.isContract ?? false,
     contract_end_date: input.contractEndDate || null,
     weekly_work_hours: input.weeklyWorkHours ?? null,
+    is_foreigner:      input.isForeigner ?? false,
+    nationality:       input.nationality || null,
+    visa_type:         input.visaType || null,
   }
 
   let employee: { id: number; name: string; email: string } | null = null

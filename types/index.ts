@@ -86,6 +86,9 @@ export interface Employee {
   is_contract: boolean
   contract_end_date: string | null
   weekly_work_hours: number | null
+  is_foreigner: boolean
+  nationality: string | null
+  visa_type: string | null
 }
 
 // ── 급여 (MVP JSON 구조) ─────────────────────────────────────

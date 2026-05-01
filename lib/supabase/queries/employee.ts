@@ -23,6 +23,9 @@ export interface EmployeeRow {
   is_contract: boolean
   contract_end_date: string | null
   weekly_work_hours: number | null
+  is_foreigner: boolean
+  nationality: string | null
+  visa_type: string | null
   companies?: { name: string } | null
 }
 

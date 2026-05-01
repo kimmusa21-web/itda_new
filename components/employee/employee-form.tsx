@@ -32,6 +32,9 @@ export type EmployeeCreateInput = {
   isContract: boolean
   contractEndDate: string
   weeklyWorkHours: string
+  isForeigner: boolean
+  nationality: string
+  visaType: string
   salaryType: 'annual' | 'monthly'
   salaryAmount: number | ''
   salaryBasis: 'gross' | 'net'
@@ -43,6 +46,7 @@ const INITIAL: EmployeeCreateInput = {
   job: '', jobDescription: '', workLocation: '',
   joinDate: new Date().toISOString().slice(0, 10),
   isContract: false, contractEndDate: '', weeklyWorkHours: '',
+  isForeigner: false, nationality: '', visaType: '',
   salaryType: 'monthly', salaryAmount: '', salaryBasis: 'gross',
 }
 
@@ -71,6 +75,9 @@ async function realCreateEmployeeRequest(
       isContract:      data.isContract,
       contractEndDate: data.contractEndDate  || undefined,
       weeklyWorkHours: data.weeklyWorkHours ? Number(data.weeklyWorkHours) : undefined,
+      isForeigner:     data.isForeigner,
+      nationality:     data.nationality     || undefined,
+      visaType:        data.visaType        || undefined,
       salaryType:     data.salaryType,
       salaryAmount:   data.salaryAmount  || undefined,
       salaryBasis:    data.salaryBasis,

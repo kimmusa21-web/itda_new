@@ -75,6 +75,56 @@ export function EmployeeBasicSection({ form, errors, onChange }: Props) {
           </div>
         </Field>
 
+        {/* 외국인 여부 */}
+        <Field label="외국인 여부" className="sm:col-span-2">
+          <div className="flex items-center gap-3 h-[42px]">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.isForeigner}
+              onClick={() => {
+                onChange('isForeigner', !form.isForeigner)
+                if (form.isForeigner) {
+                  onChange('nationality', '')
+                  onChange('visaType', '')
+                }
+              }}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                form.isForeigner ? 'bg-blue-500' : 'bg-slate-200'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                form.isForeigner ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+            <span className="text-sm text-slate-700">
+              {form.isForeigner ? '외국인' : '내국인'}
+            </span>
+          </div>
+        </Field>
+
+        {/* 국가·비자유형 — 외국인일 때만 표시 */}
+        {form.isForeigner && (
+          <>
+            <Field label="국가">
+              <input
+                className={inp(undefined)}
+                placeholder="예: 미국, 중국, 베트남"
+                value={form.nationality}
+                onChange={e => onChange('nationality', e.target.value)}
+              />
+            </Field>
+            <Field label="비자유형">
+              <input
+                className={inp(undefined)}
+                placeholder="예: E-7, F-4, H-2"
+                value={form.visaType}
+                onChange={e => onChange('visaType', e.target.value)}
+              />
+            </Field>
+          </>
+        )}
+
       </div>
     </FormSection>
   )
