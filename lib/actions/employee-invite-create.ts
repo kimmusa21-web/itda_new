@@ -87,11 +87,12 @@ export async function createEmployeeWithInvite(
   /* ── 2. 회사 확인 ────────────────────────────────────────── */
   const { data: company } = await service
     .from('companies')
-    .select('id, biz_number')
+    .select('id, biz_number, name')
     .eq('id', companyId)
     .single()
 
   if (!company) return { success: false, error: '회사 정보를 찾을 수 없습니다' }
+  const companyName = (company as { id: number; biz_number: string | null; name: string }).name ?? '회사'
 
   /* ── 3. 중복 이메일 확인 ──────────────────────────────────── */
   const normalizedEmail = input.email.trim().toLowerCase()
@@ -212,6 +213,29 @@ export async function createEmployeeWithInvite(
 
   revalidatePath('/manager/employees')
   revalidatePath('/admin/employees')
+
+  /* ── 8. 어드민 알림 생성 ────────────────────────────────────── */
+  try {
+    const { data: admins } = await service
+      .from('profiles')
+      .select('id')
+      .eq('role', 'admin')
+
+    if (admins && admins.length > 0) {
+      await service.from('notifications').insert(
+        admins.map((a: { id: string }) => ({
+          user_id:   a.id,
+          type:      'new_employee_registered',
+          title:     '신규 직원 등록',
+          message:   `[${companyName}] ${employee.name}(${normalizedEmail}) 님이 등록되었습니다.`,
+          target_id: String(employee.id),
+          is_read:   false,
+        }))
+      )
+    }
+  } catch (e) {
+    console.warn('[createEmployeeWithInvite] 어드민 알림 생성 실패:', e)
+  }
 
   return { success: true }
 }

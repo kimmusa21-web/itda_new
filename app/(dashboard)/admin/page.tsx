@@ -1,12 +1,12 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Bell, Plus, Building2, Users, Upload, BarChart3 } from 'lucide-react'
+import { Plus, Building2, Users, Upload, BarChart3 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getRequests } from '@/lib/supabase/queries/company'
 import { getAllBatches } from '@/lib/supabase/queries/payslip'
+import { getMyNotifications } from '@/lib/supabase/queries/notifications'
 import { formatMonth } from '@/lib/utils'
-import NoticeCard from '@/components/common/notice-card'
-import { notices as mockNotices } from '@/lib/mock-data'
+import AdminNotificationsPanel from '@/components/admin/notifications-panel'
 
 export default async function AdminDashboard() {
   const supabase = createClient()
@@ -22,11 +22,13 @@ export default async function AdminDashboard() {
     { count: employeeCount },
     pendingRequests,
     recentBatches,
+    notifications,
   ] = await Promise.all([
     supabase.from('companies').select('*', { count: 'exact', head: true }),
     supabase.from('employees').select('*', { count: 'exact', head: true }).eq('is_active', true),
     getRequests('pending'),
     getAllBatches(),
+    getMyNotifications(30),
   ])
 
   const pendingCount = pendingRequests.length
@@ -125,15 +127,8 @@ export default async function AdminDashboard() {
         </section>
       )}
 
-      {/* Notices */}
-      <section>
-        <div className="section-header">
-          <h2 className="section-title">공지사항</h2>
-        </div>
-        <div className="space-y-2.5">
-          {mockNotices.map(n => <NoticeCard key={n.id} notice={n} />)}
-        </div>
-      </section>
+      {/* 알림 */}
+      <AdminNotificationsPanel notifications={notifications} />
     </div>
   )
 }
