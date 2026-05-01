@@ -53,8 +53,8 @@ function serverValidateRow(
 
   if (!row.email)                          fail('이메일 필수값')
   else if (!EMAIL_RE.test(row.email))      fail(`이메일 형식 오류: ${row.email}`)
-  if (!row.pay_month)                      fail('귀속월 필수값 (YYYY-MM)')
-  else if (!MONTH_RE.test(row.pay_month))  fail(`귀속월 형식 오류: ${row.pay_month}`)
+  if (!row.pay_month)                      fail('귀속월 필수값 (YYYY-MM-DD, 예: 2026-04-01)')
+  else if (!MONTH_RE.test(row.pay_month))  fail(`귀속월 형식 오류: ${row.pay_month} (YYYY-MM-DD 필요)`)
   if (!row.base_salary)                    fail('기본급 필수값')
   else if (isNaN(Number(row.base_salary))) fail(`기본급 숫자 오류: ${row.base_salary}`)
 
@@ -151,8 +151,11 @@ function buildUpsertRecord(
     ? toNum(row.net_pay, true)
     : totalEarnings - totalDeductions
 
-  // 근로시간: Over_time → overtime_hours (분 단위)
-  const overtimeHours = toNumOrNull(row.Over_time) ?? 0
+  // 근로시간 (분 단위)
+  const overTime                  = toNumOrNull(row.Over_time)
+  const holidayWorkingHours       = toNumOrNull(row.Holiday_working_hours)
+  const nightWorkHours            = toNumOrNull(row.night_work_hours)
+  const remainingAnnualLeaveHours = toNumOrNull(row.Remaining_annual_leave_hours)
 
   return {
     company_id:        companyId,
@@ -162,7 +165,11 @@ function buildUpsertRecord(
     start_date:        row.start_date   || null,
     end_date:          row.end_date     || null,
     work_days:         row.work_days    ? toNum(row.work_days) : null,
-    overtime_hours:    overtimeHours,
+    overtime_hours:    overTime ?? null,
+    Over_time:                  overTime,
+    Holiday_working_hours:      holidayWorkingHours,
+    night_work_hours:           nightWorkHours,
+    Remaining_annual_leave_hours: remainingAnnualLeaveHours,
     // 지급 항목 개별 컬럼
     base_salary:               baseSalary,
     overtime_pay_fixed:        overtimePayFixed,
@@ -175,7 +182,8 @@ function buildUpsertRecord(
     Other_allowances:          otherAllowances,
     Other_allowances2:         otherAllowances2,
     Holiday_bonus:             holidayBonus,
-    Total_payment:             row.Total_payment  ? toNum(row.Total_payment)         : null,
+    Total_payment:             row.Total_payment     ? toNum(row.Total_payment)         : null,
+    Total_tax_salary:          row.Total_tax_salary  ? toNumOrNull(row.Total_tax_salary) : null,
     // 공제 항목 개별 컬럼
     national_pension:           nationalPension,
     health_insurance:           healthInsurance,

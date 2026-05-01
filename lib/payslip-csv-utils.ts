@@ -99,8 +99,8 @@ export function validatePayslipRow(
   else if (!EMAIL_RE.test(row.email)) addFail(`이메일 형식 오류: ${row.email}`)
 
   // 귀속월
-  if (!row.pay_month) addFail('귀속월 필수값 (YYYY-MM)')
-  else if (!MONTH_RE.test(row.pay_month)) addFail(`귀속월 형식 오류: ${row.pay_month}`)
+  if (!row.pay_month) addFail('귀속월 필수값 (YYYY-MM-DD, 예: 2026-04-01)')
+  else if (!MONTH_RE.test(row.pay_month)) addFail(`귀속월 형식 오류: ${row.pay_month} (YYYY-MM-DD 필요)`)
 
   // 기본급
   if (!row.base_salary) addFail('기본급 필수값')
@@ -122,6 +122,7 @@ export function validatePayslipRow(
     ['Other_allowances2',      '기타수당2'],
     ['Holiday_bonus',          '명절상여'],
     ['Total_payment',          '지급합계'],
+    ['Total_tax_salary',       '과세급여합계'],
   ]
   for (const [key, label] of earningsFields) {
     const val = row[key]

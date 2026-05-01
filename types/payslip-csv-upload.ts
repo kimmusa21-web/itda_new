@@ -45,6 +45,7 @@ export interface PayslipCsvRow {
   Other_deductions?:            string
   // 합계 (미입력 시 서버에서 계산)
   Total_payment?:    string
+  Total_tax_salary?: string   // 과세급여합계
   Total_deductible?: string
   net_pay?:          string
 }

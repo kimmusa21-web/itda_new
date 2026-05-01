@@ -153,7 +153,7 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
           <li>
             필수 컬럼: {REQUIRED_PAYSLIP_KEYS.map(k => REQUIRED_PAYSLIP_LABELS[k]).join(', ')}
           </li>
-          <li>귀속월: <code className="bg-blue-100 px-1 rounded">YYYY-MM</code> (예: 2026-04) — 지급합계·공제합계·차인지급액 미입력 시 자동 계산</li>
+          <li>귀속월: <code className="bg-blue-100 px-1 rounded">YYYY-MM-DD</code> (예: 2026-04-01) — 지급합계·공제합계·차인지급액 미입력 시 자동 계산</li>
           <li>직원 매칭 기준: <strong>회사 + 이메일</strong> — 한 명이라도 없으면 전체 중단</li>
           <li>같은 직원 + 귀속월로 재업로드 시 자동 덮어쓰기됩니다.</li>
         </ul>

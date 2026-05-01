@@ -18,7 +18,7 @@ export const STANDARD_CSV_COLUMNS: CsvColumnDef[] = [
   { key: 'employee_name',   label: '성명',          required: false, group: 'identity', note: '참고용' },
   { key: 'employee_number', label: '사번',          required: false, group: 'identity', note: '이메일 없을 때 보조 매칭' },
   // ── 급여 기준 ────────────────────────────────────────
-  { key: 'pay_month',       label: '귀속월',        required: true,  group: 'period',   note: 'YYYY-MM 형식' },
+  { key: 'pay_month',       label: '귀속월',        required: true,  group: 'period',   note: 'YYYY-MM-DD 형식 (예: 2026-04-01)' },
   { key: 'payment_date',    label: '급여지급일',     required: false, group: 'period',   note: 'YYYY-MM-DD 형식' },
   { key: 'start_date',      label: '정산시작일',     required: false, group: 'period',   note: 'YYYY-MM-DD 형식' },
   { key: 'end_date',        label: '정산종료일',     required: false, group: 'period',   note: 'YYYY-MM-DD 형식' },
@@ -76,7 +76,7 @@ export function generateStandardCsvTemplate(): string {
 
   const example1 = [
     'hong@example.com', '홍길동', 'EMP-001',
-    '2026-04', '2026-04-25', '2026-03-16', '2026-04-15', '28',
+    '2026-04-01', '2026-04-25', '2026-03-16', '2026-04-15', '28',
     '3000000', '300000', '150000', '', '', '200000', '', '', '', '', '',
     '', '', '', '',
     '148500', '116920', '15130', '27440', '52940', '5290', '', '', '', '', '',
@@ -85,7 +85,7 @@ export function generateStandardCsvTemplate(): string {
 
   const example2 = [
     'kim@example.com', '김철수', 'EMP-002',
-    '2026-04', '2026-04-25', '2026-03-16', '2026-04-15', '28',
+    '2026-04-01', '2026-04-25', '2026-03-16', '2026-04-15', '28',
     '2800000', '', '', '', '', '200000', '', '', '', '', '',
     '', '', '', '',
     '135900', '106940', '13830', '25100', '19800', '1980', '', '', '', '', '',
