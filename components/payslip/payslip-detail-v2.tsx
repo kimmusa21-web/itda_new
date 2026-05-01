@@ -221,7 +221,9 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
         {/* ── 근로시간 / 연차 정보 ── */}
         {(() => {
           const baseHours =
-            d.workDays != null && d.daysInMonth != null && d.daysInMonth > 0
+            d.basicWorkTime != null
+              ? d.basicWorkTime
+              : d.workDays != null && d.daysInMonth != null && d.daysInMonth > 0
               ? Math.round(209 * d.workDays / d.daysInMonth * 10) / 10
               : 209
           return (

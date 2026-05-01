@@ -38,19 +38,19 @@ const KOREAN_COLUMN_MAP: Record<string, string> = {
   '직원번호':      'employee_number',
   '사원번호':      'employee_number',
   // 급여 기준
-  '귀속월':        'pay_month',
-  '급여월':        'pay_month',
-  '지급월':        'pay_month',
-  '급여귀속월':    'pay_month',
+  '귀속월':        'accrual_month',
+  '급여월':        'accrual_month',
+  '지급월':        'accrual_month',
+  '급여귀속월':    'accrual_month',
   '지급일':        'payment_date',
   '급여지급일':    'payment_date',
   '급여일':        'payment_date',
-  '정산시작일':    'start_date',
-  '시작일':        'start_date',
-  '정산종료일':    'end_date',
-  '종료일':        'end_date',
-  '급여일수':      'work_days',
-  '근무일수':      'work_days',
+  '정산시작일':    'Start_date',
+  '시작일':        'Start_date',
+  '정산종료일':    'End_date',
+  '종료일':        'End_date',
+  '급여일수':      'working_days',
+  '근무일수':      'working_days',
   '부서':          'department',
   '직급':          'position',
   '직위':          'position',
@@ -86,9 +86,9 @@ const KOREAN_COLUMN_MAP: Record<string, string> = {
   '총지급액':            'Total_payment',
   '급여합계':            'Total_payment',
   // 근로시간
-  '연장근로시간':         'Over_time',
-  '연장근로시간(분)':     'Over_time',
-  'OT시간':             'Over_time',
+  '연장근로시간':         'Overtime',
+  '연장근로시간(분)':     'Overtime',
+  'OT시간':             'Overtime',
   '휴일근로시간':         'Holiday_working_hours',
   '휴일근로시간(분)':     'Holiday_working_hours',
   '야간근로시간':         'night_work_hours',
@@ -125,7 +125,7 @@ const KOREAN_COLUMN_MAP: Record<string, string> = {
 }
 
 /* ── 표준 CSV 판별 기준 ──────────────────────────────────── */
-const STANDARD_REQUIRED_HEADERS = ['email', 'pay_month']
+const STANDARD_REQUIRED_HEADERS = ['email', 'accrual_month']
 const KOREAN_REQUIRED_HEADERS   = ['귀속월', '급여월', '지급월', '급여귀속월']
 const KOREAN_IDENTITY_HEADERS   = ['성명', '이름', '직원명', '사번', '사원번호', '직원번호']
 
@@ -136,7 +136,7 @@ export function detectCsvFormat(headers: string[]): FormatDetectResult {
   // 표준 CSV
   const hasStdHeaders = STANDARD_REQUIRED_HEADERS.every(h => normalized.includes(h))
   if (hasStdHeaders) {
-    return { format: 'standard', headers: normalized, reason: '표준 CSV 형식 (email + pay_month 헤더 감지)' }
+    return { format: 'standard', headers: normalized, reason: '표준 CSV 형식 (email + accrual_month 헤더 감지)' }
   }
 
   // 한국어 급여대장
@@ -149,7 +149,7 @@ export function detectCsvFormat(headers: string[]): FormatDetectResult {
   return {
     format:  'unknown',
     headers: normalized,
-    reason:  `미인식 형식 — 표준(email+pay_month) 또는 한국어(귀속월+성명/사번) 헤더가 필요합니다.\n감지된 헤더: ${normalized.slice(0, 8).join(', ')}`,
+    reason:  `미인식 형식 — 표준(email+accrual_month) 또는 한국어(귀속월+성명/사번) 헤더가 필요합니다.\n감지된 헤더: ${normalized.slice(0, 8).join(', ')}`,
   }
 }
 
@@ -317,21 +317,22 @@ export async function autoDetectAndParseCsv(file: File): Promise<AutoDetectResul
           _unmapped.forEach(u => allUnmapped.add(u))
 
           // 날짜/월 정규화
-          const payMonth    = normalizePayMonth((mapped as Record<string,string>).pay_month ?? '')
-          const paymentDate = normalizeDate((mapped as Record<string,string>).payment_date ?? '')
-          const startDate   = normalizeDate((mapped as Record<string,string>).start_date ?? '')
-          const endDate     = normalizeDate((mapped as Record<string,string>).end_date ?? '')
+          const accrualMonth = normalizePayMonth((mapped as Record<string,string>).accrual_month ?? '')
+          const paymentDate  = normalizeDate((mapped as Record<string,string>).payment_date ?? '')
+          const startDate    = normalizeDate((mapped as Record<string,string>).Start_date ?? '')
+          const endDate      = normalizeDate((mapped as Record<string,string>).End_date ?? '')
 
           // 숫자 필드 정규화
           const numFields = [
             'base_salary', 'overtime_pay_fixed', 'overtime_pay', 'holidaytime_pay',
             'nighttime_pay', 'meal_allowance', 'incentive', 'annual_leave_allowance',
             'Other_allowances', 'Other_allowances2', 'Holiday_bonus',
-            'Over_time', 'Holiday_working_hours', 'night_work_hours', 'Remaining_annual_leave_hours',
+            'Overtime', 'Holiday_working_hours', 'night_work_hours', 'Remaining_annual_leave_hours',
+            'basic_work_time',
             'national_pension', 'health_insurance', 'longterm_care', 'employment_insurance',
             'income_tax', 'resident_tax', 'student_loan',
             'income_tax_refund', 'resident_tax_refund', 'health_insurance_adjustment',
-            'Other_deductions', 'Total_payment', 'Total_deductible', 'net_pay', 'work_days',
+            'Other_deductions', 'Total_payment', 'Total_deductible', 'net_pay', 'working_days',
           ]
 
           const result: Record<string, string> = { ...mapped }
@@ -341,12 +342,12 @@ export async function autoDetectAndParseCsv(file: File): Promise<AutoDetectResul
 
           return {
             ...result,
-            pay_month:    payMonth,
-            payment_date: paymentDate,
-            start_date:   startDate,
-            end_date:     endDate,
+            accrual_month: accrualMonth,
+            payment_date:  paymentDate,
+            Start_date:    startDate,
+            End_date:      endDate,
           } as PayslipCsvRow
-        }).filter(r => r.pay_month || r.employee_name || r.email)   // 완전 빈 행 제거
+        }).filter(r => r.accrual_month || r.employee_name || r.email)   // 완전 빈 행 제거
 
         resolve({
           format:          'korean',

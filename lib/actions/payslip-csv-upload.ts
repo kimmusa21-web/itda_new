@@ -6,7 +6,7 @@
      1. 인증 + 권한 확인 (admin / manager)
      2. manager: company_id 불일치 차단
      3. 행별 형식 검증
-     4. 파일 내 중복 검사 (email + pay_month)
+     4. 파일 내 중복 검사 (email + accrual_month)
      5. Option A: 오류 1건이라도 → 전체 중단
      6. company_id + email 기준 직원 매칭
         → 한 명이라도 실패 시 전체 중단
@@ -51,19 +51,19 @@ function serverValidateRow(
   const failures: PayslipCsvFailure[] = []
   const fail = (reason: string) => failures.push({ rowNumber, email: row.email, reason })
 
-  if (!row.email)                          fail('이메일 필수값')
-  else if (!EMAIL_RE.test(row.email))      fail(`이메일 형식 오류: ${row.email}`)
-  if (!row.pay_month)                      fail('귀속월 필수값 (YYYY-MM-DD, 예: 2026-04-01)')
-  else if (!MONTH_RE.test(row.pay_month))  fail(`귀속월 형식 오류: ${row.pay_month} (YYYY-MM-DD 필요)`)
-  if (!row.base_salary)                    fail('기본급 필수값')
-  else if (isNaN(Number(row.base_salary))) fail(`기본급 숫자 오류: ${row.base_salary}`)
+  if (!row.email)                             fail('이메일 필수값')
+  else if (!EMAIL_RE.test(row.email))         fail(`이메일 형식 오류: ${row.email}`)
+  if (!row.accrual_month)                     fail('귀속월 필수값 (YYYY-MM-DD, 예: 2026-04-01)')
+  else if (!MONTH_RE.test(row.accrual_month)) fail(`귀속월 형식 오류: ${row.accrual_month} (YYYY-MM-DD 필요)`)
+  if (!row.base_salary)                       fail('기본급 필수값')
+  else if (isNaN(Number(row.base_salary)))    fail(`기본급 숫자 오류: ${row.base_salary}`)
 
   if (row.payment_date && !DATE_RE.test(row.payment_date))
     fail(`급여지급일 형식 오류: ${row.payment_date}`)
-  if (row.start_date && !DATE_RE.test(row.start_date))
-    fail(`정산시작일 형식 오류: ${row.start_date}`)
-  if (row.end_date && !DATE_RE.test(row.end_date))
-    fail(`정산종료일 형식 오류: ${row.end_date}`)
+  if (row.Start_date && !DATE_RE.test(row.Start_date))
+    fail(`정산시작일 형식 오류: ${row.Start_date}`)
+  if (row.End_date && !DATE_RE.test(row.End_date))
+    fail(`정산종료일 형식 오류: ${row.End_date}`)
 
   return failures
 }
@@ -151,8 +151,9 @@ function buildUpsertRecord(
     ? toNum(row.net_pay, true)
     : totalEarnings - totalDeductions
 
-  // 근로시간 (분 단위)
-  const overTime                  = toNumOrNull(row.Over_time)
+  // 근로시간 (분·시간 단위)
+  const basicWorkTime             = toNumOrNull(row.basic_work_time)
+  const overTime                  = toNumOrNull(row.Overtime)
   const holidayWorkingHours       = toNumOrNull(row.Holiday_working_hours)
   const nightWorkHours            = toNumOrNull(row.night_work_hours)
   const remainingAnnualLeaveHours = toNumOrNull(row.Remaining_annual_leave_hours)
@@ -160,15 +161,16 @@ function buildUpsertRecord(
   return {
     company_id:        companyId,
     employee_id:       employeeId,
-    accrual_month:     toAccrualDate(row.pay_month),
+    accrual_month:     toAccrualDate(row.accrual_month),
     payment_date:      row.payment_date || null,
-    start_date:        row.start_date   || null,
-    end_date:          row.end_date     || null,
-    work_days:         row.work_days    ? toNum(row.work_days) : null,
+    start_date:        row.Start_date   || null,
+    end_date:          row.End_date     || null,
+    work_days:         row.working_days ? toNum(row.working_days) : null,
     overtime_hours:    overTime ?? null,
-    Over_time:                  overTime,
-    Holiday_working_hours:      holidayWorkingHours,
-    night_work_hours:           nightWorkHours,
+    basic_work_time:              basicWorkTime,
+    Over_time:                    overTime,
+    Holiday_working_hours:        holidayWorkingHours,
+    night_work_hours:             nightWorkHours,
     Remaining_annual_leave_hours: remainingAnnualLeaveHours,
     // 지급 항목 개별 컬럼
     base_salary:               baseSalary,
@@ -252,13 +254,13 @@ export async function uploadPayslipCsv(
   const keyCount = new Map<string, number>()
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
-    if (!row.email || !row.pay_month) continue
-    const key = `${row.email.toLowerCase()}|${row.pay_month}`
+    if (!row.email || !row.accrual_month) continue
+    const key = `${row.email.toLowerCase()}|${row.accrual_month}`
     if (keyCount.has(key)) {
       allFailures.push({
         rowNumber: i + 2,
         email:     row.email,
-        reason:    `파일 내 중복 (${row.email} / ${row.pay_month})`,
+        reason:    `파일 내 중복 (${row.email} / ${row.accrual_month})`,
       })
     } else {
       keyCount.set(key, i + 2)

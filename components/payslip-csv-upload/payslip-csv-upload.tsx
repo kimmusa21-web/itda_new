@@ -32,7 +32,7 @@ type Step = 'idle' | 'preview' | 'uploading' | 'done'
 export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Props) {
   const [step, setStep]               = useState<Step>('idle')
   const [companyId, setCompanyId]     = useState<number | ''>(defaultCompanyId ?? '')
-  const [selectedMonth, setSelectedMonth] = useState('')   // YYYY-MM, 선택 시 CSV pay_month 덮어쓰기
+  const [selectedMonth, setSelectedMonth] = useState('')   // YYYY-MM, 선택 시 CSV accrual_month 덮어쓰기
   const [fileName, setFileName]       = useState('')
   const [rows, setRows]               = useState<PayslipCsvRow[]>([])
   const [headerError, setHeaderError] = useState<string | null>(null)
@@ -42,7 +42,7 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
 
   /* ── 귀속월 override 적용된 실효 행 ── */
   const effectiveRows: PayslipCsvRow[] = selectedMonth
-    ? rows.map(r => ({ ...r, pay_month: selectedMonth }))
+    ? rows.map(r => ({ ...r, accrual_month: `${selectedMonth}-01` }))
     : rows
 
   /* ── 유효성 검사 (effectiveRows 기준, 렌더 시 계산) ── */
@@ -53,9 +53,9 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
       const rowNumber = idx + 2
       const rowFails: PayslipCsvFailure[] = []
       rowFails.push(...validatePayslipRow(row, rowNumber))
-      const key = `${row.email.toLowerCase()}|${row.pay_month}`
+      const key = `${row.email.toLowerCase()}|${row.accrual_month}`
       if (duplicates.has(key)) {
-        rowFails.push({ rowNumber, email: row.email, reason: `파일 내 중복 (${row.email} / ${row.pay_month})` })
+        rowFails.push({ rowNumber, email: row.email, reason: `파일 내 중복 (${row.email} / ${row.accrual_month})` })
       }
       if (rowFails.length > 0) previewErrors[rowNumber] = rowFails
     })
@@ -153,7 +153,8 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
           <li>
             필수 컬럼: {REQUIRED_PAYSLIP_KEYS.map(k => REQUIRED_PAYSLIP_LABELS[k]).join(', ')}
           </li>
-          <li>귀속월: <code className="bg-blue-100 px-1 rounded">YYYY-MM-DD</code> (예: 2026-04-01) — 지급합계·공제합계·차인지급액 미입력 시 자동 계산</li>
+          <li>귀속월: <code className="bg-blue-100 px-1 rounded">YYYY-MM-DD</code> (예: 2026-04-01) — Jan-26 형식도 자동 변환 지원</li>
+          <li>지급합계·공제합계·차인지급액 미입력 시 자동 계산, 기본근로시간 미입력 시 근무일수 기반 계산</li>
           <li>직원 매칭 기준: <strong>회사 + 이메일</strong> — 한 명이라도 없으면 전체 중단</li>
           <li>같은 직원 + 귀속월로 재업로드 시 자동 덮어쓰기됩니다.</li>
         </ul>
@@ -162,7 +163,7 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
           className="flex items-center gap-2 text-sm font-medium text-blue-700 hover:text-blue-900 underline-offset-2 hover:underline"
         >
           <Download size={14} />
-          표준 양식 다운로드 (35컬럼)
+          표준 양식 다운로드 (38컬럼)
         </button>
       </div>
 
@@ -327,8 +328,8 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
                           {row.email || <span className="text-red-400 italic">없음</span>}
                         </td>
                         <td className="px-3 py-2 text-slate-600">
-                          {row.pay_month
-                            ? <span className={selectedMonth ? 'text-blue-600 font-medium' : ''}>{row.pay_month}</span>
+                          {row.accrual_month
+                            ? <span className={selectedMonth ? 'text-blue-600 font-medium' : ''}>{row.accrual_month}</span>
                             : <span className="text-red-400 italic">없음</span>
                           }
                         </td>

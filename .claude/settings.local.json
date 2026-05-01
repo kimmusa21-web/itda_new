@@ -27,7 +27,8 @@
       "Bash(git commit -m ' *)",
       "Bash(xargs grep *)",
       "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
-      "Bash(git reset *)"
+      "Bash(git reset *)",
+      "mcp__claude_ai_Supabase__execute_sql"
     ]
   }
 }

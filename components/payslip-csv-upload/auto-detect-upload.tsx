@@ -84,9 +84,9 @@ export function AutoDetectUpload({ role, defaultCompanyId, companies = [] }: Pro
 
       rowFails.push(...validatePayslipRow(row, rowNumber))
 
-      const key = `${row.email.toLowerCase()}|${row.pay_month}`
+      const key = `${row.email.toLowerCase()}|${row.accrual_month}`
       if (duplicates.has(key)) {
-        rowFails.push({ rowNumber, email: row.email, reason: `파일 내 중복 (${row.email} / ${row.pay_month})` })
+        rowFails.push({ rowNumber, email: row.email, reason: `파일 내 중복 (${row.email} / ${row.accrual_month})` })
       }
 
       if (rowFails.length > 0) errors[rowNumber] = rowFails
@@ -294,7 +294,7 @@ export function AutoDetectUpload({ role, defaultCompanyId, companies = [] }: Pro
                           {row.employee_name || <span className="text-slate-300">—</span>}
                         </td>
                         <td className="px-3 py-2 text-slate-600">
-                          {row.pay_month || <span className="text-red-400 italic">없음</span>}
+                          {row.accrual_month || <span className="text-red-400 italic">없음</span>}
                         </td>
                         <td className="px-3 py-2 text-right text-slate-600">
                           {row.base_salary

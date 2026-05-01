@@ -21,6 +21,31 @@ import {
 /** @alias downloadStandardCsvTemplate */
 export const downloadPayslipCsvTemplate = downloadStandardCsvTemplate
 
+/* ── 귀속월 정규화 ──────────────────────────────────────────
+   지원 형식:
+     YYYY-MM-DD  → 그대로
+     YYYY-MM     → YYYY-MM-01
+     Jan-26 형식 → 2026-01-01  (Excel 월 표시 대응)
+──────────────────────────────────────────────────────────── */
+const EXCEL_MONTH_RE = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{2})$/i
+const MONTH_ABBR: Record<string, string> = {
+  jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+  jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+}
+
+export function normalizeAccrualMonth(v: string): string | null {
+  if (!v) return null
+  const s = v.trim()
+  if (/^\d{4}-(0[1-9]|1[0-2])-\d{2}$/.test(s)) return s           // YYYY-MM-DD
+  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(s))         return `${s}-01`  // YYYY-MM
+  const m = s.match(EXCEL_MONTH_RE)
+  if (m) {
+    const month = MONTH_ABBR[m[1].toLowerCase()]
+    return `20${m[2]}-${month}-01`
+  }
+  return null
+}
+
 /* ── CSV 파싱 ───────────────────────────────────────────────── */
 export interface PayslipParseResult {
   rows:        PayslipCsvRow[]
@@ -46,7 +71,7 @@ export async function parsePayslipCsv(file: File): Promise<PayslipParseResult> {
           return
         }
 
-        // 알려진 키 목록 (타입-세이프 파싱용)
+        // 알려진 키 목록 (STANDARD_CSV_COLUMNS 기준, 자동 동기화)
         const knownKeys = new Set(STANDARD_CSV_COLUMNS.map(c => c.key))
 
         const rows: PayslipCsvRow[] = result.data.map(raw => {
@@ -56,9 +81,13 @@ export async function parsePayslipCsv(file: File): Promise<PayslipParseResult> {
             if (v) row[key] = v
           }
           // 필수 키는 빈 문자열이라도 포함
-          row.email       = (raw['email']       ?? '').trim()
-          row.pay_month   = (raw['pay_month']   ?? '').trim()
-          row.base_salary = (raw['base_salary'] ?? '').trim()
+          row.email         = (raw['email']         ?? '').trim()
+          row.accrual_month = (raw['accrual_month'] ?? '').trim()
+          row.base_salary   = (raw['base_salary']   ?? '').trim()
+          // 귀속월 정규화 (Jan-26 등 Excel 형식 대응)
+          if (row.accrual_month) {
+            row.accrual_month = normalizeAccrualMonth(row.accrual_month) ?? row.accrual_month
+          }
           return row as unknown as PayslipCsvRow
         })
 
@@ -98,9 +127,9 @@ export function validatePayslipRow(
   if (!row.email) addFail('이메일 필수값')
   else if (!EMAIL_RE.test(row.email)) addFail(`이메일 형식 오류: ${row.email}`)
 
-  // 귀속월
-  if (!row.pay_month) addFail('귀속월 필수값 (YYYY-MM-DD, 예: 2026-04-01)')
-  else if (!MONTH_RE.test(row.pay_month)) addFail(`귀속월 형식 오류: ${row.pay_month} (YYYY-MM-DD 필요)`)
+  // 귀속월 (normalizeAccrualMonth 통과 후 형식 검사)
+  if (!row.accrual_month) addFail('귀속월 필수값 (YYYY-MM-DD, 예: 2026-04-01)')
+  else if (!MONTH_RE.test(row.accrual_month)) addFail(`귀속월 형식 오류: ${row.accrual_month} (YYYY-MM-DD 필요)`)
 
   // 기본급
   if (!row.base_salary) addFail('기본급 필수값')
@@ -123,6 +152,8 @@ export function validatePayslipRow(
     ['Holiday_bonus',          '명절상여'],
     ['Total_payment',          '지급합계'],
     ['Total_tax_salary',       '과세급여합계'],
+    ['basic_work_time',        '기본근로시간'],
+    ['working_days',           '근무일수'],
   ]
   for (const [key, label] of earningsFields) {
     const val = row[key]
@@ -159,10 +190,10 @@ export function validatePayslipRow(
   // 날짜 필드 (선택)
   if (row.payment_date && !DATE_RE.test(row.payment_date))
     addFail(`급여지급일 형식 오류: ${row.payment_date} (YYYY-MM-DD 필요)`)
-  if (row.start_date && !DATE_RE.test(row.start_date))
-    addFail(`정산시작일 형식 오류: ${row.start_date} (YYYY-MM-DD 필요)`)
-  if (row.end_date && !DATE_RE.test(row.end_date))
-    addFail(`정산종료일 형식 오류: ${row.end_date} (YYYY-MM-DD 필요)`)
+  if (row.Start_date && !DATE_RE.test(row.Start_date))
+    addFail(`정산시작일 형식 오류: ${row.Start_date} (YYYY-MM-DD 필요)`)
+  if (row.End_date && !DATE_RE.test(row.End_date))
+    addFail(`정산종료일 형식 오류: ${row.End_date} (YYYY-MM-DD 필요)`)
 
   return failures
 }
@@ -176,7 +207,7 @@ export function checkPayslipInternalDuplicates(rows: PayslipCsvRow[]): {
 
   rows.forEach((row, idx) => {
     const rowNumber = idx + 2
-    const key = `${row.email.toLowerCase()}|${row.pay_month}`
+    const key = `${row.email.toLowerCase()}|${row.accrual_month}`
 
     if (seen.has(key)) {
       const existing = duplicates.get(key) ?? [seen.get(key)!]
