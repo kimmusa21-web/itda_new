@@ -61,9 +61,11 @@ export interface EmployeeInviteInput {
   jobDescription?: string
   workLocation?:  string
   joinDate:       string
-  salaryType?:      'annual' | 'monthly'
+  salaryType?:      'annual' | 'monthly' | 'hourly'
   salaryAmount?:    number | ''
   salaryBasis?:     'gross' | 'net'
+  nonTaxableItems?: { name: string; amount: number }[]
+  taxableTotal?:    number
   isContract?:      boolean
   contractEndDate?: string
   weeklyWorkHours?: number | null
@@ -158,6 +160,11 @@ export async function createEmployeeWithInvite(
     nationality:         input.nationality || null,
     visa_type:           input.visaType || null,
     registration_number: input.registrationNumber || null,
+    salary_type:         input.salaryType || null,
+    salary_amount:       input.salaryAmount || null,
+    salary_basis:        input.salaryBasis || null,
+    non_taxable_items:   input.nonTaxableItems?.length ? input.nonTaxableItems : null,
+    taxable_total:       input.taxableTotal ?? null,
   }
 
   let employee: { id: number; name: string; email: string } | null = null

@@ -15,6 +15,11 @@ import {
 } from '@/lib/validation'
 
 /* ── 타입 ──────────────────────────────────────────────── */
+export type NonTaxableItem = {
+  name: string
+  amount: number | ''
+}
+
 export type EmployeeCreateInput = {
   name: string
   email: string
@@ -36,9 +41,10 @@ export type EmployeeCreateInput = {
   nationality: string
   visaType: string
   registrationNumber: string
-  salaryType: 'annual' | 'monthly'
+  salaryType: 'annual' | 'monthly' | 'hourly'
   salaryAmount: number | ''
   salaryBasis: 'gross' | 'net'
+  nonTaxableItems: NonTaxableItem[]
 }
 
 const INITIAL: EmployeeCreateInput = {
@@ -50,6 +56,7 @@ const INITIAL: EmployeeCreateInput = {
   isForeigner: false, nationality: '', visaType: '',
   registrationNumber: '',
   salaryType: 'monthly', salaryAmount: '', salaryBasis: 'gross',
+  nonTaxableItems: [],
 }
 
 type SubmitState = 'idle' | 'loading' | 'success' | 'error'
@@ -81,9 +88,19 @@ async function realCreateEmployeeRequest(
       nationality:        data.nationality        || undefined,
       visaType:           data.visaType           || undefined,
       registrationNumber: data.registrationNumber || undefined,
-      salaryType:     data.salaryType,
-      salaryAmount:   data.salaryAmount  || undefined,
-      salaryBasis:    data.salaryBasis,
+      salaryType:        data.salaryType,
+      salaryAmount:      data.salaryAmount || undefined,
+      salaryBasis:       data.salaryBasis,
+      nonTaxableItems:   data.nonTaxableItems
+        .filter(i => i.name.trim() && typeof i.amount === 'number' && i.amount > 0)
+        .map(i => ({ name: i.name.trim(), amount: i.amount as number })),
+      taxableTotal: (() => {
+        const base = typeof data.salaryAmount === 'number' ? data.salaryAmount : 0
+        const nonTax = data.nonTaxableItems.reduce(
+          (sum, i) => sum + (typeof i.amount === 'number' ? i.amount : 0), 0
+        )
+        return base > 0 ? Math.max(0, base - nonTax) : undefined
+      })(),
     },
     companyId,
   )
