@@ -149,15 +149,17 @@ export async function uploadEmployeesCsv(
   /* 10. 유효 행 배치 INSERT */
   if (validRows.length > 0) {
     const records = validRows.map(({ row }, i) => ({
-      company_id:      companyId,
-      name:            row.name,
-      email:           row.email,
-      employee_number: generatedNumbers[i] || null,
-      department:      row.department || null,
-      position:        row.position   || null,
-      Tel:             row.phone      || null,
-      Date_of_joining: row.join_date  || null,
-      is_active:       row.employment_status !== 'inactive',
+      company_id:        companyId,
+      name:              row.name,
+      email:             row.email,
+      employee_number:   generatedNumbers[i] || null,
+      department:        row.department || null,
+      position:          row.position   || null,
+      Tel:               row.phone      || null,
+      Date_of_joining:   row.join_date  || null,
+      is_active:         row.employment_status !== 'inactive',
+      is_contract:       row.is_contract === 'Y',
+      contract_end_date: row.contract_end_date || null,
     }))
 
     // 50건씩 배치 처리 (사번은 이미 generatedNumbers에 할당됨)

@@ -30,6 +30,8 @@ const TEMPLATE_EXAMPLE_ROWS: EmployeeCsvRawRow[] = [
     phone:             '010-1234-5678',
     join_date:         '2024-01-15',
     employment_status: 'active',
+    is_contract:       'N',
+    contract_end_date: '',
   },
   {
     name:              '김영희',
@@ -40,6 +42,8 @@ const TEMPLATE_EXAMPLE_ROWS: EmployeeCsvRawRow[] = [
     phone:             '010-2345-6789',
     join_date:         '2023-03-01',
     employment_status: 'active',
+    is_contract:       'Y',
+    contract_end_date: '2025-02-28',
   },
 ]
 
@@ -115,6 +119,8 @@ export function parseEmployeeCsv(file: File): Promise<ParseResult> {
           phone:             (row['phone']             ?? '').trim(),
           join_date:         (row['join_date']         ?? '').trim(),
           employment_status: (row['employment_status'] ?? '').trim().toLowerCase(),
+          is_contract:       (row['is_contract']       ?? '').trim().toUpperCase(),
+          contract_end_date: (row['contract_end_date'] ?? '').trim(),
         } as EmployeeCsvRawRow))
 
         resolve({ rows, headerError: null })
@@ -167,6 +173,16 @@ export function validateEmployeeRow(
     reasons.push(
       `재직상태 값 오류: "${row.employment_status}" → active 또는 inactive 만 허용`
     )
+  }
+
+  // is_contract 허용값 (입력된 경우만)
+  if (row.is_contract && !['Y', 'N'].includes(row.is_contract)) {
+    reasons.push(`계약직여부 값 오류: "${row.is_contract}" → Y 또는 N 만 허용`)
+  }
+
+  // contract_end_date 형식 (입력된 경우만)
+  if (row.contract_end_date && !isValidDate(row.contract_end_date)) {
+    reasons.push(`계약만료일 형식 오류 (YYYY-MM-DD): "${row.contract_end_date}"`)
   }
 
   return { valid: reasons.length === 0, reasons }
