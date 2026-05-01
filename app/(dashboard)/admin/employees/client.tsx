@@ -131,6 +131,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
           is_active:         true,
           is_contract:       form.is_contract ?? false,
           contract_end_date: form.contract_end_date ?? null,
+          weekly_work_hours: form.weekly_work_hours ?? null,
         })
         if (!result.success) throw new Error(result.error)
       } else if (modal === 'edit' && selected) {
@@ -142,6 +143,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
           'Working place': form['Working place'], 'Work details': form['Work details'],
           is_contract:       form.is_contract ?? false,
           contract_end_date: form.contract_end_date ?? null,
+          weekly_work_hours: form.weekly_work_hours ?? null,
         }).eq('id', selected.id)
         if (editErr) throw new Error(editErr.message)
       } else if (modal === 'quit' && selected) {
@@ -475,6 +477,22 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
                 <option value="M">남성</option>
                 <option value="F">여성</option>
               </select>
+            </div>
+            {/* 1주 소정근로시간 */}
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">1주 소정근로시간</label>
+              <div className="relative">
+                <input
+                  className="input pr-10"
+                  type="number"
+                  min={1}
+                  max={168}
+                  placeholder="40"
+                  value={(form as Record<string, unknown>).weekly_work_hours as string ?? ''}
+                  onChange={e => setForm(p => ({ ...p, weekly_work_hours: e.target.value ? Number(e.target.value) : null }))}
+                />
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">시간</span>
+              </div>
             </div>
             {/* 고용 형태 */}
             <div className="col-span-2">

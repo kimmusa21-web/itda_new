@@ -32,6 +32,7 @@ const TEMPLATE_EXAMPLE_ROWS: EmployeeCsvRawRow[] = [
     employment_status: 'active',
     is_contract:       'N',
     contract_end_date: '',
+    weekly_work_hours: '40',
   },
   {
     name:              '김영희',
@@ -44,6 +45,7 @@ const TEMPLATE_EXAMPLE_ROWS: EmployeeCsvRawRow[] = [
     employment_status: 'active',
     is_contract:       'Y',
     contract_end_date: '2025-02-28',
+    weekly_work_hours: '40',
   },
 ]
 
@@ -121,6 +123,7 @@ export function parseEmployeeCsv(file: File): Promise<ParseResult> {
           employment_status: (row['employment_status'] ?? '').trim().toLowerCase(),
           is_contract:       (row['is_contract']       ?? '').trim().toUpperCase(),
           contract_end_date: (row['contract_end_date'] ?? '').trim(),
+          weekly_work_hours: (row['weekly_work_hours'] ?? '').trim(),
         } as EmployeeCsvRawRow))
 
         resolve({ rows, headerError: null })
@@ -183,6 +186,14 @@ export function validateEmployeeRow(
   // contract_end_date 형식 (입력된 경우만)
   if (row.contract_end_date && !isValidDate(row.contract_end_date)) {
     reasons.push(`계약만료일 형식 오류 (YYYY-MM-DD): "${row.contract_end_date}"`)
+  }
+
+  // weekly_work_hours — 양의 정수, 최대 168 (입력된 경우만)
+  if (row.weekly_work_hours) {
+    const h = Number(row.weekly_work_hours)
+    if (!Number.isInteger(h) || h < 1 || h > 168) {
+      reasons.push(`1주소정근로시간 값 오류: "${row.weekly_work_hours}" → 1~168 사이의 정수`)
+    }
   }
 
   return { valid: reasons.length === 0, reasons }

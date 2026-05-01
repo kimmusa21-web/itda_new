@@ -66,6 +66,7 @@ export interface EmployeeInviteInput {
   salaryBasis?:     'gross' | 'net'
   isContract?:      boolean
   contractEndDate?: string
+  weeklyWorkHours?: number | null
 }
 
 /* ================================================================
@@ -147,6 +148,7 @@ export async function createEmployeeWithInvite(
     is_active:         false,
     is_contract:       input.isContract ?? false,
     contract_end_date: input.contractEndDate || null,
+    weekly_work_hours: input.weeklyWorkHours ?? null,
   }
 
   let employee: { id: number; name: string; email: string } | null = null

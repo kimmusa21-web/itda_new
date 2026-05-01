@@ -15,8 +15,9 @@ export interface EmployeeEditInput {
   job:             string
   workLocation:    string
   joinDate:        string
-  isContract:      boolean
-  contractEndDate: string
+  isContract:       boolean
+  contractEndDate:  string
+  weeklyWorkHours:  string
 }
 
 export type EmployeeEditResult = { success: true } | { success: false; error: string }
@@ -64,8 +65,9 @@ export async function updateEmployeeByManager(
       job:               data.job          || null,
       'Working place':   data.workLocation || null,
       Date_of_joining:   data.joinDate     || null,
-      is_contract:       data.isContract,
-      contract_end_date: data.contractEndDate || null,
+      is_contract:        data.isContract,
+      contract_end_date:  data.contractEndDate || null,
+      weekly_work_hours:  data.weeklyWorkHours ? Number(data.weeklyWorkHours) : null,
     })
     .eq('id', employeeId)
 

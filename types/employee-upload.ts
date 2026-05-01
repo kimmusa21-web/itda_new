@@ -14,6 +14,7 @@ export interface EmployeeCsvRawRow {
   employment_status: string
   is_contract: string        // "Y" = 계약직, 그 외 = 정규직
   contract_end_date: string  // YYYY-MM-DD (계약직인 경우)
+  weekly_work_hours: string  // 숫자 (예: 40)
 }
 
 /** 행별 업로드 결과 */
@@ -52,6 +53,7 @@ export const EMPLOYEE_CSV_HEADERS = [
   'employment_status',
   'is_contract',
   'contract_end_date',
+  'weekly_work_hours',
 ] as const
 
 export type EmployeeCsvHeader = typeof EMPLOYEE_CSV_HEADERS[number]
@@ -74,6 +76,7 @@ export const CSV_HEADER_LABELS: Record<EmployeeCsvHeader, string> = {
   employment_status:  '재직상태 (active/inactive)',
   is_contract:        '계약직여부 (Y/N)',
   contract_end_date:  '계약만료일 (YYYY-MM-DD)',
+  weekly_work_hours:  '1주소정근로시간',
 }
 
 /** employment_status 허용값 */

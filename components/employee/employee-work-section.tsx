@@ -28,6 +28,21 @@ export function EmployeeWorkSection({ form, errors, onChange }: Props) {
           />
         </Field>
 
+        <Field label="1주 소정근로시간" hint="단위: 시간 (예: 40)">
+          <div className="relative">
+            <input
+              type="number"
+              className={inp(undefined)}
+              placeholder="40"
+              min={1}
+              max={168}
+              value={form.weeklyWorkHours}
+              onChange={e => onChange('weeklyWorkHours', e.target.value)}
+            />
+            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">시간</span>
+          </div>
+        </Field>
+
         {/* 계약직 여부 */}
         <Field label="고용 형태">
           <div className="flex items-center gap-3 h-[42px]">

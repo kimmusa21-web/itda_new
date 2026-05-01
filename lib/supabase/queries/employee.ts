@@ -22,6 +22,7 @@ export interface EmployeeRow {
   'Work details': string | null
   is_contract: boolean
   contract_end_date: string | null
+  weekly_work_hours: number | null
   companies?: { name: string } | null
 }
 

@@ -223,6 +223,7 @@ function EditModal({ emp, onClose, onSaved }: {
     joinDate:        emp.Date_of_joining   ?? '',
     isContract:      emp.is_contract       ?? false,
     contractEndDate: emp.contract_end_date ?? '',
+    weeklyWorkHours: emp.weekly_work_hours != null ? String(emp.weekly_work_hours) : '',
   })
   const [saving, setSaving] = useState(false)
   const [errMsg, setErrMsg] = useState<string | null>(null)
@@ -253,6 +254,7 @@ function EditModal({ emp, onClose, onSaved }: {
         Date_of_joining:   form.joinDate         || null,
         is_contract:       form.isContract,
         contract_end_date: form.contractEndDate  || null,
+        weekly_work_hours: form.weeklyWorkHours ? Number(form.weeklyWorkHours) : null,
       })
     } else {
       setErrMsg(result.error)
@@ -269,8 +271,9 @@ function EditModal({ emp, onClose, onSaved }: {
     ['직급',     'grade',        'text'],
     ['직책',     'roleTitle',    'text'],
     ['직무',     'job',          'text'],
-    ['근무지',   'workLocation', 'text'],
-    ['입사일',   'joinDate',     'date'],
+    ['근무지',           'workLocation',    'text'],
+    ['입사일',           'joinDate',        'date'],
+    ['1주 소정근로시간', 'weeklyWorkHours', 'number'],
   ]
 
   return (

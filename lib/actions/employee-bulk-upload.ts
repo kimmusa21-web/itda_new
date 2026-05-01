@@ -160,6 +160,7 @@ export async function uploadEmployeesCsv(
       is_active:         row.employment_status !== 'inactive',
       is_contract:       row.is_contract === 'Y',
       contract_end_date: row.contract_end_date || null,
+      weekly_work_hours: row.weekly_work_hours ? Number(row.weekly_work_hours) : null,
     }))
 
     // 50건씩 배치 처리 (사번은 이미 generatedNumbers에 할당됨)
