@@ -26,6 +26,7 @@ export interface EmployeeRow {
   is_foreigner: boolean
   nationality: string | null
   visa_type: string | null
+  registration_number: string | null
   companies?: { name: string } | null
 }
 

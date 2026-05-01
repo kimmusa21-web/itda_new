@@ -28,6 +28,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
   const [form, setForm]                 = useState<Partial<EmployeeRow>>({})
   const [saving, setSaving]             = useState(false)
   const [inviting, setInviting]         = useState<number | null>(null)
+  const [regFocused, setRegFocused]     = useState(false)
   const [, startTransition]             = useTransition()
 
   // 퇴사 처리 — 급여 내역 요약
@@ -128,13 +129,14 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
           Role:            form.Role ?? null,
           'Working place':   form['Working place'] ?? null,
           'Work details':    form['Work details'] ?? null,
-          is_active:         true,
-          is_contract:       form.is_contract ?? false,
-          contract_end_date: form.contract_end_date ?? null,
-          weekly_work_hours: form.weekly_work_hours ?? null,
-          is_foreigner:      form.is_foreigner ?? false,
-          nationality:       form.nationality ?? null,
-          visa_type:         form.visa_type ?? null,
+          is_active:           true,
+          is_contract:         form.is_contract ?? false,
+          contract_end_date:   form.contract_end_date ?? null,
+          weekly_work_hours:   form.weekly_work_hours ?? null,
+          is_foreigner:        form.is_foreigner ?? false,
+          nationality:         form.nationality ?? null,
+          visa_type:           form.visa_type ?? null,
+          registration_number: form.registration_number ?? null,
         })
         if (!result.success) throw new Error(result.error)
       } else if (modal === 'edit' && selected) {
@@ -144,12 +146,13 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
           Date_of_joining: form.Date_of_joining, Tel: form.Tel, Sex: form.Sex,
           Grade: form.Grade, Role: form.Role,
           'Working place': form['Working place'], 'Work details': form['Work details'],
-          is_contract:       form.is_contract ?? false,
-          contract_end_date: form.contract_end_date ?? null,
-          weekly_work_hours: form.weekly_work_hours ?? null,
-          is_foreigner:      form.is_foreigner ?? false,
-          nationality:       form.nationality ?? null,
-          visa_type:         form.visa_type ?? null,
+          is_contract:         form.is_contract ?? false,
+          contract_end_date:   form.contract_end_date ?? null,
+          weekly_work_hours:   form.weekly_work_hours ?? null,
+          is_foreigner:        form.is_foreigner ?? false,
+          nationality:         form.nationality ?? null,
+          visa_type:           form.visa_type ?? null,
+          registration_number: form.registration_number ?? null,
         }).eq('id', selected.id)
         if (editErr) throw new Error(editErr.message)
       } else if (modal === 'quit' && selected) {
@@ -445,15 +448,14 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
               </div>
             )}
             {([
-              ['이름 *',        'name',       'text'],
-              ['이메일 *',      'email',      'email'],
-              ['생년월일 6자리', 'birthdate',  'text'],
-              ['부서',          'department', 'text'],
-              ['직위',          'position',   'text'],
-              ['직급',          'Grade',      'text'],
-              ['직책',          'Role',       'text'],
-              ['직무',          'job',        'text'],
-              ['전화번호',      'Tel',        'tel'],
+              ['이름 *',   'name',       'text'],
+              ['이메일 *', 'email',      'email'],
+              ['부서',     'department', 'text'],
+              ['직위',     'position',   'text'],
+              ['직급',     'Grade',      'text'],
+              ['직책',     'Role',       'text'],
+              ['직무',     'job',        'text'],
+              ['전화번호', 'Tel',        'tel'],
             ] as [string, keyof EmployeeRow, string][]).map(([label, key, type]) => (
               <div key={key}>
                 <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
@@ -465,6 +467,44 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
                 />
               </div>
             ))}
+            {/* 주민(외국인)등록번호 */}
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">주민(외국인)등록번호</label>
+              <input
+                className="input"
+                placeholder="901225-1234567"
+                maxLength={14}
+                value={
+                  !regFocused && (form.registration_number ?? '').replace(/\D/g, '').length === 13
+                    ? `${(form.registration_number ?? '').slice(0, 7)}*******`
+                    : (form.registration_number ?? '')
+                }
+                onFocus={() => setRegFocused(true)}
+                onBlur={() => setRegFocused(false)}
+                onChange={e => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 13)
+                  const formatted = digits.length > 6 ? `${digits.slice(0, 6)}-${digits.slice(6)}` : digits
+                  setForm(p => {
+                    const next: Partial<EmployeeRow> = { ...p, registration_number: formatted || null }
+                    if (digits.length >= 6) next.birthdate = digits.slice(0, 6)
+                    return next
+                  })
+                }}
+              />
+              <p className="text-[11px] text-slate-400 mt-1">입력 시 생년월일 자동 기재 · 뒷자리 마스킹 표시</p>
+            </div>
+            {/* 생년월일 */}
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">생년월일 6자리</label>
+              <input
+                className="input"
+                placeholder="901225"
+                maxLength={6}
+                value={form.birthdate ?? ''}
+                onChange={e => setForm(p => ({ ...p, birthdate: e.target.value.replace(/\D/g, '').slice(0, 6) || null }))}
+              />
+              <p className="text-[11px] text-slate-400 mt-1">초기 비밀번호로 사용됩니다</p>
+            </div>
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">소속 회사</label>
               <select className="input" value={form.company_id ?? ''} onChange={f('company_id')}>

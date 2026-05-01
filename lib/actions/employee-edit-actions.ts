@@ -18,9 +18,10 @@ export interface EmployeeEditInput {
   isContract:       boolean
   contractEndDate:  string
   weeklyWorkHours:  string
-  isForeigner:      boolean
-  nationality:      string
-  visaType:         string
+  isForeigner:        boolean
+  nationality:        string
+  visaType:           string
+  registrationNumber: string
 }
 
 export type EmployeeEditResult = { success: true } | { success: false; error: string }
@@ -71,9 +72,10 @@ export async function updateEmployeeByManager(
       is_contract:        data.isContract,
       contract_end_date:  data.contractEndDate || null,
       weekly_work_hours:  data.weeklyWorkHours ? Number(data.weeklyWorkHours) : null,
-      is_foreigner:       data.isForeigner,
-      nationality:        data.nationality || null,
-      visa_type:          data.visaType || null,
+      is_foreigner:        data.isForeigner,
+      nationality:         data.nationality || null,
+      visa_type:           data.visaType || null,
+      registration_number: data.registrationNumber || null,
     })
     .eq('id', employeeId)
 

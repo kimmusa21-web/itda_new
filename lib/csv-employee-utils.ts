@@ -33,9 +33,10 @@ const TEMPLATE_EXAMPLE_ROWS: EmployeeCsvRawRow[] = [
     is_contract:       'N',
     contract_end_date: '',
     weekly_work_hours: '40',
-    is_foreigner:      'N',
-    nationality:       '',
-    visa_type:         '',
+    is_foreigner:        'N',
+    nationality:         '',
+    visa_type:           '',
+    registration_number: '',
   },
   {
     name:              '김영희',
@@ -52,6 +53,7 @@ const TEMPLATE_EXAMPLE_ROWS: EmployeeCsvRawRow[] = [
     is_foreigner:      'Y',
     nationality:       '미국',
     visa_type:         'E-7',
+    registration_number: '',
   },
 ]
 
@@ -130,9 +132,10 @@ export function parseEmployeeCsv(file: File): Promise<ParseResult> {
           is_contract:       (row['is_contract']       ?? '').trim().toUpperCase(),
           contract_end_date: (row['contract_end_date'] ?? '').trim(),
           weekly_work_hours: (row['weekly_work_hours'] ?? '').trim(),
-          is_foreigner:      (row['is_foreigner']      ?? '').trim().toUpperCase(),
-          nationality:       (row['nationality']       ?? '').trim(),
-          visa_type:         (row['visa_type']         ?? '').trim(),
+          is_foreigner:        (row['is_foreigner']        ?? '').trim().toUpperCase(),
+          nationality:         (row['nationality']         ?? '').trim(),
+          visa_type:           (row['visa_type']           ?? '').trim(),
+          registration_number: (row['registration_number'] ?? '').trim(),
         } as EmployeeCsvRawRow))
 
         resolve({ rows, headerError: null })
@@ -208,6 +211,14 @@ export function validateEmployeeRow(
   // is_foreigner 허용값 (입력된 경우만)
   if (row.is_foreigner && !['Y', 'N'].includes(row.is_foreigner)) {
     reasons.push(`외국인여부 값 오류: "${row.is_foreigner}" → Y 또는 N 만 허용`)
+  }
+
+  // registration_number 형식 (입력된 경우만) — 숫자 13자리
+  if (row.registration_number) {
+    const digits = row.registration_number.replace(/\D/g, '')
+    if (digits.length !== 13) {
+      reasons.push(`주민(외국인)등록번호 형식 오류: 숫자 13자리여야 합니다 (예: 901225-1234567)`)
+    }
   }
 
   return { valid: reasons.length === 0, reasons }

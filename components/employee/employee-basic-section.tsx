@@ -1,9 +1,21 @@
 'use client'
 
+import { useState } from 'react'
 import { User } from 'lucide-react'
 import type { EmployeeCreateInput } from './employee-form'
 import type { FormErrors } from '@/lib/validation'
 import { formatPhone } from '@/lib/validation'
+
+/** XXXXXX-XXXXXXX 형식으로 포매팅 (숫자만 추출, 최대 13자리) */
+function formatRegNumber(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 13)
+  return digits.length > 6 ? `${digits.slice(0, 6)}-${digits.slice(6)}` : digits
+}
+
+/** 등록번호 → 생년월일 6자리 추출 */
+function extractBirthdate(regNum: string): string {
+  return regNum.replace(/\D/g, '').slice(0, 6)
+}
 
 interface Props {
   form: EmployeeCreateInput
@@ -12,6 +24,20 @@ interface Props {
 }
 
 export function EmployeeBasicSection({ form, errors, onChange }: Props) {
+  const [regFocused, setRegFocused] = useState(false)
+
+  const isRegComplete = form.registrationNumber.replace(/\D/g, '').length === 13
+  const regDisplayValue = !regFocused && isRegComplete
+    ? `${form.registrationNumber.slice(0, 7)}*******`
+    : form.registrationNumber
+
+  function handleRegNumberChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const formatted = formatRegNumber(e.target.value)
+    onChange('registrationNumber', formatted)
+    const digits = formatted.replace(/\D/g, '')
+    if (digits.length >= 6) onChange('birthdate', digits.slice(0, 6))
+  }
+
   return (
     <FormSection icon={<User size={15} className="text-blue-500" />} title="기본 정보">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -37,8 +63,21 @@ export function EmployeeBasicSection({ form, errors, onChange }: Props) {
           />
         </Field>
 
+        <Field label="주민(외국인)등록번호"
+          hint="입력 시 생년월일 자동 기재 · 뒷자리는 마스킹 표시">
+          <input
+            className={inp(undefined)}
+            placeholder="901225-1234567"
+            maxLength={14}
+            value={regDisplayValue}
+            onFocus={() => setRegFocused(true)}
+            onBlur={() => setRegFocused(false)}
+            onChange={handleRegNumberChange}
+          />
+        </Field>
+
         <Field label="생년월일 6자리" error={errors.birthdate}
-          hint="초기 비밀번호 생성에 사용됩니다 (예: 901225)">
+          hint="초기 비밀번호로 사용됩니다 (등록번호 입력 시 자동 기재)">
           <input
             className={inp(errors.birthdate)}
             placeholder="901225"

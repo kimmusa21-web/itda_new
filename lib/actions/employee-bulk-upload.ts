@@ -161,9 +161,10 @@ export async function uploadEmployeesCsv(
       is_contract:       row.is_contract === 'Y',
       contract_end_date: row.contract_end_date || null,
       weekly_work_hours: row.weekly_work_hours ? Number(row.weekly_work_hours) : null,
-      is_foreigner:      row.is_foreigner === 'Y',
-      nationality:       row.nationality || null,
-      visa_type:         row.visa_type   || null,
+      is_foreigner:        row.is_foreigner === 'Y',
+      nationality:         row.nationality         || null,
+      visa_type:           row.visa_type           || null,
+      registration_number: row.registration_number || null,
     }))
 
     // 50건씩 배치 처리 (사번은 이미 generatedNumbers에 할당됨)

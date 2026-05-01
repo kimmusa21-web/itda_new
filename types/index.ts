@@ -89,6 +89,7 @@ export interface Employee {
   is_foreigner: boolean
   nationality: string | null
   visa_type: string | null
+  registration_number: string | null
 }
 
 // ── 급여 (MVP JSON 구조) ─────────────────────────────────────

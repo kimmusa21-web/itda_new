@@ -210,26 +210,28 @@ function EditModal({ emp, onClose, onSaved }: {
   onSaved: (updated: EmployeeRow) => void
 }) {
   const [form, setForm] = useState<EmployeeEditInput>({
-    name:            emp.name              ?? '',
-    phone:           emp.Tel               ?? '',
-    birthdate:       emp.birthdate         ?? '',
-    gender:          emp.Sex               ?? '',
-    department:      emp.department        ?? '',
-    position:        emp.position          ?? '',
-    grade:           emp.Grade             ?? '',
-    roleTitle:       emp.Role              ?? '',
-    job:             emp.job               ?? '',
-    workLocation:    emp['Working place']  ?? '',
-    joinDate:        emp.Date_of_joining   ?? '',
-    isContract:      emp.is_contract       ?? false,
-    contractEndDate: emp.contract_end_date ?? '',
-    weeklyWorkHours: emp.weekly_work_hours != null ? String(emp.weekly_work_hours) : '',
-    isForeigner:     emp.is_foreigner      ?? false,
-    nationality:     emp.nationality       ?? '',
-    visaType:        emp.visa_type         ?? '',
+    name:               emp.name              ?? '',
+    phone:              emp.Tel               ?? '',
+    birthdate:          emp.birthdate         ?? '',
+    gender:             emp.Sex               ?? '',
+    department:         emp.department        ?? '',
+    position:           emp.position          ?? '',
+    grade:              emp.Grade             ?? '',
+    roleTitle:          emp.Role              ?? '',
+    job:                emp.job               ?? '',
+    workLocation:       emp['Working place']  ?? '',
+    joinDate:           emp.Date_of_joining   ?? '',
+    isContract:         emp.is_contract       ?? false,
+    contractEndDate:    emp.contract_end_date ?? '',
+    weeklyWorkHours:    emp.weekly_work_hours != null ? String(emp.weekly_work_hours) : '',
+    isForeigner:        emp.is_foreigner      ?? false,
+    nationality:        emp.nationality       ?? '',
+    visaType:           emp.visa_type         ?? '',
+    registrationNumber: emp.registration_number ?? '',
   })
-  const [saving, setSaving] = useState(false)
-  const [errMsg, setErrMsg] = useState<string | null>(null)
+  const [saving, setSaving]         = useState(false)
+  const [errMsg, setErrMsg]         = useState<string | null>(null)
+  const [regFocused, setRegFocused] = useState(false)
 
   function set(key: keyof EmployeeEditInput, value: string) {
     setForm(f => ({ ...f, [key]: value }))
@@ -244,23 +246,24 @@ function EditModal({ emp, onClose, onSaved }: {
     if (result.success) {
       onSaved({
         ...emp,
-        name:              form.name,
-        Tel:               form.phone           || null,
-        birthdate:         form.birthdate        || null,
-        Sex:               form.gender           || null,
-        department:        form.department       || null,
-        position:          form.position         || null,
-        Grade:             form.grade            || null,
-        Role:              form.roleTitle        || null,
-        job:               form.job              || null,
-        'Working place':   form.workLocation     || null,
-        Date_of_joining:   form.joinDate         || null,
-        is_contract:       form.isContract,
-        contract_end_date: form.contractEndDate  || null,
-        weekly_work_hours: form.weeklyWorkHours ? Number(form.weeklyWorkHours) : null,
-        is_foreigner:      form.isForeigner,
-        nationality:       form.nationality       || null,
-        visa_type:         form.visaType          || null,
+        name:                form.name,
+        Tel:                 form.phone           || null,
+        birthdate:           form.birthdate        || null,
+        Sex:                 form.gender           || null,
+        department:          form.department       || null,
+        position:            form.position         || null,
+        Grade:               form.grade            || null,
+        Role:                form.roleTitle        || null,
+        job:                 form.job              || null,
+        'Working place':     form.workLocation     || null,
+        Date_of_joining:     form.joinDate         || null,
+        is_contract:         form.isContract,
+        contract_end_date:   form.contractEndDate  || null,
+        weekly_work_hours:   form.weeklyWorkHours ? Number(form.weeklyWorkHours) : null,
+        is_foreigner:        form.isForeigner,
+        nationality:         form.nationality       || null,
+        visa_type:           form.visaType          || null,
+        registration_number: form.registrationNumber || null,
       })
     } else {
       setErrMsg(result.error)
@@ -271,7 +274,6 @@ function EditModal({ emp, onClose, onSaved }: {
   const fields: [string, StringKey, string][] = [
     ['이름 *',   'name',         'text'],
     ['전화번호', 'phone',        'tel'],
-    ['생년월일', 'birthdate',    'date'],
     ['부서',     'department',   'text'],
     ['직위',     'position',     'text'],
     ['직급',     'grade',        'text'],
@@ -305,6 +307,44 @@ function EditModal({ emp, onClose, onSaved }: {
               />
             </div>
           ))}
+          {/* 주민(외국인)등록번호 */}
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">주민(외국인)등록번호</label>
+            <input
+              className="input"
+              placeholder="901225-1234567"
+              maxLength={14}
+              value={
+                !regFocused && form.registrationNumber.replace(/\D/g, '').length === 13
+                  ? `${form.registrationNumber.slice(0, 7)}*******`
+                  : form.registrationNumber
+              }
+              onFocus={() => setRegFocused(true)}
+              onBlur={() => setRegFocused(false)}
+              onChange={e => {
+                const digits = e.target.value.replace(/\D/g, '').slice(0, 13)
+                const formatted = digits.length > 6 ? `${digits.slice(0, 6)}-${digits.slice(6)}` : digits
+                setForm(f => ({
+                  ...f,
+                  registrationNumber: formatted,
+                  ...(digits.length >= 6 ? { birthdate: digits.slice(0, 6) } : {}),
+                }))
+              }}
+            />
+            <p className="text-[11px] text-slate-400 mt-1">입력 시 생년월일 자동 기재 · 뒷자리 마스킹 표시</p>
+          </div>
+          {/* 생년월일 */}
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">생년월일 6자리</label>
+            <input
+              className="input"
+              placeholder="901225"
+              maxLength={6}
+              value={form.birthdate}
+              onChange={e => set('birthdate', e.target.value.replace(/\D/g, '').slice(0, 6))}
+            />
+            <p className="text-[11px] text-slate-400 mt-1">초기 비밀번호로 사용됩니다</p>
+          </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">성별</label>
             <select className="input" value={form.gender} onChange={e => set('gender', e.target.value)}>

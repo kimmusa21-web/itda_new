@@ -40,6 +40,7 @@ export interface CreateEmployeeAdminInput {
   is_foreigner?: boolean
   nationality?: string | null
   visa_type?: string | null
+  registration_number?: string | null
 }
 
 export async function createEmployeeAdmin(
@@ -102,10 +103,11 @@ export async function createEmployeeAdmin(
     is_contract:       input.is_contract ?? false,
     contract_end_date: input.contract_end_date ?? null,
     weekly_work_hours: input.weekly_work_hours ?? null,
-    is_foreigner:      input.is_foreigner ?? false,
-    nationality:       input.nationality ?? null,
-    visa_type:         input.visa_type ?? null,
-    user_id:           null,
+    is_foreigner:        input.is_foreigner ?? false,
+    nationality:         input.nationality ?? null,
+    visa_type:           input.visa_type ?? null,
+    registration_number: input.registration_number ?? null,
+    user_id:             null,
   })
 
   if (error) {
