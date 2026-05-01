@@ -246,6 +246,12 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
             ))}
           </div>
           <TotalRow label="지급합계" value={d.totalEarnings} color="blue" revealed={revealed} />
+          {d.totalTaxSalary != null && (
+            <div className="px-5 py-2.5 border-t border-slate-100 bg-slate-50/40 flex justify-between items-center">
+              <span className="text-xs font-semibold text-slate-500">과세금액합계</span>
+              <AmountText value={d.totalTaxSalary} revealed={revealed} className="text-sm font-semibold text-slate-600" />
+            </div>
+          )}
         </div>
 
         {/* ── 공제 내역 ── */}
