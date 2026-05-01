@@ -6,6 +6,7 @@ import Link                                      from 'next/link'
 import { createClient }                          from '@/lib/supabase/client'
 import type { EmployeeRow }                      from '@/lib/supabase/queries/employee'
 import { formatDateShort, cn }                   from '@/lib/utils'
+import { formatKRW }                             from '@/lib/payslip-utils'
 import { createEmployeeAdmin, deleteEmployeeAdmin } from '@/lib/actions/employee-admin-create'
 import EmployeeExportButton                      from '@/components/employees/employee-export-button'
 
@@ -29,10 +30,70 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
   const [inviting, setInviting]         = useState<number | null>(null)
   const [, startTransition]             = useTransition()
 
+  // 퇴사 처리 — 급여 내역 요약
+  interface QuitSummary {
+    prevYear: number
+    prevYearTaxable: number
+    prevYearTotal: number
+    currentYear: number
+    currentYearTaxable: number
+    currentYearTotal: number
+    hasData: boolean
+  }
+  const [quitSummary, setQuitSummary]         = useState<QuitSummary | null>(null)
+  const [quitSummaryLoading, setQuitSummaryLoading] = useState(false)
+  const [quitDateDirty, setQuitDateDirty]     = useState(false)
+
   async function reload() {
     const { data } = await supabase
       .from('employees').select('*, companies(name)').order('name')
     setEmployees(data ?? [])
+  }
+
+  async function loadQuitSummary(employeeId: number, quitDate: string) {
+    if (!quitDate) return
+    setQuitSummaryLoading(true)
+    setQuitDateDirty(false)
+    try {
+      const quitYear = new Date(quitDate).getFullYear()
+      const prevYear = quitYear - 1
+      const { data } = await supabase
+        .from('pay_info_v2')
+        .select('accrual_month, total_earnings, Total_tax_salary')
+        .eq('employee_id', employeeId)
+        .gte('accrual_month', `${prevYear}-01-01`)
+        .lte('accrual_month', `${quitYear}-12-31`)
+      const records = data ?? []
+      const prev = records.filter(r => r.accrual_month.startsWith(String(prevYear)))
+      const curr = records.filter(r => r.accrual_month.startsWith(String(quitYear)))
+      setQuitSummary({
+        prevYear,
+        prevYearTaxable: prev.reduce((s, r) => s + (r.Total_tax_salary ?? r.total_earnings ?? 0), 0),
+        prevYearTotal:   prev.reduce((s, r) => s + (r.total_earnings ?? 0), 0),
+        currentYear:     quitYear,
+        currentYearTaxable: curr.reduce((s, r) => s + (r.Total_tax_salary ?? r.total_earnings ?? 0), 0),
+        currentYearTotal:   curr.reduce((s, r) => s + (r.total_earnings ?? 0), 0),
+        hasData: records.length > 0,
+      })
+    } finally {
+      setQuitSummaryLoading(false)
+    }
+  }
+
+  function openQuitModal(emp: EmployeeRow) {
+    const today = new Date().toISOString().slice(0, 10)
+    setSelected(emp)
+    setForm({ quit_date: today })
+    setQuitSummary(null)
+    setQuitDateDirty(false)
+    setModal('quit')
+    loadQuitSummary(emp.id, today)
+  }
+
+  function closeQuitModal() {
+    setModal(null)
+    setQuitSummary(null)
+    setQuitDateDirty(false)
   }
 
   /* ── 클라이언트 사이드 필터링 (빠른 UX) ── */
@@ -92,6 +153,8 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
         if (!result.success) throw new Error(result.error)
       }
       setModal(null)
+      setQuitSummary(null)
+      setQuitDateDirty(false)
       startTransition(reload)
     } catch (e: unknown) {
       alert('오류: ' + (e instanceof Error ? e.message : String(e)))
@@ -246,7 +309,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
                         </button>
                         {emp.is_active ? (
                           <button
-                            onClick={() => { setSelected(emp); setForm({ quit_date: new Date().toISOString().slice(0, 10) }); setModal('quit') }}
+                            onClick={() => openQuitModal(emp)}
                             className="text-xs text-red-500 hover:underline"
                           >
                             퇴사
@@ -327,7 +390,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
                   )}
                   {emp.is_active ? (
                     <button
-                      onClick={() => { setSelected(emp); setForm({ quit_date: new Date().toISOString().slice(0, 10) }); setModal('quit') }}
+                      onClick={() => openQuitModal(emp)}
                       className="flex-1 text-xs text-red-500 hover:underline py-1"
                     >
                       퇴사 처리
@@ -429,17 +492,103 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
 
       {/* 퇴사 처리 모달 */}
       {modal === 'quit' && selected && (
-        <Modal title="퇴사 처리" onClose={() => setModal(null)}>
-          <p className="text-sm text-slate-600 mb-4">{selected.name}을 퇴사 처리합니다.</p>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">퇴사일</label>
-            <input className="input" type="date" value={form.quit_date ?? ''}
-              onChange={e => setForm(p => ({ ...p, quit_date: e.target.value }))} />
+        <Modal title="퇴사 처리" onClose={closeQuitModal}>
+          {/* 직원 기본 정보 */}
+          <div className="bg-slate-50 rounded-xl px-4 py-3 mb-4 space-y-1.5">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">직원명</span>
+              <span className="font-semibold text-slate-900">{selected.name}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">입사일</span>
+              <span className="text-slate-700">{selected.Date_of_joining ?? '-'}</span>
+            </div>
           </div>
-          <div className="flex gap-2 mt-5">
-            <button onClick={() => setModal(null)} className="btn-secondary flex-1">취소</button>
-            <button onClick={save} className="btn-danger flex-1" disabled={saving}>
-              {saving ? '처리중...' : '퇴사 처리'}
+
+          {/* 퇴사일 입력 */}
+          <div className="mb-5">
+            <label className="block text-xs font-medium text-slate-600 mb-1">퇴사일</label>
+            <div className="flex gap-2">
+              <input
+                className="input flex-1"
+                type="date"
+                value={form.quit_date ?? ''}
+                onChange={e => {
+                  setForm(p => ({ ...p, quit_date: e.target.value }))
+                  setQuitDateDirty(true)
+                }}
+              />
+              {quitDateDirty && form.quit_date && (
+                <button
+                  onClick={() => loadQuitSummary(selected.id, form.quit_date!)}
+                  disabled={quitSummaryLoading}
+                  className="btn-secondary text-xs px-3 flex-shrink-0"
+                >
+                  재조회
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 급여 내역 요약 */}
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-slate-500 mb-2">급여 내역 요약</p>
+            {quitSummaryLoading && (
+              <div className="text-center py-5 text-sm text-slate-400">급여 내역 조회 중...</div>
+            )}
+            {!quitSummaryLoading && quitSummary && (
+              <div className="space-y-2">
+                {/* 전년도 */}
+                <div className="border border-slate-200 rounded-xl px-4 py-3">
+                  <p className="text-xs font-medium text-slate-400 mb-2">{quitSummary.prevYear}년 · 전년도</p>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">과세총액</span>
+                      <span className="font-semibold text-slate-900">
+                        {quitSummary.prevYearTaxable > 0 ? formatKRW(quitSummary.prevYearTaxable) : '—'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">총임금액</span>
+                      <span className="font-semibold text-slate-900">
+                        {quitSummary.prevYearTotal > 0 ? formatKRW(quitSummary.prevYearTotal) : '—'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {/* 퇴사연도 */}
+                <div className="border border-red-200 bg-red-50/40 rounded-xl px-4 py-3">
+                  <p className="text-xs font-medium text-red-500 mb-2">{quitSummary.currentYear}년 · 퇴사연도</p>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">과세총액</span>
+                      <span className="font-semibold text-slate-900">
+                        {quitSummary.currentYearTaxable > 0 ? formatKRW(quitSummary.currentYearTaxable) : '—'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">총임금액</span>
+                      <span className="font-semibold text-slate-900">
+                        {quitSummary.currentYearTotal > 0 ? formatKRW(quitSummary.currentYearTotal) : '—'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {!quitSummary.hasData && (
+                  <p className="text-xs text-slate-400 text-center pt-1">등록된 급여 내역이 없습니다.</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 pt-2 border-t border-slate-100">
+            <button onClick={closeQuitModal} className="btn-secondary flex-1">취소</button>
+            <button
+              onClick={save}
+              className="btn-danger flex-1"
+              disabled={saving || quitSummaryLoading || !quitSummary || quitDateDirty}
+            >
+              {saving ? '처리중...' : '최종 퇴사 처리 확인'}
             </button>
           </div>
         </Modal>
