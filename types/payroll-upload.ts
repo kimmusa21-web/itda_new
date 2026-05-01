@@ -112,6 +112,7 @@ export interface PreviewRow {
   totalEarnings:   number
   totalDeductions: number
   netPay:          number
+  totalTaxSalary?: number | null  // 과세급여합계
   status:          PreviewStatus
   errorReason?:    string
 }

@@ -53,9 +53,10 @@ export const STANDARD_CSV_COLUMNS: CsvColumnDef[] = [
   { key: 'health_insurance_adjustment', label: '건강보험료정산',    required: false, group: 'deductions', note: '음수 가능' },
   { key: 'Other_deductions',            label: '기타공제',          required: false, group: 'deductions' },
   // ── 합계 ────────────────────────────────────────────
-  { key: 'Total_payment',   label: '지급합계',    required: false, group: 'totals', note: '미입력 시 지급항목 합산' },
-  { key: 'Total_deductible',label: '공제합계',    required: false, group: 'totals', note: '미입력 시 공제항목 합산' },
-  { key: 'net_pay',         label: '차인지급액',  required: false, group: 'totals', note: '미입력 시 지급합계-공제합계' },
+  { key: 'Total_payment',    label: '지급합계',    required: false, group: 'totals', note: '미입력 시 지급항목 합산' },
+  { key: 'Total_tax_salary', label: '과세급여합계', required: false, group: 'totals', note: '비과세 항목 제외 과세소득 합계' },
+  { key: 'Total_deductible', label: '공제합계',    required: false, group: 'totals', note: '미입력 시 공제항목 합산' },
+  { key: 'net_pay',          label: '차인지급액',  required: false, group: 'totals', note: '미입력 시 지급합계-공제합계' },
 ]
 
 export const STANDARD_CSV_REQUIRED_KEYS = STANDARD_CSV_COLUMNS
@@ -79,7 +80,7 @@ export function generateStandardCsvTemplate(): string {
     '3000000', '300000', '150000', '', '', '200000', '', '', '', '', '',
     '', '', '', '',
     '148500', '116920', '15130', '27440', '52940', '5290', '', '', '', '', '',
-    '3650000', '-365720', '3284280',
+    '3650000', '3450000', '-365720', '3284280',
   ].join(',')
 
   const example2 = [
@@ -88,7 +89,7 @@ export function generateStandardCsvTemplate(): string {
     '2800000', '', '', '', '', '200000', '', '', '', '', '',
     '', '', '', '',
     '135900', '106940', '13830', '25100', '19800', '1980', '', '', '', '', '',
-    '3000000', '-302550', '2697450',
+    '3000000', '2800000', '-302550', '2697450',
   ].join(',')
 
   return '\uFEFF' + [header, example1, example2].join('\n')

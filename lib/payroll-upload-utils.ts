@@ -197,13 +197,16 @@ export function transformCsvRows(
   const startDateMap = mappings.find(m => m.db_key === 'start_date')
   const endDateMap   = mappings.find(m => m.db_key === 'end_date')
   const totalPayMap  = mappings.find(m => m.db_key === 'Total_payment')
+  const totalTaxMap  = mappings.find(m => m.db_key === 'Total_tax_salary')
   const totalDeMap   = mappings.find(m => m.db_key === 'Total_deductible')
   const netPayMap    = mappings.find(m => m.db_key === 'net_pay')
 
   // ★ workDayKey, otKey는 현재 미사용이므로 제거 (빌드 경고 방지)
 
   const earningMaps   = mappings.filter(m =>
-    m.group_type === 'earnings' && m.db_key !== 'Total_payment'
+    m.group_type === 'earnings' &&
+    m.db_key !== 'Total_payment' &&
+    m.db_key !== 'Total_tax_salary'   // 과세급여합계는 별도 추출, JSONB 제외
   )
   const deductionMaps = mappings.filter(m =>
     m.group_type === 'deductions' &&
@@ -267,6 +270,11 @@ export function transformCsvRows(
         ? parseCurrency(getColRaw(row, totalPayMap))
         : Object.values(earnings).reduce((s, v) => s + v, 0)
 
+    const totalTaxSalary =
+      totalTaxMap != null
+        ? (getColRaw(row, totalTaxMap) != null ? parseCurrency(getColRaw(row, totalTaxMap)) : null)
+        : null
+
     const totalDeductions =
       totalDeMap != null
         ? parseCurrency(getColRaw(row, totalDeMap))
@@ -296,6 +304,7 @@ export function transformCsvRows(
       totalEarnings,
       totalDeductions,
       netPay,
+      totalTaxSalary,
       status:          'valid',
     } satisfies PreviewRow
   })
@@ -332,7 +341,7 @@ export function toPayInfoPayloads(
         end_date:          p.endDate     || null,
         work_days:         null,
         overtime_hours:    null,
-        Total_tax_salary:  nvl(e.Total_tax_salary),
+        Total_tax_salary:  p.totalTaxSalary != null ? p.totalTaxSalary : null,
         // 지급 항목 개별 컬럼
         base_salary:               nvl(e.base_salary),
         overtime_pay_fixed:        nvl(e.overtime_pay_fixed),
