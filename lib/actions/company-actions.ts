@@ -306,6 +306,9 @@ export async function updateCompanyByManager(
     revalidatePath('/manager/company')
     revalidatePath(`/admin/companies/${profile.company_id}`)
     revalidatePath(`/admin/companies/${profile.company_id}/edit`)
+    revalidatePath('/manager/payroll', 'layout')
+    revalidatePath(`/admin/companies/${profile.company_id}/payroll`, 'layout')
+    revalidatePath('/employee/payslips', 'layout')
     return { success: true }
   } catch (e: any) {
     return { success: false, error: e.message }
