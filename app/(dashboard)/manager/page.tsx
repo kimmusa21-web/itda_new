@@ -1,12 +1,13 @@
 import { redirect }            from 'next/navigation'
 import Link                    from 'next/link'
-import { Plus, BarChart3, Users, Upload, ClipboardList } from 'lucide-react'
+import { Plus, BarChart3, Users, Upload } from 'lucide-react'
 import { createClient }        from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { getCompanyEmployees } from '@/lib/supabase/queries/employee'
 import { getAvailableMonthsV2 } from '@/lib/supabase/queries/payslip-v2'
 import { formatMonth }         from '@/lib/utils'
 import EmptyState              from '@/components/common/empty-state'
+import { InviteList }          from '@/components/manager-request/invite-list'
 
 export const metadata = { title: '대시보드 | itda' }
 
@@ -26,15 +27,32 @@ export default async function ManagerDashboard() {
     .from('profiles').select('name').eq('id', user.id).single()
 
   /* ── 데이터 병렬 조회 ── */
-  const [employees, months] = await Promise.all([
+  const [employees, months, invitesResult] = await Promise.all([
     getCompanyEmployees(companyId),
     getAvailableMonthsV2(companyId),
+    supabase
+      .from('employees')
+      .select('id, name, email, department, position, Date_of_joining, is_active, user_id, created_at')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false }),
   ])
 
   const activeEmployees = employees.filter(e => e.is_active)
   const latestMonth     = months[0] ?? null
 
   const recentEmployees = activeEmployees.slice(0, 4)
+
+  const inviteList = (invitesResult.data ?? []).map(e => ({
+    id:         e.id as number,
+    name:       e.name as string,
+    email:      e.email as string,
+    department: e.department as string | null,
+    position:   e.position as string | null,
+    joinDate:   e.Date_of_joining as string | null,
+    isActive:   e.is_active as boolean,
+    hasAccount: e.user_id !== null,
+    createdAt:  e.created_at as string,
+  }))
 
   return (
     <div className="space-y-6">
@@ -47,7 +65,7 @@ export default async function ManagerDashboard() {
         </div>
         <Link href="/manager/employees/create" className="btn-primary flex-shrink-0">
           <Plus size={16} />
-          직원 등록 요청
+          직원 등록
         </Link>
       </div>
 
@@ -147,10 +165,10 @@ export default async function ManagerDashboard() {
         <h2 className="section-title mb-3">빠른 메뉴</h2>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { href: '/manager/employees/create', icon: Plus,          label: '직원 등록 신청', sub: '개별 신청' },
+            { href: '/manager/employees/create', icon: Plus,          label: '직원 등록',     sub: '개별 등록' },
             { href: '/manager/employees/upload', icon: Upload,        label: '직원 CSV 등록', sub: '대량 등록' },
-            { href: '/manager/requests',         icon: ClipboardList, label: '신청 내역',      sub: '처리 현황' },
-            { href: '/manager/employees',        icon: Users,         label: '직원 관리',      sub: '목록 보기' },
+            { href: '/manager/employees',        icon: Users,         label: '직원관리',      sub: '목록 보기' },
+            { href: '/manager/payroll/upload',   icon: Upload,        label: '급여업로드',    sub: 'CSV 등록'  },
           ].map(item => (
             <Link
               key={item.href}
@@ -167,6 +185,17 @@ export default async function ManagerDashboard() {
             </Link>
           ))}
         </div>
+      </section>
+
+      {/* 초대 내역 */}
+      <section>
+        <div className="section-header">
+          <h2 className="section-title">초대 내역</h2>
+          <Link href="/manager/requests" className="text-xs text-blue-600 hover:underline">
+            전체 보기
+          </Link>
+        </div>
+        <InviteList companyId={companyId} initialList={inviteList} />
       </section>
     </div>
   )
