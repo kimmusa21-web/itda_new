@@ -230,10 +230,10 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
             <InfoSection icon={<Timer size={14} className="text-blue-500" />} title="근로시간 / 연차">
               <div className="grid grid-cols-2 gap-3 py-2">
                 <WorkTimeRow label="기본근로시간(h)" value={baseHours} wide />
-                <WorkTimeRow label="연장근로시간(분)" value={d.overTime} />
-                <WorkTimeRow label="휴일근로시간(분)" value={d.holidayWorkingHours} />
-                <WorkTimeRow label="야간근로시간(분)" value={d.nightWorkHours} />
-                <WorkTimeRow label="잔여연차시간(분)" value={d.remainingAnnualLeaveHours} />
+                <WorkTimeRow label="연장근로시간(h)" value={d.overTime} />
+                <WorkTimeRow label="휴일근로시간(h)" value={d.holidayWorkingHours} />
+                <WorkTimeRow label="야간근로시간(h)" value={d.nightWorkHours} />
+                <WorkTimeRow label="잔여연차시간(h)" value={d.remainingAnnualLeaveHours} />
               </div>
             </InfoSection>
           )
