@@ -89,7 +89,7 @@ export function EmployeeSalarySection({ form, errors, onChange }: Props) {
               className={`${inp(errors.salaryAmount)} pr-6`}
               placeholder={
                 form.salaryType === 'annual' ? '40,000,000'
-                : form.salaryType === 'hourly' ? '10,030'
+                : form.salaryType === 'hourly' ? '10,320'
                 : '3,000,000'
               }
               inputMode="numeric"
