@@ -24,9 +24,9 @@ import type {
 } from '@/types/payslip-csv-upload'
 
 /* ── 숫자 변환 헬퍼 ──────────────────────────────────────── */
-/** 빈값/NaN → null, 음수 허용 여부 선택 */
+/** 빈값/'-'/NaN → null, 음수 허용 여부 선택 */
 function toNumOrNull(v: string | undefined, allowNegative = false): number | null {
-  if (!v || v.trim() === '') return null
+  if (!v || v.trim() === '' || v.trim() === '-') return null
   const n = Number(v.replace(/,/g, ''))
   if (isNaN(n)) return null
   if (!allowNegative && n < 0) return null

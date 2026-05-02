@@ -106,9 +106,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])(-\d{2})?$/
 const DATE_RE  = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/
 
-/** 숫자 파싱 (음수 허용 여부 선택) */
+/** 숫자 파싱 (음수 허용 여부 선택) — '-'는 빈값(0)으로 처리 */
 function parseNum(v: string, allowNegative = false): { valid: boolean; value: number } {
-  if (!v) return { valid: true, value: 0 }
+  if (!v || v.trim() === '-') return { valid: true, value: 0 }
   const n = Number(v.replace(/,/g, ''))
   if (isNaN(n)) return { valid: false, value: 0 }
   if (!allowNegative && n < 0) return { valid: false, value: n }
