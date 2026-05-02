@@ -71,7 +71,6 @@ export async function sendPayslipEmails(params: {
     .from('pay_info_v2')
     .select(`
       id,
-      net_pay,
       payment_date,
       employees ( id, name, email )
     `)
@@ -106,14 +105,10 @@ export async function sendPayslipEmails(params: {
     }
 
     const payslipUrl = `${appUrl}/employee/payslips/${row.id}`
-    const netPay     = typeof row.net_pay === 'number'
-      ? row.net_pay
-      : parseFloat(String(row.net_pay ?? '0')) || 0
 
     const result = await sendPayslipNotificationEmail(email, name, {
       companyName,
       accrualMonth: params.accrualMonth,
-      netPay,
       paymentDate:  row.payment_date ?? null,
       payslipUrl,
     })

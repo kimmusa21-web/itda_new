@@ -172,7 +172,6 @@ function RegisterForm({
   setMessage: (m: any) => void
   message: { type: 'error'|'success'; text: string } | null
 }) {
-  const supabase = createClient()
   const [form, setForm] = useState({
     company_name: '', biz_number: '', representative: '',
     admin_name: '', admin_email: '', admin_phone: '',
@@ -186,10 +185,15 @@ function RegisterForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    const { error } = await supabase.from('company_admin_requests').insert(form)
+    const res = await fetch('/api/company-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
+    const data = await res.json().catch(() => ({}))
     setLoading(false)
-    if (error) setMessage({ type: 'error', text: '신청 중 오류가 발생했습니다: ' + error.message })
-    else       setMessage({ type: 'success', text: '가입 신청이 완료되었습니다. 검토 후 이메일로 안내드립니다.' })
+    if (!res.ok) setMessage({ type: 'error', text: '신청 중 오류가 발생했습니다: ' + (data.error ?? res.statusText) })
+    else         setMessage({ type: 'success', text: '가입 신청이 완료되었습니다. 검토 후 이메일로 안내드립니다.' })
   }
 
   const inputCls = "w-full bg-[#0f172a] border border-[#334155] text-slate-100 rounded-xl px-3.5 py-2.5 text-sm placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-colors"

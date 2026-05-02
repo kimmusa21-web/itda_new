@@ -108,16 +108,14 @@ export async function sendPayslipNotificationEmail(
   params: {
     companyName: string
     accrualMonth: string     // YYYY-MM
-    netPay: number
     paymentDate: string | null
     payslipUrl: string       // 직접 링크
   },
 ): Promise<{ success: boolean; error?: string }> {
-  const { companyName, accrualMonth, netPay, paymentDate, payslipUrl } = params
+  const { companyName, accrualMonth, paymentDate, payslipUrl } = params
   const [year, month] = accrualMonth.split('-')
   const monthLabel    = `${year}년 ${parseInt(month)}월`
-  const netPayFormatted = netPay.toLocaleString('ko-KR')
-  const payDateLabel    = paymentDate
+  const payDateLabel  = paymentDate
     ? new Date(paymentDate).toLocaleDateString('ko-KR')
     : '미정'
 
@@ -129,8 +127,7 @@ export async function sendPayslipNotificationEmail(
       ``,
       `${companyName}의 ${monthLabel} 급여명세서가 등록되었습니다.`,
       ``,
-      `  실수령액: ${netPayFormatted}원`,
-      `  지급일:   ${payDateLabel}`,
+      `  지급일: ${payDateLabel}`,
       ``,
       `아래 링크에서 급여명세서를 확인하세요:`,
       payslipUrl,
@@ -167,12 +164,6 @@ export async function sendPayslipNotificationEmail(
           <tr>
             <td style="color:#64748b;font-size:13px;padding:4px 0">지급일</td>
             <td style="color:#0f172a;font-size:13px;font-weight:600;text-align:right;padding:4px 0">${payDateLabel}</td>
-          </tr>
-          <tr>
-            <td style="color:#64748b;font-size:13px;padding:12px 0 0">실수령액</td>
-            <td style="color:#2563eb;font-size:20px;font-weight:800;text-align:right;padding:12px 0 0">
-              ${netPayFormatted}원
-            </td>
           </tr>
         </table>
       </div>

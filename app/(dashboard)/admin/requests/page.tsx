@@ -34,7 +34,7 @@ export default function AdminRequestsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">서류 관리</h1>
+        <h1 className="text-xl font-semibold text-slate-900">기업신청</h1>
         <p className="text-sm text-slate-500 mt-0.5">입사 신청, 퇴사 통보, 기업 가입 신청을 처리하세요</p>
       </div>
 
