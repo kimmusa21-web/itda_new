@@ -94,6 +94,8 @@ export async function POST(req: Request) {
     },
   })
 
+  let authUserId: string
+
   if (authError) {
     const isConflict =
       authError.message.toLowerCase().includes('already been registered') ||
@@ -101,21 +103,34 @@ export async function POST(req: Request) {
       authError.message.toLowerCase().includes('duplicate') ||
       authError.status === 422
 
-    if (isConflict) {
+    if (!isConflict) {
+      console.error('[complete-invite] Auth 계정 생성 실패:', authError.message)
+      return NextResponse.json(
+        { error: '계정 생성 중 오류가 발생했습니다: ' + authError.message },
+        { status: 500 },
+      )
+    }
+
+    // 재입사 케이스: 이미 Auth 계정이 존재 → 기존 계정을 새 employee 레코드에 연결
+    const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('email', normalizedEmail)
+      .maybeSingle()
+
+    if (!existingProfile) {
       return NextResponse.json(
         { error: '이미 가입된 이메일입니다. 로그인하거나 비밀번호 재설정을 이용하세요.' },
         { status: 409 },
       )
     }
 
-    console.error('[complete-invite] Auth 계정 생성 실패:', authError.message)
-    return NextResponse.json(
-      { error: '계정 생성 중 오류가 발생했습니다: ' + authError.message },
-      { status: 500 },
-    )
+    // 기존 auth user_id로 새 employee 레코드 연결
+    authUserId = existingProfile.id
+    console.log(`[complete-invite] 재입사 처리: 기존 계정 재사용 (authUserId=${authUserId})`)
+  } else {
+    authUserId = newUser!.user.id
   }
-
-  const authUserId = newUser.user.id
 
   /* ── 7. employees 연결 ────────────────────────────────────── */
   // 우선순위: invite.employee_id(직접 초대) → company_id+email 매칭(승인 플로우 fallback)

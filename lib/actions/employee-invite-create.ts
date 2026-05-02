@@ -103,24 +103,32 @@ export async function createEmployeeWithInvite(
   /* ── 3. 중복 이메일 확인 ──────────────────────────────────── */
   const normalizedEmail = input.email.trim().toLowerCase()
 
-  const { data: existing } = await service
+  // 재직 중인 직원 확인 (is_active=true) — 퇴사자는 허용
+  const { data: activeEmployee } = await service
     .from('employees')
-    .select('id, is_active, user_id')
+    .select('id')
     .eq('company_id', companyId)
     .ilike('email', normalizedEmail)
+    .eq('is_active', true)
     .maybeSingle()
 
-  if (existing) {
-    // 가입 완료된 재직 직원
-    if (existing.is_active && existing.user_id) {
-      return { success: false, error: '이미 가입 완료된 직원입니다' }
-    }
-    // 초대 발송됐으나 미가입 (is_active=true or false, user_id=null)
-    if (!existing.user_id) {
-      return { success: false, error: '이미 초대가 발송된 이메일입니다. 초대 재발송을 이용하세요.' }
-    }
-    // is_active=false && user_id 있음 → 퇴사 직원: 재등록 허용 (UPDATE)
+  if (activeEmployee) {
+    return { success: false, error: '이미 재직 중인 직원입니다' }
   }
+
+  // 초대 발송됐으나 미가입(user_id=null) 확인 — 재발송 유도
+  const { data: pendingEmployee } = await service
+    .from('employees')
+    .select('id')
+    .eq('company_id', companyId)
+    .ilike('email', normalizedEmail)
+    .is('user_id', null)
+    .maybeSingle()
+
+  if (pendingEmployee) {
+    return { success: false, error: '이미 초대가 발송된 이메일입니다. 초대 재발송을 이용하세요.' }
+  }
+  // 퇴사자(is_active=false, user_id 있음)는 재입사 허용 → 신규 레코드 생성
 
   /* ── 4. 사번 생성 ────────────────────────────────────────── */
   let employeeNumber: string | null = null
@@ -137,7 +145,7 @@ export async function createEmployeeWithInvite(
     }
   }
 
-  /* ── 5. 직원 INSERT or UPDATE (is_active=false, user_id=null) ── */
+  /* ── 5. 직원 INSERT (재입사자도 항상 신규 레코드, 이전 퇴사 이력 보존) ── */
   const employeePayload = {
     user_id:          null,
     name:             input.name.trim(),
@@ -170,26 +178,13 @@ export async function createEmployeeWithInvite(
   let employee: { id: number; name: string; email: string } | null = null
   let empError: { message: string } | null = null
 
-  if (existing) {
-    // 퇴사 직원 재등록: 기존 레코드 업데이트
-    const { data, error } = await service
-      .from('employees')
-      .update(employeePayload)
-      .eq('id', existing.id)
-      .select('id, name, email')
-      .single()
-    employee = data
-    empError = error
-  } else {
-    // 신규 직원 등록
-    const { data, error } = await service
-      .from('employees')
-      .insert({ company_id: companyId, email: normalizedEmail, ...employeePayload })
-      .select('id, name, email')
-      .single()
-    employee = data
-    empError = error
-  }
+  const { data, error } = await service
+    .from('employees')
+    .insert({ company_id: companyId, email: normalizedEmail, ...employeePayload })
+    .select('id, name, email')
+    .single()
+  employee = data
+  empError = error
 
   if (empError || !employee) {
     console.error('[createEmployeeWithInvite] employees 저장 실패:', empError?.message)

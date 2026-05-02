@@ -283,6 +283,7 @@ export async function uploadPayslipCsv(
     .from('employees')
     .select('id, email')
     .eq('company_id', companyId)
+    .eq('is_active', true)
 
   if (empError) {
     return { ...empty, totalCount, authError: `직원 조회 오류: ${empError.message}` }
