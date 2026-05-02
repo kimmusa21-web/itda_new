@@ -47,9 +47,13 @@ export async function GET(req: Request) {
     const { data, error } = await service
       .from('employees')
       .select(`
-        id, name, email, department, position, job, Date_of_joining,
+        id, name, email, Tel, birthdate, Sex,
+        employee_number, department, position, Grade, job,
+        Date_of_joining, "Working place",
         salary_type, salary_amount, salary_basis,
-        is_contract, weekly_work_hours,
+        non_taxable_items, taxable_total,
+        is_contract, contract_end_date, weekly_work_hours,
+        is_foreigner, nationality, visa_type,
         companies ( name )
       `)
       .eq('id', targetId)
@@ -59,13 +63,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ type, data })
   }
 
-  /* ── 퇴사 통보 ───────────────────────────────────────────────── */
+  /* ── 퇴사 통보 ──────────────────────────────────────────────── */
   if (type === 'employee_resignation') {
     const { data, error } = await service
       .from('employees')
       .select(`
-        id, name, email, department, position,
-        Date_of_joining, resignation_date,
+        id, name, email, Tel, birthdate, Sex,
+        employee_number, department, position, Grade, job,
+        Date_of_joining, quit_date, quit_reason,
+        unemployment_claim, unemployment_code,
+        salary_type, salary_amount,
+        is_contract, weekly_work_hours,
         companies ( name )
       `)
       .eq('id', targetId)

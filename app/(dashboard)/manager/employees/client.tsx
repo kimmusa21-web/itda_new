@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Search, Users, Mail, CalendarDays, Hash, X, Send, Loader2, Pencil, Check, AlertCircle } from 'lucide-react'
+import { Search, Users, Mail, CalendarDays, Hash, X, Send, Loader2, Pencil, Check, AlertCircle, LogOut } from 'lucide-react'
 import type { EmployeeRow } from '@/lib/supabase/queries/employee'
 import { formatDateShort, cn, getInitials } from '@/lib/utils'
 import { resendEmployeeInvite } from '@/lib/actions/employee-invite-create'
 import { updateEmployeeByManager } from '@/lib/actions/employee-edit-actions'
 import type { EmployeeEditInput } from '@/lib/actions/employee-edit-actions'
+import { resignEmployee } from '@/lib/actions/employee-resign'
+import type { ResignInput } from '@/lib/actions/employee-resign'
 
 type Filter = 'active' | 'inactive' | 'all'
 
@@ -45,9 +47,16 @@ export function ManagerEmployeesClient({ initialEmployees, companyName }: Props)
     return matchStatus && matchSearch
   })
 
+  const [resignTarget, setResignTarget] = useState<EmployeeRow | null>(null)
+
   function handleEditSaved(updated: EmployeeRow) {
     setEmployees(prev => prev.map(e => e.id === updated.id ? updated : e))
     setEditTarget(null)
+  }
+
+  function handleResigned(id: number) {
+    setEmployees(prev => prev.map(e => e.id === id ? { ...e, is_active: false } : e))
+    setResignTarget(null)
   }
 
   return (
@@ -95,6 +104,7 @@ export function ManagerEmployeesClient({ initialEmployees, companyName }: Props)
               key={emp.id}
               emp={emp}
               onEdit={() => setEditTarget(emp)}
+              onResign={() => setResignTarget(emp)}
             />
           ))}
         </div>
@@ -108,12 +118,21 @@ export function ManagerEmployeesClient({ initialEmployees, companyName }: Props)
           onSaved={handleEditSaved}
         />
       )}
+
+      {/* 퇴사 처리 모달 */}
+      {resignTarget && (
+        <ResignModal
+          emp={resignTarget}
+          onClose={() => setResignTarget(null)}
+          onDone={handleResigned}
+        />
+      )}
     </>
   )
 }
 
 /* ── 직원 카드 ─────────────────────────────────────────────── */
-function EmployeeListItem({ emp, onEdit }: { emp: EmployeeRow; onEdit: () => void }) {
+function EmployeeListItem({ emp, onEdit, onResign }: { emp: EmployeeRow; onEdit: () => void; onResign: () => void }) {
   const bg       = avatarBg(emp.name ?? '?')
   const initials = getInitials(emp.name ?? '?')
   const isLinked  = !!emp.user_id
@@ -198,6 +217,147 @@ function EmployeeListItem({ emp, onEdit }: { emp: EmployeeRow; onEdit: () => voi
             재발송
           </button>
         )}
+        {emp.is_active && (
+          <button onClick={onResign}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors">
+            <LogOut size={12} />퇴사처리
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ── 퇴사 처리 모달 ────────────────────────────────────────── */
+const QUIT_REASONS = [
+  '자발적 퇴사',
+  '계약기간 만료',
+  '권고사직',
+  '해고',
+  '정년퇴직',
+  '기타',
+]
+
+function ResignModal({ emp, onClose, onDone }: {
+  emp: EmployeeRow
+  onClose: () => void
+  onDone: (id: number) => void
+}) {
+  const [form, setForm] = useState<ResignInput>({
+    quitDate:          '',
+    quitReason:        '',
+    unemploymentClaim: false,
+    unemploymentCode:  '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [errMsg, setErrMsg] = useState<string | null>(null)
+
+  function set<K extends keyof ResignInput>(key: K, value: ResignInput[K]) {
+    setForm(f => ({ ...f, [key]: value }))
+  }
+
+  async function handleSubmit() {
+    if (!form.quitDate) { setErrMsg('퇴사일을 입력해주세요'); return }
+    if (!form.quitReason) { setErrMsg('퇴사사유를 선택해주세요'); return }
+    setSaving(true)
+    setErrMsg(null)
+    const result = await resignEmployee(emp.id, form)
+    setSaving(false)
+    if (result.success) {
+      onDone(emp.id)
+    } else {
+      setErrMsg(result.error ?? '처리 실패')
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 px-4 py-8 overflow-y-auto">
+      <div className="card w-full max-w-md p-5 my-auto">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-semibold text-slate-900">퇴사 처리</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">×</button>
+        </div>
+        <p className="text-xs text-slate-500 mb-5">{emp.name} · {emp.email}</p>
+
+        <div className="space-y-4">
+          {/* 퇴사일 */}
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">퇴사일 <span className="text-red-500">*</span></label>
+            <input
+              type="date"
+              className="input"
+              value={form.quitDate}
+              onChange={e => set('quitDate', e.target.value)}
+            />
+          </div>
+
+          {/* 퇴사사유 */}
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">퇴사사유 <span className="text-red-500">*</span></label>
+            <select
+              className="input"
+              value={form.quitReason}
+              onChange={e => set('quitReason', e.target.value)}
+            >
+              <option value="">선택하세요</option>
+              {QUIT_REASONS.map(r => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 실업급여 신청 여부 */}
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-2">실업급여 신청 여부</label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.unemploymentClaim}
+                onClick={() => set('unemploymentClaim', !form.unemploymentClaim)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  form.unemploymentClaim ? 'bg-blue-500' : 'bg-slate-200'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  form.unemploymentClaim ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+              <span className="text-sm text-slate-700">{form.unemploymentClaim ? '신청' : '미신청'}</span>
+            </div>
+          </div>
+
+          {/* 실업급여 코드 */}
+          {form.unemploymentClaim && (
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">이직 사유 코드</label>
+              <input
+                className="input font-mono"
+                placeholder="예: 23, 26, 32"
+                value={form.unemploymentCode}
+                onChange={e => set('unemploymentCode', e.target.value)}
+              />
+              <p className="text-[11px] text-slate-400 mt-1">고용보험 이직확인서 이직 사유 코드를 입력하세요</p>
+            </div>
+          )}
+        </div>
+
+        {errMsg && (
+          <div className="flex items-center gap-2 mt-4 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+            <AlertCircle size={13} />{errMsg}
+          </div>
+        )}
+
+        <div className="flex gap-2 mt-5 pt-4 border-t border-slate-100">
+          <button onClick={onClose} className="btn-secondary flex-1">취소</button>
+          <button
+            onClick={handleSubmit}
+            disabled={saving}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-rose-600 text-white text-sm font-medium hover:bg-rose-700 transition-colors disabled:opacity-50"
+          >
+            {saving ? <><Loader2 size={14} className="animate-spin" />처리 중...</> : <><LogOut size={14} />퇴사 처리</>}
+          </button>
+        </div>
       </div>
     </div>
   )

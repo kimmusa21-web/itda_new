@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, X, Building2, Users, UserMinus, Bell, ChevronDown, ChevronUp, FileText } from 'lucide-react'
+import { Check, X, Building2, Users, UserMinus, Bell, ChevronDown, ChevronUp, FileText, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import AdminNotificationsPanel from '@/components/admin/notifications-panel'
 import type { Notification } from '@/types'
+import type { EmployeeRow } from '@/lib/supabase/queries/employee'
 
 type RequestStatus = 'pending' | 'approved' | 'rejected'
 
@@ -28,10 +29,10 @@ interface CompanyRequest {
 }
 
 interface Props {
-  companyRequests:        CompanyRequest[]
-  employeeNotifications:  Notification[]
-  resignationNotifications: Notification[]
-  otherNotifications:     Notification[]
+  companyRequests:       CompanyRequest[]
+  employeeNotifications: Notification[]
+  resignedEmployees:     EmployeeRow[]
+  otherNotifications:    Notification[]
 }
 
 type Tab = 'company' | 'employee' | 'resignation'
@@ -196,7 +197,7 @@ function CompanyRequestItem({ req, onStatusChange }: {
   )
 }
 
-/* ── 알림 기반 탭 (직원등록 / 탈퇴요청) ────────────────── */
+/* ── 알림 기반 탭 (직원등록) ────────────────────────────── */
 function NotificationList({ notifications, emptyText }: {
   notifications: Notification[]
   emptyText: string
@@ -213,11 +214,144 @@ function NotificationList({ notifications, emptyText }: {
   )
 }
 
+/* ── 퇴사자 행 컴포넌트 ─────────────────────────────────── */
+function Row({ label, value }: { label: string; value?: string | null }) {
+  if (!value) return null
+  return (
+    <div className="flex gap-3 py-1.5 border-b border-slate-50 last:border-0">
+      <span className="w-24 flex-shrink-0 text-xs text-slate-400">{label}</span>
+      <span className="text-xs text-slate-700 font-medium">{value}</span>
+    </div>
+  )
+}
+
+function salaryLabel(type?: string | null) {
+  if (type === 'annual')  return '연봉제'
+  if (type === 'monthly') return '월급제'
+  if (type === 'hourly')  return '시급제'
+  return type ?? null
+}
+
+function ResignedEmployeeDetail({
+  employee,
+  onClose,
+}: {
+  employee: EmployeeRow
+  onClose: () => void
+}) {
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
+      <div className="fixed right-0 top-0 h-full w-full max-w-sm bg-white z-50 shadow-2xl flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center bg-rose-100 text-rose-600">
+              <UserMinus size={13} />
+            </div>
+            <span className="text-sm font-semibold text-slate-800">퇴사 정보</span>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+          <div className="bg-slate-50 rounded-xl p-4">
+            <p className="text-[10px] font-semibold text-slate-400 mb-2 uppercase tracking-wide">직원 정보</p>
+            <Row label="소속 기업"  value={(employee.companies as any)?.name} />
+            <Row label="이름"       value={employee.name} />
+            <Row label="이메일"     value={employee.email} />
+            <Row label="연락처"     value={employee.Tel} />
+            <Row label="생년월일"   value={employee.birthdate} />
+            <Row label="성별"       value={employee.Sex === 'M' ? '남' : employee.Sex === 'F' ? '여' : null} />
+          </div>
+          <div className="bg-slate-50 rounded-xl p-4">
+            <p className="text-[10px] font-semibold text-slate-400 mb-2 uppercase tracking-wide">재직 / 퇴직 정보</p>
+            <Row label="부서"       value={employee.department} />
+            <Row label="직위"       value={employee.position} />
+            <Row label="직급"       value={employee.Grade} />
+            <Row label="직책"       value={employee.job} />
+            <Row label="입사일"     value={employee.Date_of_joining} />
+            <Row label="퇴사일"     value={employee.quit_date} />
+            <Row label="퇴사사유"   value={employee.quit_reason} />
+            <Row label="고용 형태"  value={employee.is_contract ? '계약직' : '정규직'} />
+            <Row label="주소정근로" value={employee.weekly_work_hours ? `${employee.weekly_work_hours}시간` : null} />
+          </div>
+          <div className="bg-rose-50 rounded-xl p-4 border border-rose-100">
+            <p className="text-[10px] font-semibold text-rose-400 mb-2 uppercase tracking-wide">실업급여</p>
+            <Row label="신청 여부"      value={employee.unemployment_claim ? '신청' : '미신청'} />
+            {employee.unemployment_claim && (
+              <Row label="이직 사유 코드" value={employee.unemployment_code} />
+            )}
+          </div>
+          <div className="bg-slate-50 rounded-xl p-4">
+            <p className="text-[10px] font-semibold text-slate-400 mb-2 uppercase tracking-wide">급여 정보</p>
+            <Row label="급여 유형"  value={salaryLabel(employee.salary_type)} />
+            <Row label="급여 금액"  value={employee.salary_amount ? `${Number(employee.salary_amount).toLocaleString('ko-KR')}원` : null} />
+          </div>
+        </div>
+
+        <div className="px-5 py-4 border-t border-slate-100">
+          <a
+            href="/admin/employees/resigned"
+            onClick={onClose}
+            className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-rose-600 text-white text-sm font-medium hover:bg-rose-700 transition-colors"
+          >
+            퇴사자 목록 확인
+            <ExternalLink size={13} />
+          </a>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function ResignedEmployeeList({ employees }: { employees: EmployeeRow[] }) {
+  const [selected, setSelected] = useState<EmployeeRow | null>(null)
+
+  if (employees.length === 0) {
+    return <div className="card p-10 text-center text-slate-400 text-sm">퇴사 직원이 없습니다</div>
+  }
+
+  return (
+    <>
+      <div className="card overflow-hidden divide-y divide-slate-50">
+        {employees.map(emp => (
+          <button
+            key={emp.id}
+            onClick={() => setSelected(emp)}
+            className="w-full flex gap-3 px-5 py-4 text-left hover:bg-slate-50/60 transition-colors"
+          >
+            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-rose-100 text-rose-600">
+              <UserMinus size={14} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-medium text-slate-700 truncate">{emp.name}</p>
+                <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0">
+                  {emp.quit_date ?? '-'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5 truncate">
+                {(emp.companies as any)?.name ?? ''}{emp.department ? ` · ${emp.department}` : ''}{emp.position ? ` · ${emp.position}` : ''}
+              </p>
+              <span className="text-xs text-blue-500 mt-1 inline-block">상세 보기 →</span>
+            </div>
+          </button>
+        ))}
+      </div>
+      {selected && (
+        <ResignedEmployeeDetail employee={selected} onClose={() => setSelected(null)} />
+      )}
+    </>
+  )
+}
+
 /* ── 메인 클라이언트 ─────────────────────────────────────── */
 export default function AdminRequestsClient({
   companyRequests,
   employeeNotifications,
-  resignationNotifications,
+  resignedEmployees,
   otherNotifications,
 }: Props) {
   const [tab, setTab] = useState<Tab>('company')
@@ -243,9 +377,9 @@ export default function AdminRequestsClient({
     },
     {
       key: 'resignation',
-      label: '탈퇴 요청',
+      label: '퇴사자',
       icon: UserMinus,
-      count: resignationNotifications.filter(n => !n.is_read).length || undefined,
+      count: resignedEmployees.length || undefined,
     },
   ]
 
@@ -316,12 +450,9 @@ export default function AdminRequestsClient({
         />
       )}
 
-      {/* 탈퇴 요청 탭 */}
+      {/* 퇴사자 탭 */}
       {tab === 'resignation' && (
-        <NotificationList
-          notifications={resignationNotifications}
-          emptyText="탈퇴 요청이 없습니다"
-        />
+        <ResignedEmployeeList employees={resignedEmployees} />
       )}
 
       {/* 기타 알림 */}

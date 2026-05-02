@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from 'react'
 import type { ElementType } from 'react'
-import { Bell, Users, Building2, UserMinus, CheckCheck, X, ExternalLink } from 'lucide-react'
+import { Bell, Users, Building2, UserMinus, CheckCheck, X, ExternalLink, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import type { Notification } from '@/types'
 import {
@@ -49,13 +49,17 @@ function salaryLabel(type?: string | null) {
 function DetailPanel({
   notification,
   onClose,
+  onProcessed,
 }: {
   notification: Notification
   onClose: () => void
+  onProcessed: (id: number) => void
 }) {
-  const [detail, setDetail] = useState<Record<string, any> | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [err, setErr]         = useState<string | null>(null)
+  const [detail,    setDetail]    = useState<Record<string, any> | null>(null)
+  const [loading,   setLoading]   = useState(false)
+  const [err,       setErr]       = useState<string | null>(null)
+  const [done,      setDone]      = useState(false)
+  const [processing, setProcessing] = useState(false)
 
   /* 마운트 시 fetch */
   useEffect(() => {
@@ -70,6 +74,15 @@ function DetailPanel({
       .catch(() => setErr('데이터를 불러오지 못했습니다'))
       .finally(() => setLoading(false))
   }, [notification.target_id, notification.type])
+
+  async function handleProcess() {
+    setProcessing(true)
+    await markNotificationRead(notification.id)
+    setProcessing(false)
+    setDone(true)
+    onProcessed(notification.id)
+    setTimeout(onClose, 800)
+  }
 
   const meta = TYPE_META[notification.type] ?? { label: notification.type, color: 'bg-slate-100 text-slate-500', icon: Bell }
   const Icon = meta.icon
@@ -125,39 +138,94 @@ function DetailPanel({
           )}
 
           {detail && notification.type === 'new_employee_registered' && (
-            <div className="bg-slate-50 rounded-xl p-4">
-              <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">직원 정보</p>
-              <Row label="소속 기업"  value={(detail.companies as any)?.name} />
-              <Row label="이름"       value={detail.name} />
-              <Row label="이메일"     value={detail.email} />
-              <Row label="부서"       value={detail.department} />
-              <Row label="직위"       value={detail.position} />
-              <Row label="직책"       value={detail.job} />
-              <Row label="입사일"     value={detail.Date_of_joining} />
-              <p className="text-xs font-semibold text-slate-500 mb-2 mt-4 uppercase tracking-wide">급여 정보</p>
-              <Row label="급여 유형"  value={salaryLabel(detail.salary_type)} />
-              <Row label="급여 금액"  value={detail.salary_amount ? `${Number(detail.salary_amount).toLocaleString('ko-KR')}원` : null} />
-              <Row label="고용 형태"  value={detail.is_contract ? '계약직' : '정규직'} />
-              <Row label="주소정근로" value={detail.weekly_work_hours ? `${detail.weekly_work_hours}시간` : null} />
+            <div className="space-y-3">
+              <div className="bg-slate-50 rounded-xl p-4">
+                <p className="text-[10px] font-semibold text-slate-400 mb-2 uppercase tracking-wide">기본 정보</p>
+                <Row label="소속 기업"  value={(detail.companies as any)?.name} />
+                <Row label="사번"       value={detail.employee_number} />
+                <Row label="이름"       value={detail.name} />
+                <Row label="이메일"     value={detail.email} />
+                <Row label="연락처"     value={detail.Tel} />
+                <Row label="생년월일"   value={detail.birthdate} />
+                <Row label="성별"       value={detail.Sex === 'M' ? '남' : detail.Sex === 'F' ? '여' : null} />
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4">
+                <p className="text-[10px] font-semibold text-slate-400 mb-2 uppercase tracking-wide">인사 정보</p>
+                <Row label="부서"       value={detail.department} />
+                <Row label="직위"       value={detail.position} />
+                <Row label="직급"       value={detail.Grade} />
+                <Row label="직책"       value={detail.job} />
+                <Row label="입사일"     value={detail.Date_of_joining} />
+                <Row label="근무지"     value={detail['Working place']} />
+                <Row label="고용 형태"  value={detail.is_contract ? `계약직${detail.contract_end_date ? ` (~ ${detail.contract_end_date})` : ''}` : '정규직'} />
+                <Row label="주소정근로" value={detail.weekly_work_hours ? `${detail.weekly_work_hours}시간` : null} />
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4">
+                <p className="text-[10px] font-semibold text-slate-400 mb-2 uppercase tracking-wide">급여 정보</p>
+                <Row label="급여 유형"  value={salaryLabel(detail.salary_type)} />
+                <Row label="지급 기준"  value={detail.salary_basis === 'gross' ? '세전' : detail.salary_basis === 'net' ? '세후' : null} />
+                <Row label="급여 금액"  value={detail.salary_amount ? `${Number(detail.salary_amount).toLocaleString('ko-KR')}원` : null} />
+                {Array.isArray(detail.non_taxable_items) && detail.non_taxable_items.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-slate-200">
+                    <p className="text-[10px] text-slate-400 mb-1">비과세 항목</p>
+                    {detail.non_taxable_items.map((item: any, i: number) => (
+                      <Row key={i} label={item.name} value={`${Number(item.amount).toLocaleString('ko-KR')}원`} />
+                    ))}
+                    <Row label="과세총액" value={detail.taxable_total ? `${Number(detail.taxable_total).toLocaleString('ko-KR')}원` : null} />
+                  </div>
+                )}
+              </div>
+              {detail.is_foreigner && (
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-[10px] font-semibold text-slate-400 mb-2 uppercase tracking-wide">외국인 정보</p>
+                  <Row label="국적"       value={detail.nationality} />
+                  <Row label="비자 유형"  value={detail.visa_type} />
+                </div>
+              )}
             </div>
           )}
 
           {detail && notification.type === 'employee_resignation' && (
-            <div className="bg-slate-50 rounded-xl p-4">
-              <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">퇴사 정보</p>
-              <Row label="소속 기업"  value={(detail.companies as any)?.name} />
-              <Row label="이름"       value={detail.name} />
-              <Row label="이메일"     value={detail.email} />
-              <Row label="부서"       value={detail.department} />
-              <Row label="직위"       value={detail.position} />
-              <Row label="입사일"     value={detail.Date_of_joining} />
-              <Row label="퇴사일"     value={detail.resignation_date} />
+            <div className="space-y-3">
+              <div className="bg-slate-50 rounded-xl p-4">
+                <p className="text-[10px] font-semibold text-slate-400 mb-2 uppercase tracking-wide">직원 정보</p>
+                <Row label="소속 기업"  value={(detail.companies as any)?.name} />
+                <Row label="이름"       value={detail.name} />
+                <Row label="이메일"     value={detail.email} />
+                <Row label="연락처"     value={detail.Tel} />
+                <Row label="생년월일"   value={detail.birthdate} />
+                <Row label="성별"       value={detail.Sex === 'M' ? '남' : detail.Sex === 'F' ? '여' : null} />
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4">
+                <p className="text-[10px] font-semibold text-slate-400 mb-2 uppercase tracking-wide">재직 / 퇴직 정보</p>
+                <Row label="부서"       value={detail.department} />
+                <Row label="직위"       value={detail.position} />
+                <Row label="직급"       value={detail.Grade} />
+                <Row label="직책"       value={detail.job} />
+                <Row label="입사일"     value={detail.Date_of_joining} />
+                <Row label="퇴사일"     value={detail.quit_date} />
+                <Row label="퇴사사유"   value={detail.quit_reason} />
+                <Row label="고용 형태"  value={detail.is_contract ? '계약직' : '정규직'} />
+                <Row label="주소정근로" value={detail.weekly_work_hours ? `${detail.weekly_work_hours}시간` : null} />
+              </div>
+              <div className="bg-rose-50 rounded-xl p-4 border border-rose-100">
+                <p className="text-[10px] font-semibold text-rose-400 mb-2 uppercase tracking-wide">실업급여</p>
+                <Row label="신청 여부"      value={detail.unemployment_claim ? '신청' : '미신청'} />
+                {detail.unemployment_claim && (
+                  <Row label="이직 사유 코드" value={detail.unemployment_code} />
+                )}
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4">
+                <p className="text-[10px] font-semibold text-slate-400 mb-2 uppercase tracking-wide">급여 정보</p>
+                <Row label="급여 유형"  value={salaryLabel(detail.salary_type)} />
+                <Row label="급여 금액"  value={detail.salary_amount ? `${Number(detail.salary_amount).toLocaleString('ko-KR')}원` : null} />
+              </div>
             </div>
           )}
         </div>
 
-        {/* 하단 링크 */}
-        <div className="px-5 py-4 border-t border-slate-100">
+        {/* 하단 버튼 */}
+        <div className="px-5 py-4 border-t border-slate-100 space-y-2">
           {notification.type === 'new_company_request' && (
             <Link
               href="/admin/requests"
@@ -169,22 +237,38 @@ function DetailPanel({
             </Link>
           )}
           {notification.type === 'new_employee_registered' && (
-            <Link
-              href="/admin/employees"
-              onClick={onClose}
-              className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors"
+            <button
+              onClick={handleProcess}
+              disabled={processing || done}
+              className={`flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                done
+                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                  : 'bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50'
+              }`}
             >
-              직원 목록 확인
-              <ExternalLink size={13} />
-            </Link>
+              {done ? <><CheckCircle size={14} />처리됨</> : processing ? '처리 중...' : <><CheckCircle size={14} />처리 완료</>}
+            </button>
           )}
           {notification.type === 'employee_resignation' && (
-            <Link
-              href="/admin/employees/resigned"
-              onClick={onClose}
-              className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-rose-600 text-white text-sm font-medium hover:bg-rose-700 transition-colors"
+            <button
+              onClick={handleProcess}
+              disabled={processing || done}
+              className={`flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                done
+                  ? 'bg-rose-50 text-rose-600 border border-rose-200'
+                  : 'bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50'
+              }`}
             >
-              퇴사자 목록 확인
+              {done ? <><CheckCircle size={14} />처리됨</> : processing ? '처리 중...' : <><CheckCircle size={14} />처리 완료</>}
+            </button>
+          )}
+          {(notification.type === 'new_employee_registered' || notification.type === 'employee_resignation') && (
+            <Link
+              href={notification.type === 'employee_resignation' ? '/admin/employees/resigned' : '/admin/employees'}
+              onClick={onClose}
+              className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl border border-slate-200 text-slate-600 text-sm hover:bg-slate-50 transition-colors"
+            >
+              {notification.type === 'employee_resignation' ? '퇴사자 목록' : '직원 목록'}
               <ExternalLink size={13} />
             </Link>
           )}
@@ -298,6 +382,9 @@ export default function AdminNotificationsPanel({ notifications: initial }: Prop
         <DetailPanel
           notification={selected}
           onClose={() => setSelected(null)}
+          onProcessed={(id) => {
+            setItems(prev => prev.map(x => x.id === id ? { ...x, is_read: true } : x))
+          }}
         />
       )}
     </>

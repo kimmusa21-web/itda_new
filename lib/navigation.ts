@@ -1,4 +1,4 @@
-import { Bell, Building2, Users, Upload, Home, BarChart3, Wallet, User, UserPlus, ClipboardList, Eye, BadgeDollarSign, Settings, UserMinus, type LucideIcon } from 'lucide-react'
+import { Bell, Building2, Users, Upload, Home, BarChart3, Wallet, User, UserPlus, ClipboardList, Eye, BadgeDollarSign, Settings, UserMinus, FileText, type LucideIcon } from 'lucide-react'
 import type { Role } from '@/types'
 
 export type { Role }
@@ -17,6 +17,7 @@ export const roleNavMap: RoleNavMap = {
     { label: '급여조회',   href: '/admin/payroll',            icon: BarChart3       },
     { label: '급여업로드', href: '/admin/payroll/upload',    icon: Upload          },
     { label: '퇴직금 산정', href: '/admin/severance',        icon: BadgeDollarSign },
+    { label: '이직확인서', href: '/admin/separation',        icon: FileText        },
     { label: '점검 모드',  href: '/admin/impersonation',     icon: Eye             },
     { label: '내 정보',    href: '/admin/profile',           icon: Settings        },
   ],
@@ -79,6 +80,7 @@ export function getPageTitle(pathname: string): string {
     '/admin/payroll/upload':         '급여업로드',
     '/admin/impersonation':          '점검 모드',
     '/admin/severance':              '퇴직금 산정',
+    '/admin/separation':             '이직확인서',
     '/admin/profile':                '내 정보',
     '/manager/profile':              '내 정보',
     '/admin/companies/new':          '회사 등록',

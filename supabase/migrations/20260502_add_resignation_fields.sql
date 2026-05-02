@@ -1,0 +1,4 @@
+ALTER TABLE employees
+  ADD COLUMN IF NOT EXISTS quit_reason         TEXT,
+  ADD COLUMN IF NOT EXISTS unemployment_claim  BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS unemployment_code   TEXT;

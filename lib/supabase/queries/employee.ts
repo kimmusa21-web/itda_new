@@ -32,6 +32,9 @@ export interface EmployeeRow {
   salary_basis: 'gross' | 'net' | null
   non_taxable_items: { name: string; amount: number }[] | null
   taxable_total: number | null
+  quit_reason: string | null
+  unemployment_claim: boolean
+  unemployment_code: string | null
   companies?: { name: string } | null
 }
 
