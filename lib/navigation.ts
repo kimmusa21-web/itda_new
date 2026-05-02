@@ -27,6 +27,7 @@ export const roleNavMap: RoleNavMap = {
     { label: '퇴사자',     href: '/manager/employees/resigned', icon: UserMinus    },
     { label: '급여조회',   href: '/manager/payroll',          icon: BarChart3      },
     { label: '급여업로드', href: '/manager/payroll/upload',   icon: Upload         },
+    { label: '퇴사자',     href: '/manager/employees/resigned', icon: UserMinus    },
     { label: '내 정보',    href: '/manager/profile',          icon: Settings       },
   ],
   employee: [

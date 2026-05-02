@@ -27,6 +27,11 @@ export interface EmployeeRow {
   nationality: string | null
   visa_type: string | null
   registration_number: string | null
+  salary_type: 'annual' | 'monthly' | 'hourly' | null
+  salary_amount: number | null
+  salary_basis: 'gross' | 'net' | null
+  non_taxable_items: { name: string; amount: number }[] | null
+  taxable_total: number | null
   companies?: { name: string } | null
 }
 
