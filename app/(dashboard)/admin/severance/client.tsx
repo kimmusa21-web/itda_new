@@ -220,7 +220,7 @@ export default function SeveranceClient({ companies }: Props) {
               disabled={!companyId || empLoading}
             >
               <option value={0}>{empLoading ? '조회 중...' : '직원 선택'}</option>
-              {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+              {employees.map(e => <option key={e.id} value={e.id}>{e.name} ({e.email})</option>)}
             </select>
           </div>
           <div>
@@ -237,6 +237,7 @@ export default function SeveranceClient({ companies }: Props) {
         {selectedEmp && (
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 bg-slate-50 rounded-xl px-4 py-2.5">
             <span className="font-medium text-slate-700">{selectedEmp.name}</span>
+            <span className="text-slate-400">{selectedEmp.email}</span>
             <span>·</span>
             <span>입사일: <span className="font-medium text-slate-700">{selectedEmp.Date_of_joining ?? '미등록'}</span></span>
             {retirementDate && selectedEmp.Date_of_joining && (
