@@ -1,12 +1,21 @@
 'use client'
 /* ================================================================
    이직확인서 — 고용보험 피보험자 이직확인서 (고용보험법 제42조)
-   + 퇴직금 산정 내역 (근로기준법 제34조)
 ================================================================ */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Printer, ArrowLeft, Calculator, ChevronDown, ChevronUp } from 'lucide-react'
+import { Printer, ArrowLeft, Calculator, RefreshCw } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import {
+  computeSegments,
+  computeSeverance,
+  parseDate,
+  type MonthSegment,
+  type MonthlyPayInput,
+  type SeveranceResult,
+} from '@/lib/severance-calc'
+import { toAccrualDate, toAccrualMonth } from '@/lib/payslip-utils'
 
 /* ── 타입 ─────────────────────────────────────────────────────── */
 interface Company {
@@ -77,12 +86,23 @@ function daysBetween(a: string, b: string) {
 
 function krw(n: number) { return Math.round(n).toLocaleString('ko-KR') }
 
+/* ── 토요일을 제외한 일수 카운트 ─────────────────────────────── */
+function countNonSaturdayDays(start: Date, end: Date): number {
+  let count = 0
+  const d = new Date(start)
+  while (d <= end) {
+    if (d.getDay() !== 6) count++   // 6 = 토요일
+    d.setDate(d.getDate() + 1)
+  }
+  return count
+}
+
 /* ── 피보험단위기간 계산 ──────────────────────────────────────── */
 interface InsuranceSegment {
   period: string        // "YYYY.MM.DD ~ YYYY.MM.DD"
   startDate: string
   endDate: string
-  baseDays: number      // 보수지급 기초일수
+  baseDays: number      // 보수지급 기초일수 (토요일 제외)
 }
 
 function computeInsuranceSegments(joinDate: string, quitDate: string): InsuranceSegment[] {
@@ -98,11 +118,12 @@ function computeInsuranceSegments(joinDate: string, quitDate: string): Insurance
 
   while (cursor <= quit) {
     const segStart = new Date(cursor)
-    /* 해당 월의 마지막 날 */
     const monthEnd = new Date(segStart.getFullYear(), segStart.getMonth() + 1, 0)
     const segEnd   = monthEnd < quit ? monthEnd : new Date(quit)
 
-    const baseDays = Math.round((segEnd.getTime() - segStart.getTime()) / 86400000) + 1
+    /* 토요일을 제외한 일수 */
+    const baseDays = countNonSaturdayDays(segStart, segEnd)
+
     const fmt = (d: Date) =>
       `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 
@@ -119,86 +140,6 @@ function computeInsuranceSegments(joinDate: string, quitDate: string): Insurance
   return segments
 }
 
-/* ── 퇴직금 계산 (평균임금 기반) ────────────────────────────── */
-interface RetirementCalc {
-  serviceDays:     number
-  serviceYears:    number
-  avgWageDaily:    number
-  severancePay:    number
-  /* 세금 (소득세법 제48조 2023년 현행) */
-  serviceYearDed:  number  // 근속연수공제
-  convertedSalary: number  // 환산급여
-  convertedSalDed: number  // 환산급여공제
-  taxBase:         number  // 과세표준
-  convertedTax:    number  // 환산산출세액
-  incomeTax:       number  // 소득세
-  residentTax:     number  // 지방소득세
-  netPay:          number
-}
-
-function computeServiceYearDeduction(years: number): number {
-  if (years <= 5)       return 300_000 * years
-  if (years <= 10)      return 1_500_000 + 500_000 * (years - 5)
-  if (years <= 20)      return 4_000_000 + 800_000 * (years - 10)
-  return 12_000_000 + 1_200_000 * (years - 20)
-}
-
-function computeConvertedSalaryDeduction(v: number): number {
-  const M = 10_000
-  if (v <= 800 * M)  return v
-  if (v <= 7_000 * M) return 800 * M + (v - 800 * M) * 0.6
-  if (v <= 10_000 * M) return 4_520 * M + (v - 7_000 * M) * 0.55
-  if (v <= 30_000 * M) return 6_170 * M + (v - 10_000 * M) * 0.45
-  return 15_170 * M + (v - 30_000 * M) * 0.35
-}
-
-function computeIncomeTax(taxBase: number): number {
-  const M = 10_000
-  if (taxBase <= 0) return 0
-  if (taxBase <= 1_400 * M)  return taxBase * 0.06
-  if (taxBase <= 5_000 * M)  return 840_000 + (taxBase - 1_400 * M) * 0.15
-  if (taxBase <= 8_800 * M)  return 6_240_000 + (taxBase - 5_000 * M) * 0.24
-  if (taxBase <= 15_000 * M) return 15_360_000 + (taxBase - 8_800 * M) * 0.35
-  if (taxBase <= 30_000 * M) return 37_060_000 + (taxBase - 15_000 * M) * 0.38
-  if (taxBase <= 50_000 * M) return 94_060_000 + (taxBase - 30_000 * M) * 0.40
-  if (taxBase <= 100_000 * M) return 174_060_000 + (taxBase - 50_000 * M) * 0.42
-  return 384_060_000 + (taxBase - 100_000 * M) * 0.45
-}
-
-function computeRetirementCalc(
-  joinDate: string,
-  quitDate: string,
-  monthlySalary: number,
-  avgWageOverride?: number,
-): RetirementCalc {
-  const serviceDays  = daysBetween(joinDate, quitDate)
-  const serviceMonths = serviceDays / 30.44
-  const serviceYears  = Math.max(1, Math.ceil(serviceMonths / 12))
-
-  /* 1일 평균임금: 월급 ÷ 30 (간이 산출) */
-  const avgWageDaily = avgWageOverride ?? (monthlySalary / 30)
-
-  /* 퇴직금 = 1일평균임금 × 30 × 근속일수/365 */
-  const severancePay = Math.round(avgWageDaily * 30 * serviceDays / 365)
-
-  /* 소득세법 제48조 현행 계산 */
-  const serviceYearDed  = computeServiceYearDeduction(serviceYears)
-  const convertedSalary = Math.max(0, (severancePay - serviceYearDed) / serviceYears * 12)
-  const convertedSalDed = computeConvertedSalaryDeduction(convertedSalary)
-  const taxBase         = Math.max(0, convertedSalary - convertedSalDed)
-  const convertedTax    = computeIncomeTax(taxBase)
-  const calculatedTax   = convertedTax / 12 * serviceYears
-  const incomeTax       = Math.floor(calculatedTax / 10) * 10
-  const residentTax     = Math.floor(incomeTax * 0.1 / 10) * 10
-  const netPay          = severancePay - incomeTax - residentTax
-
-  return {
-    serviceDays, serviceYears, avgWageDaily, severancePay,
-    serviceYearDed, convertedSalary, convertedSalDed, taxBase,
-    convertedTax, incomeTax, residentTax, netPay,
-  }
-}
-
 /* ── 인쇄용 구분선 ──────────────────────────────────────────── */
 function PrintRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
@@ -211,7 +152,8 @@ function PrintRow({ label, value, mono = false }: { label: string; value: string
 
 /* ── 메인 컴포넌트 ──────────────────────────────────────────── */
 export default function SeparationClient({ employee: emp }: Props) {
-  const company = emp.companies
+  const supabase = createClient()
+  const company  = emp.companies
 
   /* 편집 가능한 필드 */
   const [quitDate,         setQuitDate]         = useState(emp.quit_date ?? '')
@@ -219,7 +161,6 @@ export default function SeparationClient({ employee: emp }: Props) {
   const [unemploymentCode, setUnemploymentCode]  = useState(emp.unemployment_code ?? '')
   const [regNumber,        setRegNumber]         = useState(emp.registration_number ?? '')
   const [salaryInput,      setSalaryInput]       = useState(emp.salary_amount ?? 0)
-  const [taxOpen,          setTaxOpen]           = useState(false)
 
   /* 피보험단위기간 */
   const insuranceSegments = useMemo<InsuranceSegment[]>(() => {
@@ -233,18 +174,72 @@ export default function SeparationClient({ employee: emp }: Props) {
     [insuranceSegments],
   )
 
-  /* 퇴직금 계산 */
-  const calc = useMemo<RetirementCalc | null>(() => {
-    if (!emp.Date_of_joining || !quitDate || salaryInput <= 0) return null
-    try { return computeRetirementCalc(emp.Date_of_joining, quitDate, salaryInput) }
-    catch { return null }
-  }, [emp.Date_of_joining, quitDate, salaryInput])
+  /* ── 1일 평균임금 산정 (이직 전 3개월) ── */
+  const [avgSegs,        setAvgSegs]        = useState<MonthSegment[]>([])
+  const [avgData,        setAvgData]        = useState<Record<string, MonthlyPayInput>>({})
+  const [avgFetching,    setAvgFetching]    = useState(false)
+  const [avgFetched,     setAvgFetched]     = useState(false)
+  const [avgAnnualBonus, setAvgAnnualBonus] = useState(0)
+  const [avgAnnualLeave, setAvgAnnualLeave] = useState(0)
+  const [lastFetchDate,  setLastFetchDate]  = useState('')
+
+  const fetchAvgWageData = useCallback(async (qDate: string) => {
+    if (!qDate) return
+    setAvgFetching(true)
+    setAvgFetched(false)
+
+    const segs = computeSegments(qDate)
+    setAvgSegs(segs)
+
+    const accrualMonths = segs.map(s => toAccrualDate(s.yearMonth))
+    const { data } = await supabase
+      .from('pay_info_v2')
+      .select('accrual_month, base_salary, total_earnings')
+      .eq('employee_id', emp.id)
+      .in('accrual_month', accrualMonths)
+
+    const newData: Record<string, MonthlyPayInput> = {}
+    for (const row of (data ?? [])) {
+      const ym    = toAccrualMonth(row.accrual_month as string)
+      const base  = Number(row.base_salary   ?? 0)
+      const total = Number(row.total_earnings ?? 0)
+      newData[ym] = { yearMonth: ym, baseSalary: base, allowances: Math.max(0, total - base) }
+    }
+    for (const seg of segs) {
+      if (!newData[seg.yearMonth]) {
+        newData[seg.yearMonth] = { yearMonth: seg.yearMonth, baseSalary: 0, allowances: 0 }
+      }
+    }
+
+    setAvgData(newData)
+    setAvgFetched(true)
+    setAvgFetching(false)
+    setLastFetchDate(qDate)
+  }, [supabase, emp.id])
+
+  /* 마운트 시 초기 조회 */
+  useEffect(() => {
+    if (emp.quit_date) fetchAvgWageData(emp.quit_date)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const avgResult = useMemo<SeveranceResult | null>(() => {
+    if (!avgFetched || avgSegs.length === 0 || !emp.Date_of_joining || !quitDate) return null
+    try {
+      return computeSeverance({
+        hireDate:       emp.Date_of_joining,
+        retirementDate: quitDate,
+        segments:       avgSegs,
+        monthlyData:    avgData,
+        annualBonus:    avgAnnualBonus,
+        annualLeaveAllow: avgAnnualLeave,
+        incomeTax:      0,
+        otherDeductions: 0,
+      })
+    } catch { return null }
+  }, [avgFetched, avgSegs, avgData, avgAnnualBonus, avgAnnualLeave, emp.Date_of_joining, quitDate])
 
   /* 임금지급방법 */
   const salaryTypeLabel = { annual: '월급(연봉)', monthly: '월급', hourly: '시급' }[emp.salary_type ?? ''] ?? '월급'
-
-  /* 이직사유 코드 설명 */
-  const codeDesc = SEPARATION_CODES[unemploymentCode] ?? unemploymentCode
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 print:space-y-4 print:max-w-none">
@@ -417,6 +412,7 @@ export default function SeparationClient({ employee: emp }: Props) {
             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">
               ⑥ 피보험단위기간 산정 (이직일 이전 18개월)
             </h2>
+            <p className="text-[11px] text-slate-400 mb-2">※ 보수지급 기초일수: 해당 기간의 총일수에서 토요일을 제외한 일수</p>
             {insuranceSegments.length === 0 ? (
               <p className="text-xs text-slate-400 py-2">입사일과 이직일을 입력하면 자동 계산됩니다</p>
             ) : (
@@ -425,7 +421,7 @@ export default function SeparationClient({ employee: emp }: Props) {
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
                       <th className="px-3 py-2 text-left text-slate-500 font-medium">피보험단위기간 산정 대상 기간</th>
-                      <th className="px-3 py-2 text-center text-slate-500 font-medium w-24">보수지급 기초일수</th>
+                      <th className="px-3 py-2 text-center text-slate-500 font-medium w-32">보수지급 기초일수 (토요일 제외)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -481,116 +477,193 @@ export default function SeparationClient({ employee: emp }: Props) {
         </div>
       </div>
 
-      {/* ── 퇴직금 산정 내역 ── */}
+      {/* ── 1일 평균임금 산정 ── */}
       <div className="card overflow-hidden">
-        <div
-          className="flex items-center justify-between px-5 py-4 border-b border-slate-100 cursor-pointer print:cursor-auto"
-          onClick={() => setTaxOpen(v => !v)}
-        >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <Calculator size={15} className="text-blue-500" />
-            <h2 className="text-sm font-bold text-slate-700">퇴직금 산정 내역서</h2>
-            <span className="text-xs text-slate-400">근로기준법 제34조 · 소득세법 제48조</span>
+            <h2 className="text-sm font-bold text-slate-700">1일 평균임금 산정</h2>
+            <span className="text-xs text-slate-400">이직 전 3개월 기준</span>
           </div>
-          <div className="print:hidden">
-            {taxOpen ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+          <div className="flex items-center gap-2 print:hidden">
+            {lastFetchDate && lastFetchDate !== quitDate && (
+              <span className="text-[11px] text-amber-600 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100">
+                이직일 변경됨 — 재조회 필요
+              </span>
+            )}
+            <button
+              onClick={() => fetchAvgWageData(quitDate)}
+              disabled={!quitDate || avgFetching}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
+            >
+              <RefreshCw size={12} className={avgFetching ? 'animate-spin' : ''} />
+              {avgFetching ? '조회 중...' : '급여 자동 조회'}
+            </button>
           </div>
         </div>
 
-        {(taxOpen || typeof window === 'undefined') && calc && (
-          <div className="p-5 print:p-4 space-y-4">
-            {/* 기본 정보 */}
-            <table className="w-full border border-slate-200 rounded-xl overflow-hidden text-xs">
-              <tbody>
-                <PrintRow label="사업장명" value={company?.name ?? ''} />
-                <PrintRow label="근로자성명" value={emp.name} />
-                <PrintRow label="입사일" value={formatDateDot(emp.Date_of_joining)} />
-                <PrintRow label="퇴사일" value={formatDateDot(quitDate)} />
-                <PrintRow label="근속일수" value={`${calc.serviceDays.toLocaleString('ko-KR')}일 (${calc.serviceYears}년 기준)`} />
-              </tbody>
-            </table>
+        {!avgFetched && !avgFetching && (
+          <div className="p-8 text-center text-sm text-slate-400">
+            이직일을 입력한 후 급여 자동 조회를 눌러주세요.
+          </div>
+        )}
 
-            {/* 평균임금 및 퇴직금 */}
-            <div className="bg-slate-800 text-white rounded-xl p-4">
-              <p className="text-xs text-slate-400 mb-3 font-semibold">평균임금 및 퇴직금 계산</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                <div>
-                  <p className="text-xs text-slate-400">1일 평균임금</p>
-                  <p className="text-base font-bold text-yellow-300 mt-1">{krw(calc.avgWageDaily)}원</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400">× 30일 × {calc.serviceDays.toLocaleString('ko-KR')}일 ÷ 365</p>
-                  <p className="text-base font-bold text-white mt-1">= 퇴직금</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400">퇴직금액</p>
-                  <p className="text-lg font-bold text-blue-300 mt-1">{krw(calc.severancePay)}원</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400">월 기본급 기준</p>
-                  <p className="text-xs text-slate-300 mt-1">{krw(salaryInput)}원</p>
-                </div>
+        {avgFetching && (
+          <div className="p-8 text-center text-sm text-slate-400 flex items-center justify-center gap-2">
+            <RefreshCw size={14} className="animate-spin" />급여 데이터 조회 중...
+          </div>
+        )}
+
+        {avgFetched && avgSegs.length > 0 && (
+          <div className="p-5 space-y-4">
+            {/* 3개월 급여 테이블 */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs" style={{ minWidth: 480 }}>
+                <thead className="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    <th className="px-4 py-2.5 text-left text-slate-500 font-semibold w-28">항목</th>
+                    {avgSegs.map(seg => (
+                      <th key={seg.yearMonth} className="px-3 py-2.5 text-center text-slate-600 font-semibold whitespace-nowrap">
+                        {Number(seg.yearMonth.split('-')[1])}월
+                        <div className="text-[10px] font-normal text-slate-400 mt-0.5">
+                          {seg.periodStart.slice(5)} ~ {seg.periodEnd.slice(5)}
+                        </div>
+                      </th>
+                    ))}
+                    <th className="px-3 py-2.5 text-center text-slate-700 font-bold bg-blue-50/60">합계</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  <tr className="bg-slate-50/40">
+                    <td className="px-4 py-2 text-slate-500 font-medium">산정일수</td>
+                    {avgSegs.map(seg => (
+                      <td key={seg.yearMonth} className="px-3 py-2 text-center font-medium text-slate-700">{seg.daysInPeriod}일</td>
+                    ))}
+                    <td className="px-3 py-2 text-center font-bold text-blue-600 bg-blue-50/40">{avgResult?.totalDays ?? 0}일</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-2.5 text-slate-700 font-medium">기본급 (월)</td>
+                    {avgSegs.map(seg => (
+                      <td key={seg.yearMonth} className="px-2 py-1.5">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={(avgData[seg.yearMonth]?.baseSalary ?? 0) === 0 ? '' : (avgData[seg.yearMonth]?.baseSalary ?? 0).toLocaleString('ko-KR')}
+                          onChange={e => {
+                            const raw = e.target.value.replace(/[^0-9]/g, '')
+                            setAvgData(prev => ({
+                              ...prev,
+                              [seg.yearMonth]: { ...prev[seg.yearMonth], yearMonth: seg.yearMonth, baseSalary: raw === '' ? 0 : Number(raw) },
+                            }))
+                          }}
+                          className="input text-right tabular-nums text-xs py-1.5 w-full print:pointer-events-none"
+                          placeholder="0"
+                        />
+                      </td>
+                    ))}
+                    <td className="px-3 py-2 text-right font-medium text-slate-700 bg-blue-50/40 whitespace-nowrap">
+                      {krw(avgResult?.totalBasePay ?? 0)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-2.5 text-slate-700 font-medium">제수당 (월)</td>
+                    {avgSegs.map(seg => (
+                      <td key={seg.yearMonth} className="px-2 py-1.5">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={(avgData[seg.yearMonth]?.allowances ?? 0) === 0 ? '' : (avgData[seg.yearMonth]?.allowances ?? 0).toLocaleString('ko-KR')}
+                          onChange={e => {
+                            const raw = e.target.value.replace(/[^0-9]/g, '')
+                            setAvgData(prev => ({
+                              ...prev,
+                              [seg.yearMonth]: { ...prev[seg.yearMonth], yearMonth: seg.yearMonth, allowances: raw === '' ? 0 : Number(raw) },
+                            }))
+                          }}
+                          className="input text-right tabular-nums text-xs py-1.5 w-full print:pointer-events-none"
+                          placeholder="0"
+                        />
+                      </td>
+                    ))}
+                    <td className="px-3 py-2 text-right font-medium text-slate-700 bg-blue-50/40 whitespace-nowrap">
+                      {krw(avgResult?.totalAllowances ?? 0)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* 상여금 / 연차수당 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">
+                  연간 상여금 총액 <span className="text-slate-400 font-normal">(3개월분 = ×3/12)</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={avgAnnualBonus === 0 ? '' : avgAnnualBonus.toLocaleString('ko-KR')}
+                  onChange={e => {
+                    const raw = e.target.value.replace(/[^0-9]/g, '')
+                    setAvgAnnualBonus(raw === '' ? 0 : Number(raw))
+                  }}
+                  className="input text-right tabular-nums text-xs"
+                  placeholder="0"
+                />
+                {avgAnnualBonus > 0 && (
+                  <p className="text-xs text-blue-600 mt-1">→ 3개월: {krw(avgAnnualBonus * 3 / 12)}원</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">
+                  연간 연차수당 총액 <span className="text-slate-400 font-normal">(3개월분 = ×3/12)</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={avgAnnualLeave === 0 ? '' : avgAnnualLeave.toLocaleString('ko-KR')}
+                  onChange={e => {
+                    const raw = e.target.value.replace(/[^0-9]/g, '')
+                    setAvgAnnualLeave(raw === '' ? 0 : Number(raw))
+                  }}
+                  className="input text-right tabular-nums text-xs"
+                  placeholder="0"
+                />
+                {avgAnnualLeave > 0 && (
+                  <p className="text-xs text-blue-600 mt-1">→ 3개월: {krw(avgAnnualLeave * 3 / 12)}원</p>
+                )}
               </div>
             </div>
 
-            {/* 퇴직소득세 상세 */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden">
-              <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">퇴직소득세 산출 근거 (소득세법 제48조)</p>
-              </div>
-              <div className="divide-y divide-slate-50 text-xs">
-                {[
-                  ['1항 — 근속연수',              `${calc.serviceYears}년`],
-                  ['2항 — 퇴직금액',              `${krw(calc.severancePay)}원`],
-                  ['3항 — 근속연수공제',           `${krw(calc.serviceYearDed)}원`],
-                  ['4항 — 환산급여 = (2항−3항) ÷ 1항 × 12', `${krw(calc.convertedSalary)}원`],
-                  ['5항 — 환산급여공제',            `${krw(calc.convertedSalDed)}원`],
-                  ['6항 — 과세표준 = 4항−5항',    `${krw(calc.taxBase)}원`],
-                  ['7항 — 환산산출세액 (기본세율)', `${krw(calc.convertedTax)}원`],
-                  ['8항 — 산출세액 = 7항 ÷ 12 × 1항', `${krw(Math.round(calc.convertedTax / 12 * calc.serviceYears))}원`],
-                  ['소득세 (10원 단위 절사)',       `${krw(calc.incomeTax)}원`],
-                  ['지방소득세 = 소득세 × 10%',    `${krw(calc.residentTax)}원`],
-                  ['세금 합계',                    `${krw(calc.incomeTax + calc.residentTax)}원`],
-                ].map(([label, value], i) => (
-                  <div
-                    key={i}
-                    className={`flex justify-between px-4 py-2 ${
-                      i >= 8 ? 'bg-amber-50 font-semibold' : ''
-                    }`}
-                  >
-                    <span className="text-slate-500">{label}</span>
-                    <span className={`tabular-nums font-medium ${i >= 8 ? 'text-amber-700' : 'text-slate-700'}`}>{value}</span>
+            {/* 1일 평균임금 결과 */}
+            {avgResult && (
+              <div className="bg-slate-800 text-white rounded-xl p-4">
+                <p className="text-xs text-slate-400 mb-3">평균임금 계산</p>
+                <div className="flex flex-wrap items-center gap-3 text-sm">
+                  <span className="text-slate-300">3개월 총임금액</span>
+                  <span className="text-white font-bold text-base">{krw(avgResult.total3mAmount)}원</span>
+                  <span className="text-slate-500">÷</span>
+                  <span className="text-slate-300">총일수 {avgResult.totalDays}일</span>
+                  <span className="text-slate-500">=</span>
+                  <div className="ml-auto text-right">
+                    <p className="text-xs text-slate-400">1일 평균임금</p>
+                    <p className="text-2xl font-bold text-yellow-300">{krw(avgResult.averageWage)}원</p>
                   </div>
-                ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-700 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs text-slate-400">
+                  <div>기본급 합계<br /><span className="text-white font-medium">{krw(avgResult.totalBasePay)}</span></div>
+                  <div>제수당 합계<br /><span className="text-white font-medium">{krw(avgResult.totalAllowances)}</span></div>
+                  <div>3개월 상여금<br /><span className="text-white font-medium">{krw(avgResult.bonus3m)}</span></div>
+                  <div>3개월 연차수당<br /><span className="text-white font-medium">{krw(avgResult.leaveAllow3m)}</span></div>
+                </div>
               </div>
-            </div>
-
-            {/* 실지급액 */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl p-5">
-              <p className="text-blue-200 text-xs mb-1">실 지급액 (퇴직금 − 소득세 − 지방소득세)</p>
-              <p className="text-3xl font-bold">{krw(calc.netPay)}원</p>
-              <p className="text-blue-300 text-xs mt-2">
-                퇴직금 {krw(calc.severancePay)} − 소득세 {krw(calc.incomeTax)} − 지방소득세 {krw(calc.residentTax)}
-              </p>
-            </div>
+            )}
 
             <p className="text-[11px] text-slate-400">
-              * 위 퇴직금 산정은 월 기본급만을 기준으로 한 간이 계산입니다. 정확한 산정은{' '}
+              * 급여 데이터가 없는 월은 직접 입력하세요. 정밀 퇴직금 산정은{' '}
               <Link href="/admin/severance" className="text-blue-500 underline">퇴직금 정밀 산정</Link>{' '}
               메뉴를 이용하세요.
             </p>
-          </div>
-        )}
-
-        {(taxOpen || typeof window === 'undefined') && !calc && (
-          <div className="p-5 text-center text-sm text-slate-400">
-            <p>이직일과 월 기본급을 입력하면 퇴직금이 자동 계산됩니다.</p>
-          </div>
-        )}
-
-        {!taxOpen && (
-          <div className="px-5 py-3 text-xs text-slate-400 print:hidden">
-            클릭하여 퇴직금 산정 내역 펼치기
           </div>
         )}
       </div>
