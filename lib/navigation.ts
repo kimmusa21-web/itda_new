@@ -24,7 +24,6 @@ export const roleNavMap: RoleNavMap = {
     { label: '홈',         href: '/manager',                  icon: Home           },
     { label: '기업관리',   href: '/manager/company',          icon: Building2      },
     { label: '직원관리',   href: '/manager/employees',        icon: Users          },
-    { label: '퇴사자',     href: '/manager/employees/resigned', icon: UserMinus    },
     { label: '급여조회',   href: '/manager/payroll',          icon: BarChart3      },
     { label: '급여업로드', href: '/manager/payroll/upload',   icon: Upload         },
     { label: '퇴사자',     href: '/manager/employees/resigned', icon: UserMinus    },
