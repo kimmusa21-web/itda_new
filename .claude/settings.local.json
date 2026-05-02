@@ -28,7 +28,11 @@
       "Bash(xargs grep *)",
       "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
       "Bash(git reset *)",
-      "mcp__claude_ai_Supabase__execute_sql"
+      "mcp__claude_ai_Supabase__execute_sql",
+      "Bash(xargs -I {} git show {}:supabase/migrations/)",
+      "mcp__claude_ai_Supabase__list_tables",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(Select-String \"notifications-panel|notification-detail\")"
     ]
   }
 }

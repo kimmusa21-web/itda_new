@@ -6,7 +6,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Search, Edit2, Trash2, Users, ChevronRight } from 'lucide-react'
+import { Building2, Search, Edit2, Trash2, Users, ChevronRight, Paperclip } from 'lucide-react'
 import { deleteCompany } from '@/lib/actions/company-actions'
 import { cn } from '@/lib/utils'
 
@@ -23,6 +23,7 @@ interface CompanyRow {
   address: string | null
   status: string
   payroll_day: number | null
+  biz_doc_url: string | null
   employees?: { count: number }[]
 }
 
@@ -177,7 +178,15 @@ export function CompanyListClient({ initialCompanies }: Props) {
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between">
-                  <span className="text-xs text-slate-400">클릭하여 급여대장 및 직원 조회</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400">클릭하여 급여대장 및 직원 조회</span>
+                    {c.biz_doc_url && (
+                      <span className="inline-flex items-center gap-1 text-xs text-blue-500">
+                        <Paperclip size={11} />
+                        서류 첨부됨
+                      </span>
+                    )}
+                  </div>
                   <ChevronRight size={14} className="text-slate-300" />
                 </div>
               </div>

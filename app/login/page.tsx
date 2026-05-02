@@ -177,10 +177,53 @@ function RegisterForm({
     admin_name: '', admin_email: '', admin_phone: '',
     business_type: '', industry: '', telephone: '', address: '',
   })
-  const [loading, setLoading] = useState(false)
+  const [bizDocUrl,    setBizDocUrl]    = useState<string | null>(null)
+  const [extracting,   setExtracting]   = useState(false)
+  const [extractMsg,   setExtractMsg]   = useState<string | null>(null)
+  const [loading,      setLoading]      = useState(false)
 
   const f = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }))
+
+  /* ── 사업자등록증 첨부 → 자동 추출 ── */
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setExtracting(true)
+    setExtractMsg('파일 분석 중...')
+
+    const fd = new FormData()
+    fd.append('file', file)
+
+    const res  = await fetch('/api/extract-biz-doc', { method: 'POST', body: fd })
+    const data = await res.json().catch(() => ({}))
+
+    setExtracting(false)
+
+    if (!res.ok) {
+      setExtractMsg('업로드 실패: ' + (data.error ?? '알 수 없는 오류'))
+      return
+    }
+
+    if (data.url) setBizDocUrl(data.url)
+
+    if (data.extracted) {
+      const ex = data.extracted
+      setForm(prev => ({
+        ...prev,
+        company_name:   ex.company_name   || prev.company_name,
+        biz_number:     ex.biz_number     || prev.biz_number,
+        representative: ex.representative || prev.representative,
+        business_type:  ex.business_type  || prev.business_type,
+        industry:       ex.industry       || prev.industry,
+        address:        ex.address        || prev.address,
+      }))
+      setExtractMsg('✓ 정보가 자동으로 입력되었습니다. 내용을 확인 후 수정하세요.')
+    } else {
+      setExtractMsg('✓ 파일이 첨부되었습니다. 내용을 직접 입력해주세요.')
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -188,7 +231,7 @@ function RegisterForm({
     const res = await fetch('/api/company-request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, biz_doc_url: bizDocUrl }),
     })
     const data = await res.json().catch(() => ({}))
     setLoading(false)
@@ -200,19 +243,49 @@ function RegisterForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <p className="text-xs text-slate-400 mb-4">기업 정보를 입력하면 어드민 검토 후 계정을 발급합니다.</p>
+      <p className="text-xs text-slate-400 mb-2">기업 정보를 입력하면 어드민 검토 후 계정을 발급합니다.</p>
+
+      {/* 사업자등록증 첨부 */}
+      <div>
+        <label className="block text-xs font-medium text-slate-400 mb-1">사업자등록증 첨부 (선택)</label>
+        <label className={`flex items-center gap-2 cursor-pointer w-full px-3.5 py-2.5 rounded-xl border text-sm transition-colors
+          ${bizDocUrl
+            ? 'border-emerald-600 bg-emerald-900/20 text-emerald-400'
+            : 'border-dashed border-[#334155] bg-[#0f172a] text-slate-500 hover:border-blue-500 hover:text-slate-300'
+          }`}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          {extracting ? '분석 중...' : bizDocUrl ? '파일 첨부됨' : 'PDF / 이미지 파일 선택'}
+          <input
+            type="file"
+            accept=".pdf,image/*"
+            className="hidden"
+            onChange={handleFileChange}
+            disabled={extracting}
+          />
+        </label>
+        {extractMsg && (
+          <p className={`text-xs mt-1.5 ${extractMsg.startsWith('✓') ? 'text-emerald-400' : 'text-amber-400'}`}>
+            {extractMsg}
+          </p>
+        )}
+        <p className="text-xs text-slate-600 mt-1">첨부 시 내용이 자동으로 입력됩니다</p>
+      </div>
 
       {[
-        ['회사명 *',     'company_name',  '브이에이성형외과'],
-        ['사업자번호',   'biz_number',    '000-00-00000'],
-        ['대표자',       'representative','홍길동'],
-        ['업태',         'business_type', '서비스업'],
-        ['종목',         'industry',      '의원'],
-        ['전화번호',     'telephone',     '02-1234-5678'],
-        ['주소',         'address',       '서울시 강남구'],
-        ['담당자 이름 *','admin_name',    '이담당'],
-        ['담당자 이메일 *','admin_email', 'manager@va.kr'],
-        ['담당자 연락처','admin_phone',   '010-1234-5678'],
+        ['회사명 *',        'company_name',  '브이에이성형외과'],
+        ['사업자번호',      'biz_number',    '000-00-00000'],
+        ['대표자',          'representative','홍길동'],
+        ['업태',            'business_type', '서비스업'],
+        ['종목',            'industry',      '의원'],
+        ['전화번호',        'telephone',     '02-1234-5678'],
+        ['주소',            'address',       '서울시 강남구'],
+        ['담당자 이름 *',   'admin_name',    '이담당'],
+        ['담당자 이메일 *', 'admin_email',   'manager@va.kr'],
+        ['담당자 연락처',   'admin_phone',   '010-1234-5678'],
       ].map(([label, key, placeholder]) => (
         <div key={key}>
           <label className="block text-xs font-medium text-slate-400 mb-1">{label}</label>
@@ -234,7 +307,7 @@ function RegisterForm({
         }`}>{message.text}</div>
       )}
 
-      <button type="submit" disabled={loading || message?.type === 'success'}
+      <button type="submit" disabled={loading || extracting || message?.type === 'success'}
         className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-3 rounded-xl text-sm transition-colors active:scale-95 mt-2">
         {loading ? '신청 중...' : '가입신청 제출'}
       </button>

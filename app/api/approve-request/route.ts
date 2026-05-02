@@ -33,5 +33,24 @@ export async function POST(req: Request) {
     .rpc('approve_company_request', { request_id: requestId })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // biz_doc_url을 companies 테이블에 복사
+  try {
+    const { data: reqRow } = await supabaseAdmin
+      .from('company_admin_requests')
+      .select('biz_doc_url, biz_number')
+      .eq('id', requestId)
+      .maybeSingle()
+
+    if (reqRow?.biz_doc_url) {
+      await supabaseAdmin
+        .from('companies')
+        .update({ biz_doc_url: reqRow.biz_doc_url })
+        .eq('biz_number', reqRow.biz_number)
+    }
+  } catch (e) {
+    console.warn('[approve-request] biz_doc_url 복사 실패:', e)
+  }
+
   return NextResponse.json({ success: true, ...data })
 }

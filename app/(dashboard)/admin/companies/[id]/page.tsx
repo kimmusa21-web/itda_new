@@ -1,6 +1,6 @@
 import { redirect, notFound }     from 'next/navigation'
 import Link                        from 'next/link'
-import { Building2, Users, Edit2, ArrowLeft, CreditCard, FileText } from 'lucide-react'
+import { Building2, Users, Edit2, ArrowLeft, CreditCard, FileText, Paperclip } from 'lucide-react'
 import { createClient }            from '@/lib/supabase/server'
 import { StartCompanyImpersonationButton } from '@/components/impersonation/start-impersonation-button'
 import {
@@ -141,6 +141,35 @@ export default async function AdminCompanyDetailPage({ params }: Props) {
           companyName={company.name}
         />
       </section>
+
+      {/* ── 사업자등록증 ── */}
+      {company.biz_doc_url && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Paperclip size={15} className="text-slate-400" />
+            <h2 className="text-sm font-semibold text-slate-700">사업자등록증</h2>
+          </div>
+          <div className="card p-5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <FileText size={16} className="text-blue-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-800 truncate">사업자등록증</p>
+                <p className="text-xs text-slate-400 truncate">{company.biz_doc_url.split('/').pop()}</p>
+              </div>
+            </div>
+            <a
+              href={company.biz_doc_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
+            >
+              열기
+            </a>
+          </div>
+        </section>
+      )}
 
       {/* ── 급여명세서 산출 근거 ── */}
       <section className="space-y-3">
