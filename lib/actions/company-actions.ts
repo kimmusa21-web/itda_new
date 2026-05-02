@@ -219,6 +219,8 @@ export async function updateCompanyPayslipNoteById(
 
     revalidatePath(`/admin/companies/${companyId}`)
     revalidatePath(`/admin/companies/${companyId}/edit`)
+    revalidatePath(`/admin/companies/${companyId}/payroll`, 'layout')
+    revalidatePath('/employee/payslips', 'layout')
     return { success: true }
   } catch (e: any) {
     return { success: false, error: e.message }
@@ -258,6 +260,8 @@ export async function updateCompanyPayslipNote(
     if (error) return { success: false, error: error.message }
 
     revalidatePath('/manager/more')
+    revalidatePath('/manager/payroll', 'layout')
+    revalidatePath('/employee/payslips', 'layout')
     return { success: true }
   } catch (e: any) {
     return { success: false, error: e.message }
@@ -356,6 +360,9 @@ export async function updatePayslipNoteOverrides(
     revalidatePath('/manager/company')
     revalidatePath(`/admin/companies/${targetId}`)
     revalidatePath(`/admin/companies/${targetId}/edit`)
+    revalidatePath('/manager/payroll', 'layout')
+    revalidatePath(`/admin/companies/${targetId}/payroll`, 'layout')
+    revalidatePath('/employee/payslips', 'layout')
     return { success: true }
   } catch (e: any) {
     return { success: false, error: e.message }
