@@ -279,11 +279,14 @@ export async function uploadPayslipCsv(
   }
 
   /* 6. 직원 목록 조회 */
+  // is_active 내림차순 정렬 → 재직자(true)가 먼저 오므로 Map에 먼저 등록됨
+  // 같은 이메일에 재직자+퇴사자가 공존하면 재직자 우선, 퇴사자만 있으면 퇴사자 허용
+  // (퇴사 처리 후 당월 급여 CSV 업로드 지원)
   const { data: employees, error: empError } = await supabase
     .from('employees')
-    .select('id, email')
+    .select('id, email, is_active')
     .eq('company_id', companyId)
-    .eq('is_active', true)
+    .order('is_active', { ascending: false })
 
   if (empError) {
     return { ...empty, totalCount, authError: `직원 조회 오류: ${empError.message}` }
@@ -291,7 +294,9 @@ export async function uploadPayslipCsv(
 
   const emailToId = new Map<string, number>()
   for (const emp of employees ?? []) {
-    if (emp.email) emailToId.set(emp.email.toLowerCase(), emp.id as number)
+    if (emp.email && !emailToId.has(emp.email.toLowerCase())) {
+      emailToId.set(emp.email.toLowerCase(), emp.id as number)
+    }
   }
 
   /* 7. 직원 매칭 */
