@@ -133,30 +133,22 @@ export async function POST(req: Request) {
   }
 
   /* ── 7. employees 연결 ────────────────────────────────────── */
-  // 우선순위: invite.employee_id(직접 초대) → company_id+email 매칭(승인 플로우 fallback)
+  // 사번 기준 관리: 반드시 employee_id로만 연결 (이메일 매칭 제거)
+  // 재입사 시 새 사번의 새 레코드가 employee_id로 명확히 지정되어야 함
   let employeeRow: { id: number; name: string; department: string | null; position: string | null; company_id: number } | null = null
 
   if (invite.employee_id) {
-    // 직접 초대 플로우: employee_id로 직접 연결
     const { data, error } = await supabaseAdmin
       .from('employees')
       .select('id, name, department, position, company_id')
       .eq('id', invite.employee_id)
       .is('user_id', null)
       .maybeSingle()
-    if (error) console.error('[complete-invite] employees 조회(id) 오류:', error.message)
+    if (error) console.error('[complete-invite] employees 조회 오류:', error.message)
     employeeRow = data ?? null
   } else {
-    // 기존 승인 플로우 fallback: company_id + email 매칭
-    const { data, error } = await supabaseAdmin
-      .from('employees')
-      .select('id, name, department, position, company_id')
-      .eq('company_id', invite.company_id)
-      .ilike('email', normalizedEmail)
-      .is('user_id', null)
-      .maybeSingle()
-    if (error) console.error('[complete-invite] employees 조회(email) 오류:', error.message)
-    employeeRow = data ?? null
+    // employee_id 없는 레거시 초대는 연결 스킵 (이메일 매칭 불가 — 사번 기준 관리)
+    console.warn('[complete-invite] employee_id 없는 초대 — 직원 레코드 연결 생략:', invite.id)
   }
 
   if (employeeRow) {
