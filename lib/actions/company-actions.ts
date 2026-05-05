@@ -37,6 +37,10 @@ export interface CompanyInput {
   payslip_note_overrides?: Record<string, string> | null
   payroll_day?: number | null
   payroll_start_day?: number | null
+  // 세무사/회계사 정보
+  tax_accountant_company?: string | null
+  tax_accountant_name?: string | null
+  tax_accountant_email?: string | null
 }
 
 /* ── 결과 타입 ──────────────────────────────────────────────── */
@@ -66,6 +70,9 @@ function normalizeInput(input: CompanyInput) {
     payroll_start_day:  input.payroll_start_day != null
                           ? Math.min(31, Math.max(1, Math.round(input.payroll_start_day)))
                           : null,
+    tax_accountant_company: input.tax_accountant_company?.trim() || null,
+    tax_accountant_name:    input.tax_accountant_name?.trim() || null,
+    tax_accountant_email:   input.tax_accountant_email?.trim() || null,
   }
 }
 

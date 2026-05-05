@@ -262,6 +262,216 @@ export async function sendInviteEmail(
   })
 }
 
+/* ── 재직증명서 이메일 ───────────────────────────────────────── */
+export async function sendEmploymentCertificateEmail(
+  to: string,
+  params: {
+    docNumber:      string   // "제 26-0001 호"
+    docType:        '재직증명서' | '경력증명서'
+    employeeName:   string
+    regNumber:      string | null   // 주민등록번호 (마스킹 처리)
+    address:        string | null
+    startDate:      string          // YYYY-MM-DD
+    endDate:        string | null   // null → 현재
+    purpose:        string | null
+    department:     string | null
+    position:       string | null
+    companyName:    string
+    representative: string | null
+    companyAddress: string | null
+    issuedDate:     string          // YYYY-MM-DD
+  },
+): Promise<{ success: boolean; error?: string }> {
+  const {
+    docNumber, docType, employeeName, regNumber, address,
+    startDate, endDate, purpose, department, position,
+    companyName, representative, companyAddress, issuedDate,
+  } = params
+
+  const maskReg = (r: string | null) => {
+    if (!r) return '—'
+    const clean = r.replace(/-/g, '')
+    if (clean.length >= 7) return `${clean.slice(0, 6)}-${clean[6]}******`
+    return r
+  }
+
+  const fmtDate = (d: string | null) => {
+    if (!d) return '현재'
+    const [y, m, dd] = d.split('-')
+    return `${y}년 ${parseInt(m)}월 ${parseInt(dd)}일`
+  }
+
+  const periodStr = `${fmtDate(startDate)} ~ ${fmtDate(endDate)}`
+  const posStr    = [department, position].filter(Boolean).join(' / ') || '—'
+  const isSuffix  = (posStr.endsWith('로') || posStr.endsWith('으로')) ? '' : (posStr.match(/[로으]$/) ? '' : ' (으)로')
+  const [iy, im, id_] = issuedDate.split('-')
+  const issuedStr = `${iy}년 ${parseInt(im)}월 ${parseInt(id_)}일`
+
+  return sendRawEmail({
+    to,
+    subject: `[itda] ${docType} 발급 안내 — ${companyName}`,
+    text: [
+      docNumber,
+      '',
+      `【 ${docType} 】`,
+      '',
+      `성    명 : ${employeeName}`,
+      `주민번호 : ${maskReg(regNumber)}`,
+      `주    소 : ${address ?? '—'}`,
+      `재직기간 : ${periodStr}`,
+      `제출용도 : ${purpose ?? '—'}`,
+      '',
+      `상기인은 ${companyName}의 ${posStr}${isSuffix} 재직함을 증명합니다.`,
+      '',
+      issuedStr,
+      '',
+      `${companyName} 대표이사 ${representative ?? ''}`,
+      companyAddress ?? '',
+    ].join('\n'),
+    html: `
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&display=swap');
+  body{font-family:'Noto Serif KR',Georgia,serif;background:#f0ede6;margin:0;padding:40px 16px}
+  .cert{max-width:600px;margin:0 auto;background:white;border:2px solid #1a1a2e;padding:60px 64px}
+  .doc-no{font-size:13px;color:#444;margin-bottom:40px}
+  .title-wrap{text-align:center;border-bottom:3px double #1a1a2e;padding-bottom:20px;margin-bottom:40px}
+  .title-ko{font-size:32px;font-weight:700;letter-spacing:6px;color:#1a1a2e;margin:0}
+  .title-en{font-size:12px;letter-spacing:3px;color:#666;margin:6px 0 0}
+  .field-table{width:100%;border-collapse:collapse;margin-bottom:36px}
+  .field-table td{padding:10px 4px;vertical-align:top;font-size:14px;border-bottom:1px dotted #ddd}
+  .field-table td:first-child{width:90px;color:#444;white-space:nowrap}
+  .field-table td:last-child{color:#1a1a2e;font-weight:600}
+  .stmt{text-align:center;font-size:15px;color:#1a1a2e;line-height:1.8;margin:36px 0}
+  .issued-date{text-align:center;font-size:14px;color:#444;margin-bottom:32px}
+  .sig-wrap{text-align:right;border-top:1px solid #ccc;padding-top:24px;margin-top:16px}
+  .sig-name{font-size:18px;font-weight:700;color:#1a1a2e}
+  .sig-title{font-size:12px;color:#666;margin-top:4px}
+  .sig-addr{font-size:11px;color:#999;margin-top:6px}
+  .footer{text-align:center;margin-top:32px;font-size:10px;color:#aaa;font-family:sans-serif}
+</style>
+</head>
+<body>
+<div class="cert">
+  <p class="doc-no">${docNumber}</p>
+
+  <div class="title-wrap">
+    <h1 class="title-ko">${docType}</h1>
+    <p class="title-en">CERTIFICATE OF ${docType === '재직증명서' ? 'EMPLOYMENT' : 'CAREER'}</p>
+  </div>
+
+  <table class="field-table">
+    <tr><td>성&nbsp;&nbsp;&nbsp;&nbsp;명</td><td>${employeeName}</td></tr>
+    <tr><td>주민번호</td><td>${maskReg(regNumber)}</td></tr>
+    <tr><td>주&nbsp;&nbsp;&nbsp;&nbsp;소</td><td>${address ?? '—'}</td></tr>
+    <tr><td>재직기간</td><td>${periodStr}</td></tr>
+    <tr><td>제출용도</td><td>${purpose ?? '—'}</td></tr>
+  </table>
+
+  <p class="stmt">
+    상기인은 <strong>${companyName}</strong>의<br>
+    <strong>${posStr}</strong>${isSuffix} 재직함을 증명합니다.
+  </p>
+
+  <p class="issued-date">${issuedStr}</p>
+
+  <div class="sig-wrap">
+    <p class="sig-name">${companyName}</p>
+    <p class="sig-title">대표이사&nbsp;&nbsp;${representative ?? ''}</p>
+    ${companyAddress ? `<p class="sig-addr">${companyAddress}</p>` : ''}
+  </div>
+</div>
+<p class="footer">본 문서는 itda 급여관리 서비스를 통해 발급되었습니다.</p>
+</body>
+</html>`.trim(),
+  })
+}
+
+/* ── 세무사 서류발급 요청 이메일 ─────────────────────────────── */
+export async function sendTaxDocumentRequestEmail(
+  to: string,
+  params: {
+    taxAccountantName: string
+    employeeName:      string
+    employeeEmail:     string
+    companyName:       string
+    documentType:      string
+    purpose:           string | null
+    note:              string | null
+    requestedAt:       string
+  },
+): Promise<{ success: boolean; error?: string }> {
+  const { taxAccountantName, employeeName, employeeEmail, companyName, documentType, purpose, note, requestedAt } = params
+  const reqDate = new Date(requestedAt).toLocaleDateString('ko-KR')
+
+  return sendRawEmail({
+    to,
+    subject: `[itda] ${companyName} — ${documentType} 발급 요청`,
+    text: [
+      `${taxAccountantName} 담당자님,`,
+      '',
+      `${companyName} 소속 직원의 ${documentType} 발급을 요청드립니다.`,
+      '',
+      `  직원명 : ${employeeName}`,
+      `  이메일 : ${employeeEmail}`,
+      `  서류종류: ${documentType}`,
+      `  제출용도: ${purpose ?? '—'}`,
+      `  신청일  : ${reqDate}`,
+      note ? `  메모    : ${note}` : '',
+      '',
+      '발급 후 직원 이메일로 직접 전달해 주시기 바랍니다.',
+      '',
+      '본 메일은 itda 급여관리 서비스에서 자동 발송되었습니다.',
+    ].filter(l => l !== undefined).join('\n'),
+    html: `
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 16px">
+  <div style="max-width:520px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
+    <div style="background:#0f172a;padding:28px 32px">
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <p style="color:#94a3b8;margin:4px 0 0;font-size:13px">서류발급 요청</p>
+    </div>
+    <div style="padding:32px">
+      <p style="color:#0f172a;font-size:15px;margin:0 0 6px">안녕하세요, <strong>${taxAccountantName}</strong> 담당자님.</p>
+      <p style="color:#475569;font-size:14px;margin:0 0 28px;line-height:1.6">
+        <strong>${companyName}</strong> 소속 직원의 서류 발급을 요청드립니다.<br>
+        발급 후 직원 이메일로 직접 전달해 주시기 바랍니다.
+      </p>
+
+      <div style="background:#f1f5f9;border-radius:12px;padding:24px;margin-bottom:28px">
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="color:#64748b;font-size:13px;padding:5px 0;width:80px">직원명</td>
+              <td style="color:#0f172a;font-size:13px;font-weight:600;padding:5px 0">${employeeName}</td></tr>
+          <tr><td style="color:#64748b;font-size:13px;padding:5px 0">이메일</td>
+              <td style="color:#2563eb;font-size:13px;padding:5px 0">${employeeEmail}</td></tr>
+          <tr><td style="color:#64748b;font-size:13px;padding:5px 0">서류종류</td>
+              <td style="color:#0f172a;font-size:13px;font-weight:600;padding:5px 0">${documentType}</td></tr>
+          <tr><td style="color:#64748b;font-size:13px;padding:5px 0">제출용도</td>
+              <td style="color:#0f172a;font-size:13px;padding:5px 0">${purpose ?? '—'}</td></tr>
+          <tr><td style="color:#64748b;font-size:13px;padding:5px 0">신청일</td>
+              <td style="color:#0f172a;font-size:13px;padding:5px 0">${reqDate}</td></tr>
+          ${note ? `<tr><td style="color:#64748b;font-size:13px;padding:5px 0">메모</td>
+              <td style="color:#0f172a;font-size:13px;padding:5px 0">${note}</td></tr>` : ''}
+        </table>
+      </div>
+
+      <p style="color:#94a3b8;font-size:12px;margin:0;line-height:1.7">
+        본 이메일은 itda 급여관리 서비스에서 자동 발송되었습니다.
+      </p>
+    </div>
+    <div style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0">
+      <p style="color:#94a3b8;font-size:11px;margin:0">© itda 급여관리 · 본 메일은 발신 전용입니다.</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
 /* ── 초대 완료 알림 이메일 (선택적) ─────────────────────────── */
 export async function sendWelcomeEmail(
   to: string,

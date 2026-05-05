@@ -32,7 +32,21 @@
       "Bash(xargs -I {} git show {}:supabase/migrations/)",
       "mcp__claude_ai_Supabase__list_tables",
       "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
-      "Bash(Select-String \"notifications-panel|notification-detail\")"
+      "Bash(Select-String \"notifications-panel|notification-detail\")",
+      "Bash(python -c ' *)",
+      "Bash(python *)",
+      "Bash(git commit *)",
+      "Bash(xargs findstr *)",
+      "Bash(Find-ChildItem -Path \"C:\\\\프로젝트\\\\itda_new\\\\payroll-app\\\\supabase\\\\migrations\" -Filter \"*.sql\")",
+      "Bash(Sort-Object -Property Name -Descending)",
+      "Bash(Select-Object -First 10)",
+      "Bash(Format-Table Name)",
+      "Bash(grep -E \"\\\\.sql$\")",
+      "Bash(Find-Content -Path \"C:\\\\프로젝트\\\\itda_new\\\\payroll-app\\\\supabase\\\\migrations\" -Filter \"*.sql\")",
+      "Bash(Select-String -Pattern \"companies|withdrawal\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\프로젝트\\\\itda_new\\\\payroll-app\\\\supabase\\\\migrations\" -Filter \"*.sql\")",
+      "Bash(Get-Content)",
+      "Bash(Select-String -Pattern \"CREATE TABLE.*companies|ALTER TABLE.*companies|withdrawal\")"
     ]
   }
 }

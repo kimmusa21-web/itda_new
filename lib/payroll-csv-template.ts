@@ -14,8 +14,9 @@ export interface CsvColumnDef {
 /** 표준 CSV 전체 컬럼 정의 (순서 = CSV 열 순서) */
 export const STANDARD_CSV_COLUMNS: CsvColumnDef[] = [
   // ── 식별 ────────────────────────────────────────────
-  { key: 'employee_name',  label: '성명',       required: false, group: 'identity', note: '참고용' },
-  { key: 'email',          label: '이메일',      required: true,  group: 'identity', note: '직원 매칭 기준 (필수)' },
+  { key: 'employee_number', label: '사번',       required: true,  group: 'identity', note: '직원 매칭 기준 (필수)' },
+  { key: 'employee_name',   label: '성명',       required: false, group: 'identity', note: '참고용 (사번 없을 때 단독 이름 매칭)' },
+  { key: 'email',           label: '이메일',     required: false, group: 'identity', note: '선택 (레거시)' },
   // ── 급여 기준 ────────────────────────────────────────
   { key: 'payment_date',   label: '급여지급일',   required: false, group: 'period',   note: 'YYYY-MM-DD 형식' },
   { key: 'accrual_month',  label: '귀속월',       required: true,  group: 'period',   note: 'YYYY-MM-DD 형식 (예: 2026-04-01)' },
@@ -76,7 +77,7 @@ export function generateStandardCsvTemplate(): string {
   const header = STANDARD_CSV_HEADER_KEYS.join(',')
 
   const example1 = [
-    '홍길동', 'hong@example.com',
+    'A001', '홍길동', 'hong@example.com',
     '2026-04-25', '2026-04-01', '2026-03-16', '2026-04-15', '28',
     '209', '60', '', '', '8',
     '3000000', '300000', '150000', '', '', '200000', '', '', '', '', '',
@@ -86,7 +87,7 @@ export function generateStandardCsvTemplate(): string {
   ].join(',')
 
   const example2 = [
-    '김철수', 'kim@example.com',
+    'A002', '김철수', 'kim@example.com',
     '2026-04-25', '2026-04-01', '2026-03-16', '2026-04-15', '28',
     '209', '', '', '', '',
     '2800000', '', '', '', '', '200000', '', '', '', '', '',

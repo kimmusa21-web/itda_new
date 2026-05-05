@@ -23,10 +23,11 @@ export type CsvRow = Record<string, string>
 export type ValidationSeverity = 'error' | 'warning'
 
 export interface ValidationError {
-  rowIndex: number               // 1-based (헤더 제외)
-  email?:   string
-  reason:   string
-  severity: ValidationSeverity
+  rowIndex:        number               // 1-based (헤더 제외)
+  employee_number?: string
+  email?:          string
+  reason:          string
+  severity:        ValidationSeverity
 }
 
 /** 검증 결과 전체 */
@@ -88,12 +89,13 @@ export interface PayInfoPayload {
   upload_log_id?:   number | null
 }
 
-/** 직원 마스터 (이메일 매핑용) */
+/** 직원 마스터 (사번 매핑용) */
 export interface EmployeeMaster {
-  id:         number
-  email:      string
-  name:       string
-  company_id: number
+  id:              number
+  employee_number: string | null
+  email:           string
+  name:            string
+  company_id:      number
 }
 
 /** 미리보기 행 */
@@ -101,6 +103,7 @@ export type PreviewStatus = 'valid' | 'error' | 'ignored'
 
 export interface PreviewRow {
   rowIndex:        number
+  employeeId?:     number        // 매칭된 직원 ID (toPayInfoPayloads 재조회 불필요)
   email:           string
   employeeName:    string
   accrualMonth:    string

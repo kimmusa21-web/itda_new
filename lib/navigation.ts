@@ -1,4 +1,4 @@
-import { Bell, Building2, Users, Upload, Home, BarChart3, Wallet, User, UserPlus, ClipboardList, Eye, BadgeDollarSign, Settings, UserMinus, FileText, type LucideIcon } from 'lucide-react'
+import { Bell, Building2, Users, Upload, Home, BarChart3, Wallet, User, UserPlus, ClipboardList, Eye, BadgeDollarSign, Settings, UserMinus, FileText, FolderOpen, type LucideIcon } from 'lucide-react'
 import type { Role } from '@/types'
 
 export type { Role }
@@ -27,12 +27,14 @@ export const roleNavMap: RoleNavMap = {
     { label: '직원관리', href: '/manager/employees',          icon: Users          },
     { label: '급여조회', href: '/manager/payroll',            icon: BarChart3      },
     { label: '퇴사자',   href: '/manager/employees/resigned', icon: UserMinus      },
+    { label: '서류관리', href: '/manager/documents',          icon: FolderOpen     },
     { label: '내 정보',  href: '/manager/profile',            icon: Settings       },
   ],
   employee: [
-    { label: '홈',      href: '/employee',          icon: Home   },
-    { label: '급여',    href: '/employee/payslips', icon: Wallet },
-    { label: '내 정보', href: '/employee/profile',  icon: User   },
+    { label: '홈',      href: '/employee',           icon: Home       },
+    { label: '급여',    href: '/employee/payslips',  icon: Wallet     },
+    { label: '서류신청', href: '/employee/documents', icon: FolderOpen },
+    { label: '내 정보', href: '/employee/profile',   icon: User       },
   ],
 }
 
@@ -57,6 +59,7 @@ export const mobileNavMap: RoleNavMap = {
     { label: '내 정보', href: '/employee/profile',  icon: User   },
   ],
 }
+
 
 export const roleLabels: Record<Role, string> = {
   admin: '시스템 관리자', manager: '기업담당자', employee: '직원',
@@ -97,6 +100,8 @@ export function getPageTitle(pathname: string): string {
     '/employee':                     '내 급여',
     '/employee/payslips':            '급여목록',
     '/employee/profile':             '내 정보',
+    '/employee/documents':           '서류신청',
+    '/manager/documents':            '서류관리',
   }
   return map[pathname] ?? 'itda'
 }

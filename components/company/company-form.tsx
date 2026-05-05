@@ -24,20 +24,23 @@ type SubmitState = 'idle' | 'loading' | 'success' | 'error'
 
 /* ── 기본값 ────────────────────────────────────────────────── */
 const EMPTY: CompanyInput = {
-  name:                '',
-  biz_number:          '',
-  representative:      '',
-  contact_name:        '',
-  contact_email:       '',
-  'Business type':     '',
-  Industry:            '',
-  Telephone:           '',
-  address:             '',
-  'tax invoice email': '',
-  status:              'active',
-  payslip_note:        null,
-  payroll_day:         null,
-  payroll_start_day:   null,
+  name:                    '',
+  biz_number:              '',
+  representative:          '',
+  contact_name:            '',
+  contact_email:           '',
+  'Business type':         '',
+  Industry:                '',
+  Telephone:               '',
+  address:                 '',
+  'tax invoice email':     '',
+  status:                  'active',
+  payslip_note:            null,
+  payroll_day:             null,
+  payroll_start_day:       null,
+  tax_accountant_company:  '',
+  tax_accountant_name:     '',
+  tax_accountant_email:    '',
 }
 
 /* ── 메인 컴포넌트 ─────────────────────────────────────────── */
@@ -68,6 +71,9 @@ export function CompanyForm({ mode, initialData, successHref, cancelHref, hideSt
     }
     if (form['tax invoice email'] && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form['tax invoice email']!)) {
       e['tax invoice email'] = '이메일 형식이 올바르지 않습니다'
+    }
+    if (form.tax_accountant_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.tax_accountant_email)) {
+      e.tax_accountant_email = '이메일 형식이 올바르지 않습니다'
     }
     setErrors(e)
     return Object.keys(e).length === 0
@@ -225,6 +231,24 @@ export function CompanyForm({ mode, initialData, successHref, cancelHref, hideSt
         </Row2>
         <FieldWrap label="주소">
           <input className={cls(false)} placeholder="서울시 강남구..." value={form.address ?? ''} onChange={onChange('address')} />
+        </FieldWrap>
+      </Section>
+
+      {/* 세무사 / 회계사 정보 */}
+      <Section title="세무사 / 회계사 정보">
+        <p className="text-xs text-slate-500 -mt-1 mb-2">
+          원천징수영수증·소득확인서 등 세무 서류 신청 시 발급 요청 이메일을 받을 담당자입니다.
+        </p>
+        <Row2>
+          <FieldWrap label="세무사(회계사) 회사명">
+            <input className={cls(false)} placeholder="예: (주)세무법인 한결" value={form.tax_accountant_company ?? ''} onChange={onChange('tax_accountant_company')} />
+          </FieldWrap>
+          <FieldWrap label="담당자 이름">
+            <input className={cls(false)} placeholder="김세무" value={form.tax_accountant_name ?? ''} onChange={onChange('tax_accountant_name')} />
+          </FieldWrap>
+        </Row2>
+        <FieldWrap label="담당자 이메일" error={errors.tax_accountant_email}>
+          <input type="email" className={cls(!!errors.tax_accountant_email)} placeholder="tax@example.com" value={form.tax_accountant_email ?? ''} onChange={onChange('tax_accountant_email')} />
         </FieldWrap>
       </Section>
 

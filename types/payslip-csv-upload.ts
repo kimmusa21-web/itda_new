@@ -5,8 +5,9 @@
 /** CSV 원본 행 — STANDARD_CSV_COLUMNS과 1:1 매핑 */
 export interface PayslipCsvRow {
   // 식별
-  employee_name?: string
-  email:          string
+  employee_number?: string  // 사번 (매칭 기준)
+  employee_name?:   string
+  email?:           string  // 선택 (레거시)
   // 급여 기준
   payment_date?:  string          // YYYY-MM-DD
   accrual_month:  string          // YYYY-MM-DD (필수)
@@ -52,9 +53,11 @@ export interface PayslipCsvRow {
 
 /** 행별 실패 상세 */
 export interface PayslipCsvFailure {
-  rowNumber: number
-  email:     string
-  reason:    string
+  rowNumber:        number
+  employee_number?: string
+  name?:            string
+  email?:           string
+  reason:           string
 }
 
 /** 업로드 결과 */
@@ -74,14 +77,14 @@ export interface PayslipCsvUploadParams {
 }
 
 /** 필수 헤더 키 목록 */
-export const REQUIRED_PAYSLIP_KEYS = ['email', 'accrual_month', 'base_salary'] as const
+export const REQUIRED_PAYSLIP_KEYS = ['employee_number', 'accrual_month', 'base_salary'] as const
 export type RequiredPayslipKey = (typeof REQUIRED_PAYSLIP_KEYS)[number]
 
 /** 필수 헤더 한글 라벨 */
 export const REQUIRED_PAYSLIP_LABELS: Record<RequiredPayslipKey, string> = {
-  email:         '이메일',
-  accrual_month: '귀속월(YYYY-MM-DD)',
-  base_salary:   '기본급',
+  employee_number: '사번',
+  accrual_month:   '귀속월(YYYY-MM-DD)',
+  base_salary:     '기본급',
 }
 
 /* ── 하위 호환성 유지 ─────────────────────────────────────── */
