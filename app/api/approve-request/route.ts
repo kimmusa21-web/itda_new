@@ -28,29 +28,77 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true })
   }
 
-  // approve — DB 함수 호출
-  const { data, error } = await supabaseAdmin
-    .rpc('approve_company_request', { request_id: requestId })
+  // ── 승인 처리 ──────────────────────────────────────────────────
+  // 신청서 조회
+  const { data: request, error: reqErr } = await supabaseAdmin
+    .from('company_admin_requests')
+    .select('*')
+    .eq('id', requestId)
+    .eq('status', 'pending')
+    .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (reqErr || !request)
+    return NextResponse.json({ error: '대기중인 신청서가 아닙니다' }, { status: 404 })
 
-  // biz_doc_url을 companies 테이블에 복사
-  try {
-    const { data: reqRow } = await supabaseAdmin
-      .from('company_admin_requests')
-      .select('biz_doc_url, biz_number')
-      .eq('id', requestId)
-      .maybeSingle()
+  // 동일 사업자번호 회사가 이미 있는지 확인 (soft-delete 포함)
+  const { data: existingCompany } = await supabaseAdmin
+    .from('companies')
+    .select('id')
+    .eq('biz_number', request.biz_number)
+    .maybeSingle()
 
-    if (reqRow?.biz_doc_url) {
-      await supabaseAdmin
-        .from('companies')
-        .update({ biz_doc_url: reqRow.biz_doc_url })
-        .eq('biz_number', reqRow.biz_number)
-    }
-  } catch (e) {
-    console.warn('[approve-request] biz_doc_url 복사 실패:', e)
+  let companyId: number
+
+  if (existingCompany) {
+    // 기존 회사 재활성화 및 정보 업데이트
+    const { error: updateErr } = await supabaseAdmin
+      .from('companies')
+      .update({
+        name:          request.company_name,
+        representative: request.representative ?? null,
+        business_type: request.business_type  ?? null,
+        industry_type: request.industry        ?? null,
+        telephone:     request.telephone       ?? null,
+        address:       request.address         ?? null,
+        status:        'active',
+        deleted_at:    null,
+        ...(request.biz_doc_url ? { biz_doc_url: request.biz_doc_url } : {}),
+      })
+      .eq('id', existingCompany.id)
+
+    if (updateErr)
+      return NextResponse.json({ error: '회사 정보 업데이트 실패: ' + updateErr.message }, { status: 500 })
+
+    companyId = existingCompany.id
+  } else {
+    // 신규 회사 생성
+    const { data: newCompany, error: insertErr } = await supabaseAdmin
+      .from('companies')
+      .insert({
+        name:          request.company_name,
+        biz_number:    request.biz_number,
+        representative: request.representative ?? null,
+        business_type: request.business_type  ?? null,
+        industry_type: request.industry        ?? null,
+        telephone:     request.telephone       ?? null,
+        address:       request.address         ?? null,
+        status:        'active',
+        biz_doc_url:   request.biz_doc_url     ?? null,
+      })
+      .select('id')
+      .single()
+
+    if (insertErr || !newCompany)
+      return NextResponse.json({ error: '회사 생성 실패: ' + insertErr?.message }, { status: 500 })
+
+    companyId = newCompany.id
   }
 
-  return NextResponse.json({ success: true, ...data })
+  // 신청서 승인 완료 처리
+  await supabaseAdmin
+    .from('company_admin_requests')
+    .update({ status: 'approved', reviewed_at: new Date().toISOString() })
+    .eq('id', requestId)
+
+  return NextResponse.json({ success: true, company_id: companyId, company_name: request.company_name })
 }
