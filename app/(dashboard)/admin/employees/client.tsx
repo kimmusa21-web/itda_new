@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Plus, Search, Mail, Upload, X, Hash }  from 'lucide-react'
+import { Plus, Search, Mail, Upload, X, Hash, Eye, EyeOff } from 'lucide-react'
 import Link                                      from 'next/link'
 import { createClient }                          from '@/lib/supabase/client'
 import type { EmployeeRow }                      from '@/lib/supabase/queries/employee'
 import { formatDateShort, cn }                   from '@/lib/utils'
 import { formatKRW }                             from '@/lib/payslip-utils'
 import { createEmployeeAdmin, deleteEmployeeAdmin } from '@/lib/actions/employee-admin-create'
+import { resignEmployee }                        from '@/lib/actions/employee-resign'
 import EmployeeExportButton                      from '@/components/employees/employee-export-button'
 
 type Filter = 'active' | 'inactive' | 'all'
@@ -44,6 +45,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
   const [quitSummary, setQuitSummary]         = useState<QuitSummary | null>(null)
   const [quitSummaryLoading, setQuitSummaryLoading] = useState(false)
   const [quitDateDirty, setQuitDateDirty]     = useState(false)
+  const [showRegNum, setShowRegNum]           = useState(false)
 
   async function reload() {
     const { data } = await supabase
@@ -55,9 +57,9 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
     if (!quitDate) return
     setQuitSummaryLoading(true)
     setQuitDateDirty(false)
+    const quitYear = new Date(quitDate).getFullYear()
+    const prevYear = quitYear - 1
     try {
-      const quitYear = new Date(quitDate).getFullYear()
-      const prevYear = quitYear - 1
       const { data } = await supabase
         .from('pay_info_v2')
         .select('accrual_month, total_earnings, Total_tax_salary')
@@ -65,16 +67,26 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
         .gte('accrual_month', `${prevYear}-01-01`)
         .lte('accrual_month', `${quitYear}-12-31`)
       const records = data ?? []
-      const prev = records.filter(r => r.accrual_month.startsWith(String(prevYear)))
-      const curr = records.filter(r => r.accrual_month.startsWith(String(quitYear)))
+      const prev = records.filter(r => r.accrual_month?.startsWith(String(prevYear)))
+      const curr = records.filter(r => r.accrual_month?.startsWith(String(quitYear)))
       setQuitSummary({
         prevYear,
-        prevYearTaxable: prev.reduce((s, r) => s + (r.Total_tax_salary ?? r.total_earnings ?? 0), 0),
-        prevYearTotal:   prev.reduce((s, r) => s + (r.total_earnings ?? 0), 0),
+        prevYearTaxable: prev.reduce((s, r) => s + Number(r.Total_tax_salary ?? r.total_earnings ?? 0), 0),
+        prevYearTotal:   prev.reduce((s, r) => s + Number(r.total_earnings ?? 0), 0),
         currentYear:     quitYear,
-        currentYearTaxable: curr.reduce((s, r) => s + (r.Total_tax_salary ?? r.total_earnings ?? 0), 0),
-        currentYearTotal:   curr.reduce((s, r) => s + (r.total_earnings ?? 0), 0),
+        currentYearTaxable: curr.reduce((s, r) => s + Number(r.Total_tax_salary ?? r.total_earnings ?? 0), 0),
+        currentYearTotal:   curr.reduce((s, r) => s + Number(r.total_earnings ?? 0), 0),
         hasData: records.length > 0,
+      })
+    } catch {
+      setQuitSummary({
+        prevYear,
+        prevYearTaxable: 0,
+        prevYearTotal: 0,
+        currentYear: quitYear,
+        currentYearTaxable: 0,
+        currentYearTotal: 0,
+        hasData: false,
       })
     } finally {
       setQuitSummaryLoading(false)
@@ -95,6 +107,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
     setModal(null)
     setQuitSummary(null)
     setQuitDateDirty(false)
+    setShowRegNum(false)
   }
 
   /* ── 클라이언트 사이드 필터링 (빠른 UX) ── */
@@ -156,9 +169,14 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
         }).eq('id', selected.id)
         if (editErr) throw new Error(editErr.message)
       } else if (modal === 'quit' && selected) {
-        await supabase.from('employees').update({
-          quit_date: form.quit_date, is_active: false,
-        }).eq('id', selected.id)
+        if (!form.quit_date) throw new Error('퇴사일을 입력해주세요')
+        const result = await resignEmployee(selected.id, {
+          quitDate:          form.quit_date,
+          quitReason:        '',
+          unemploymentClaim: false,
+          unemploymentCode:  '',
+        })
+        if (!result.success) throw new Error(result.error)
       } else if (modal === 'rehire' && selected) {
         await supabase.from('employees').update({
           is_active: true, quit_date: null,
@@ -652,6 +670,31 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
             <div className="flex justify-between text-sm">
               <span className="text-slate-500">입사일</span>
               <span className="text-slate-700">{selected.Date_of_joining ?? '-'}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">생년월일</span>
+              <span className="text-slate-700">{selected.birthdate ?? '-'}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-500">주민등록번호</span>
+              {selected.registration_number ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-700 font-mono text-xs">
+                    {showRegNum
+                      ? selected.registration_number
+                      : `${selected.registration_number.slice(0, 7)}*******`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowRegNum(v => !v)}
+                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showRegNum ? <EyeOff size={13} /> : <Eye size={13} />}
+                  </button>
+                </div>
+              ) : (
+                <span className="text-slate-400">-</span>
+              )}
             </div>
           </div>
 
