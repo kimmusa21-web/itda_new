@@ -7,8 +7,7 @@ import { createClient }                          from '@/lib/supabase/client'
 import type { EmployeeRow }                      from '@/lib/supabase/queries/employee'
 import { formatDateShort, cn }                   from '@/lib/utils'
 import { formatKRW }                             from '@/lib/payslip-utils'
-import { createEmployeeAdmin, deleteEmployeeAdmin } from '@/lib/actions/employee-admin-create'
-import { resignEmployee }                        from '@/lib/actions/employee-resign'
+import { createEmployeeAdmin, deleteEmployeeAdmin, resignEmployeeAdmin } from '@/lib/actions/employee-admin-create'
 import EmployeeExportButton                      from '@/components/employees/employee-export-button'
 
 type Filter = 'active' | 'inactive' | 'all'
@@ -170,12 +169,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
         if (editErr) throw new Error(editErr.message)
       } else if (modal === 'quit' && selected) {
         if (!form.quit_date) throw new Error('퇴사일을 입력해주세요')
-        const result = await resignEmployee(selected.id, {
-          quitDate:          form.quit_date,
-          quitReason:        '',
-          unemploymentClaim: false,
-          unemploymentCode:  '',
-        })
+        const result = await resignEmployeeAdmin(selected.id, form.quit_date)
         if (!result.success) throw new Error(result.error)
       } else if (modal === 'rehire' && selected) {
         await supabase.from('employees').update({

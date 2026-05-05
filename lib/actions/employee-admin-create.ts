@@ -119,6 +119,49 @@ export async function createEmployeeAdmin(
 }
 
 /* ================================================================
+   resignEmployeeAdmin — 직원 퇴사 처리 (어드민 전용 직접 처리)
+   매니저 요청 없이 어드민이 직접 퇴사 처리
+================================================================ */
+export async function resignEmployeeAdmin(
+  employeeId: number,
+  quitDate: string,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServerClient()
+
+  /* 어드민 권한 확인 */
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: '인증이 필요합니다' }
+
+  const { data: profile } = await supabase
+    .from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') {
+    return { success: false, error: '어드민 권한이 필요합니다' }
+  }
+
+  if (!quitDate) return { success: false, error: '퇴사일은 필수입니다' }
+
+  /* 직원 확인 */
+  const { data: emp } = await supabase
+    .from('employees').select('is_active, name').eq('id', employeeId).single()
+  if (!emp) return { success: false, error: '직원을 찾을 수 없습니다' }
+  if (!emp.is_active) return { success: false, error: '이미 퇴사 처리된 직원입니다' }
+
+  /* 퇴사 처리 (service role — RLS 우회) */
+  const service = createServiceClient()
+  const { error } = await service
+    .from('employees')
+    .update({ is_active: false, quit_date: quitDate })
+    .eq('id', employeeId)
+
+  if (error) {
+    console.error('[resignEmployeeAdmin] 퇴사 처리 실패:', error.message)
+    return { success: false, error: '퇴사 처리 실패: ' + error.message }
+  }
+
+  return { success: true }
+}
+
+/* ================================================================
    deleteEmployeeAdmin — 퇴사 직원 완전 삭제 (어드민 전용)
    순서: pay_info_v2 → employees
    퇴사(is_active=false) 상태인 직원만 삭제 허용
