@@ -2,6 +2,7 @@ import { redirect, notFound }     from 'next/navigation'
 import Link                        from 'next/link'
 import { Building2, Users, Edit2, ArrowLeft, CreditCard, FileText, Paperclip } from 'lucide-react'
 import { createClient }            from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { StartCompanyImpersonationButton } from '@/components/impersonation/start-impersonation-button'
 import {
   getCompanyDetail,
@@ -11,6 +12,7 @@ import {
 import { CompanyPayrollLedgerTable } from '@/components/company/company-payroll-ledger-table'
 import { CompanyEmployeeList }       from '@/components/company/company-employee-list'
 import { PayslipNoteEditor }         from '@/components/company/payslip-note-editor'
+import { ManagerSection }            from '@/components/company/manager-section'
 import { cn }                        from '@/lib/utils'
 
 export async function generateMetadata({ params }: Props) {
@@ -35,11 +37,33 @@ export default async function AdminCompanyDetailPage({ params }: Props) {
   if (profile?.role !== 'admin') redirect(`/${profile?.role ?? 'employee'}`)
 
   /* ── 데이터 병렬 조회 ── */
-  const [company, payrollSummaries, employees] = await Promise.all([
+  const serviceSupabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+
+  const [company, payrollSummaries, employees, managersRes, eligibleRes] = await Promise.all([
     getCompanyDetail(id),
     getCompanyPayrollLedgerSummaries(id),
     getCompanyEmployees(id),
+    // 현재 매니저 목록
+    serviceSupabase
+      .from('profiles')
+      .select('id, name, email')
+      .eq('company_id', id)
+      .eq('role', 'manager'),
+    // 앱 계정이 있는 재직 직원 (매니저 이전 대상)
+    serviceSupabase
+      .from('employees')
+      .select('id, name, email, user_id')
+      .eq('company_id', id)
+      .eq('is_active', true)
+      .not('user_id', 'is', null),
   ])
+
+  const managers          = (managersRes.data  ?? []) as { id: string; name: string | null; email: string }[]
+  const eligibleEmployees = (eligibleRes.data   ?? []) as { id: number; name: string; email: string; user_id: string }[]
 
   if (!company) notFound()
 
@@ -127,6 +151,13 @@ export default async function AdminCompanyDetailPage({ params }: Props) {
           basePath={`/admin/companies/${id}/payroll`}
         />
       </section>
+
+      {/* ── 매니저 ── */}
+      <ManagerSection
+        companyId={id}
+        managers={managers}
+        eligibleEmployees={eligibleEmployees}
+      />
 
       {/* ── 직원 목록 ── */}
       <section className="space-y-3">
