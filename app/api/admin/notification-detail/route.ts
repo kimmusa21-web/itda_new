@@ -83,5 +83,21 @@ export async function GET(req: Request) {
     return NextResponse.json({ type, data })
   }
 
+  /* ── 탈퇴신청 ──────────────────────────────────────────── */
+  if (type === 'company_withdrawal_request') {
+    const { data, error } = await service
+      .from('company_withdrawal_requests')
+      .select(`
+        id, status, note, data_downloaded, created_at, reviewed_at,
+        companies ( id, name, biz_number, representative ),
+        profiles!company_withdrawal_requests_requested_by_fkey ( name, email )
+      `)
+      .eq('id', targetId)
+      .maybeSingle()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (!data)  return NextResponse.json({ error: '데이터 없음' }, { status: 404 })
+    return NextResponse.json({ type, data })
+  }
+
   return NextResponse.json({ error: '지원하지 않는 알림 유형' }, { status: 400 })
 }

@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, X, Building2, Users, UserMinus, Bell, ChevronDown, ChevronUp, FileText, ExternalLink } from 'lucide-react'
+import { Check, X, Building2, Users, UserMinus, Bell, ChevronDown, ChevronUp, FileText, ExternalLink, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import AdminNotificationsPanel from '@/components/admin/notifications-panel'
+import { approveWithdrawal, rejectWithdrawal } from '@/lib/actions/company-withdrawal-actions'
 import type { Notification } from '@/types'
 import type { EmployeeRow } from '@/lib/supabase/queries/employee'
 
@@ -28,14 +29,26 @@ interface CompanyRequest {
   reject_reason: string | null
 }
 
+export interface WithdrawalRequest {
+  id:              number
+  status:          RequestStatus
+  note:            string | null
+  data_downloaded: boolean
+  created_at:      string
+  reviewed_at:     string | null
+  companies:       { id: number; name: string; biz_number: string | null; representative: string | null } | null
+  profiles:        { name: string | null; email: string } | null
+}
+
 interface Props {
   companyRequests:       CompanyRequest[]
   employeeNotifications: Notification[]
   resignedEmployees:     EmployeeRow[]
+  withdrawalRequests:    WithdrawalRequest[]
   otherNotifications:    Notification[]
 }
 
-type Tab = 'company' | 'employee' | 'resignation'
+type Tab = 'company' | 'employee' | 'resignation' | 'withdrawal'
 
 /* ── 행 컴포넌트 ─────────────────────────────────────────── */
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
@@ -190,6 +203,106 @@ function CompanyRequestItem({ req, onStatusChange }: {
             <p className="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
               거절 사유: {req.reject_reason}
             </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── 탈퇴신청 아이템 ─────────────────────────────────────── */
+function WithdrawalRequestItem({
+  req,
+  onStatusChange,
+}: {
+  req: WithdrawalRequest
+  onStatusChange: (id: number, status: RequestStatus) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const [loading,  setLoading]  = useState(false)
+
+  async function handle(action: 'approved' | 'rejected') {
+    setLoading(true)
+    const result = action === 'approved'
+      ? await approveWithdrawal(req.id)
+      : await rejectWithdrawal(req.id)
+    setLoading(false)
+    if (result.success) {
+      onStatusChange(req.id, action)
+      setExpanded(false)
+    } else {
+      alert('오류: ' + result.error)
+    }
+  }
+
+  const statusColor =
+    req.status === 'pending'  ? 'bg-amber-500' :
+    req.status === 'approved' ? 'bg-emerald-500' : 'bg-slate-400'
+
+  const statusLabel =
+    req.status === 'pending'  ? '대기' :
+    req.status === 'approved' ? '승인' : '거절'
+
+  return (
+    <div className="card overflow-hidden">
+      <button
+        className="w-full flex items-center gap-3 p-4 text-left hover:bg-slate-50 transition-colors"
+        onClick={() => setExpanded(v => !v)}
+      >
+        <span className={cn('w-2 h-2 rounded-full flex-shrink-0', statusColor)} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium text-slate-900">
+              {req.companies?.name ?? '(회사명 없음)'}
+            </span>
+            <span className={cn(
+              'badge text-[10px]',
+              req.status === 'pending'  ? 'badge-yellow' :
+              req.status === 'approved' ? 'badge-green'  : 'badge-gray',
+            )}>
+              {statusLabel}
+            </span>
+          </div>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {req.profiles?.name} · {req.profiles?.email} · {new Date(req.created_at).toLocaleDateString('ko-KR')}
+          </p>
+        </div>
+        {expanded
+          ? <ChevronUp size={14} className="text-slate-400 flex-shrink-0" />
+          : <ChevronDown size={14} className="text-slate-400 flex-shrink-0" />}
+      </button>
+
+      {expanded && (
+        <div className="px-4 pb-4 border-t border-slate-100 pt-3 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+            <InfoRow label="사업자번호" value={req.companies?.biz_number} />
+            <InfoRow label="대표자"     value={req.companies?.representative} />
+            <InfoRow label="담당자"     value={req.profiles?.name} />
+            <InfoRow label="이메일"     value={req.profiles?.email} />
+            <InfoRow label="탈퇴 사유"  value={req.note} />
+            <InfoRow
+              label="자료 다운로드"
+              value={req.data_downloaded ? '완료' : '미완료'}
+            />
+          </div>
+
+          {req.status === 'pending' && (
+            <div className="flex gap-2">
+              <button
+                disabled={loading}
+                onClick={() => handle('approved')}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-medium text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+              >
+                <Check size={14} /> 승인 (탈퇴 처리)
+              </button>
+              <button
+                disabled={loading}
+                onClick={() => handle('rejected')}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-red-50 border border-red-200 text-sm font-medium text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+              >
+                <X size={14} /> 거절
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -352,14 +465,20 @@ export default function AdminRequestsClient({
   companyRequests,
   employeeNotifications,
   resignedEmployees,
+  withdrawalRequests,
   otherNotifications,
 }: Props) {
   const [tab, setTab] = useState<Tab>('company')
-  const [requests, setRequests] = useState(companyRequests)
+  const [requests,    setRequests]    = useState(companyRequests)
+  const [withdrawals, setWithdrawals] = useState(withdrawalRequests)
   const [, startTransition] = useTransition()
 
   function handleStatusChange(id: number, status: RequestStatus) {
     setRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r))
+  }
+
+  function handleWithdrawalStatusChange(id: number, status: RequestStatus) {
+    setWithdrawals(prev => prev.map(r => r.id === id ? { ...r, status } : r))
   }
 
   const tabs: { key: Tab; label: string; icon: typeof Building2; count?: number }[] = [
@@ -381,10 +500,18 @@ export default function AdminRequestsClient({
       icon: UserMinus,
       count: resignedEmployees.length || undefined,
     },
+    {
+      key: 'withdrawal',
+      label: '탈퇴신청',
+      icon: LogOut,
+      count: withdrawals.filter(r => r.status === 'pending').length || undefined,
+    },
   ]
 
   const pendingRequests  = requests.filter(r => r.status === 'pending')
   const resolvedRequests = requests.filter(r => r.status !== 'pending')
+  const pendingWithdrawals  = withdrawals.filter(r => r.status === 'pending')
+  const resolvedWithdrawals = withdrawals.filter(r => r.status !== 'pending')
 
   return (
     <div className="space-y-5">
@@ -453,6 +580,31 @@ export default function AdminRequestsClient({
       {/* 퇴사자 탭 */}
       {tab === 'resignation' && (
         <ResignedEmployeeList employees={resignedEmployees} />
+      )}
+
+      {/* 탈퇴신청 탭 */}
+      {tab === 'withdrawal' && (
+        <div className="space-y-4">
+          {pendingWithdrawals.length > 0 && (
+            <div className="space-y-2.5">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">대기 중 ({pendingWithdrawals.length})</p>
+              {pendingWithdrawals.map(req => (
+                <WithdrawalRequestItem key={req.id} req={req} onStatusChange={handleWithdrawalStatusChange} />
+              ))}
+            </div>
+          )}
+          {resolvedWithdrawals.length > 0 && (
+            <div className="space-y-2.5">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">처리 완료 ({resolvedWithdrawals.length})</p>
+              {resolvedWithdrawals.map(req => (
+                <WithdrawalRequestItem key={req.id} req={req} onStatusChange={handleWithdrawalStatusChange} />
+              ))}
+            </div>
+          )}
+          {withdrawals.length === 0 && (
+            <div className="card p-10 text-center text-slate-400 text-sm">탈퇴 신청이 없습니다</div>
+          )}
+        </div>
       )}
 
       {/* 기타 알림 */}
