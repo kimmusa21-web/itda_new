@@ -97,7 +97,8 @@ export async function getMyEmployee(): Promise<EmployeeRow | null> {
     .from('employees')
     .select('*, companies(name)')
     .eq('user_id', user.id)
-    .single()
+    .eq('is_active', true)
+    .maybeSingle()
   return (data as EmployeeRow | null)
 }
 

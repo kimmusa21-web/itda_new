@@ -47,6 +47,7 @@ export async function updateStaffProfile(data: StaffProfileInput): Promise<Staff
     .from('employees')
     .select('id')
     .eq('user_id', user.id)
+    .eq('is_active', true)
     .maybeSingle()
 
   if (emp) {

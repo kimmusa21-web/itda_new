@@ -16,7 +16,7 @@ export async function getMyPayslips(): Promise<PayInfoRow[]> {
   if (!user) return []
 
   const { data: emp } = await supabase
-    .from('employees').select('id').eq('user_id', user.id).single()
+    .from('employees').select('id').eq('user_id', user.id).eq('is_active', true).maybeSingle()
   if (!emp) return []
 
   const { data } = await supabase
@@ -34,7 +34,7 @@ export async function getMyPayslipById(payInfoId: number): Promise<PayInfoRow | 
   if (!user) return null
 
   const { data: emp } = await supabase
-    .from('employees').select('id').eq('user_id', user.id).single()
+    .from('employees').select('id').eq('user_id', user.id).eq('is_active', true).maybeSingle()
   if (!emp) return null
 
   const { data } = await supabase

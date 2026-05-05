@@ -199,7 +199,11 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      alert(`${emp.name}에게 초대 이메일을 발송했습니다.\n이메일: ${emp.email}`)
+      if (data.reused) {
+        alert(`${emp.name}의 기존 계정(${emp.email})이 연결되었습니다.\n초대 이메일 없이 바로 로그인 가능합니다.`)
+      } else {
+        alert(`${emp.name}에게 초대 이메일을 발송했습니다.\n이메일: ${emp.email}`)
+      }
       startTransition(reload)
     } catch (e: unknown) {
       alert('초대 실패: ' + (e instanceof Error ? e.message : String(e)))
