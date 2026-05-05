@@ -182,7 +182,7 @@ export default function ManagerResignedClient({ initialEmployees, companyName }:
                       className={cn('transition-colors cursor-pointer', urgencyClass(days) || 'hover:bg-slate-50')}
                       onClick={() => setSelected(emp)}
                     >
-                      <td className="px-4 py-3 text-xs font-mono text-slate-400">{emp.employee_number ?? '-'}</td>
+                      <td className="px-4 py-3 text-xs font-mono text-slate-600 font-medium">{emp.employee_number ?? '-'}</td>
                       <td className="px-4 py-3">
                         <p className="font-medium text-slate-900">{emp.name}</p>
                         <p className="text-xs text-slate-400">{emp.email}</p>
@@ -252,7 +252,8 @@ export default function ManagerResignedClient({ initialEmployees, companyName }:
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-semibold text-slate-900">{emp.name}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{emp.email}</p>
+                    <p className="text-xs text-slate-600 font-mono mt-0.5">#{emp.employee_number ?? '-'}</p>
+                    <p className="text-xs text-slate-400">{emp.email}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <DaysLeftBadge days={days} />

@@ -67,7 +67,7 @@ export function ManagerEmployeesClient({ initialEmployees, companyName }: Props)
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             className="input pl-9"
-            placeholder="이름, 이메일, 사번, 부서 검색"
+            placeholder="사번·이름·이메일·부서 검색"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -167,8 +167,8 @@ function EmployeeListItem({ emp, onEdit, onResign }: { emp: EmployeeRow; onEdit:
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium text-slate-900">{emp.name}</span>
           {emp.employee_number && (
-            <span className="flex items-center gap-0.5 text-xs text-slate-400 font-mono">
-              <Hash size={10} />{emp.employee_number}
+            <span className="flex items-center gap-0.5 text-xs text-slate-600 font-mono bg-slate-100 px-1.5 py-0.5 rounded">
+              <Hash size={9} />{emp.employee_number}
             </span>
           )}
           {isInvited ? (

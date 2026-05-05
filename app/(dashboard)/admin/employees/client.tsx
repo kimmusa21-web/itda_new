@@ -242,7 +242,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             className="input pl-9"
-            placeholder="이름·이메일·사번 검색"
+            placeholder="사번·이름·이메일 검색"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -283,10 +283,10 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
       {filtered.length > 0 && (
         <div className="hidden md:block card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm" style={{ minWidth: '780px' }}>
+            <table className="w-full text-sm" style={{ minWidth: '720px' }}>
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
-                  {['이름', '사번', '회사', '부서/직위', '입사일', '계정연결', '상태', ''].map(h => (
+                  {['이름 / 사번', '회사', '부서/직위', '입사일', '계정연결', '상태', ''].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -296,10 +296,10 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
                   <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-900">{emp.name}</p>
+                      <p className="text-xs text-slate-500 font-mono mt-0.5">
+                        #{emp.employee_number ?? '-'}
+                      </p>
                       <p className="text-xs text-slate-400">{emp.email}</p>
-                    </td>
-                    <td className="px-4 py-3 text-slate-500 text-xs font-mono">
-                      {emp.employee_number ?? '-'}
                     </td>
                     <td className="px-4 py-3 text-slate-600 text-xs">
                       {(emp.companies as { name?: string } | null)?.name ?? '-'}
@@ -382,7 +382,8 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-900 truncate">{emp.name}</p>
-                    <p className="text-xs text-slate-400 truncate mt-0.5">{emp.email}</p>
+                    <p className="text-xs text-slate-500 font-mono mt-0.5">#{emp.employee_number ?? '-'}</p>
+                    <p className="text-xs text-slate-400 truncate">{emp.email}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <span className={`badge ${emp.is_active ? 'badge-green' : 'badge-gray'}`}>
@@ -396,11 +397,11 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
                 </div>
                 {/* 정보 그리드 */}
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs border-t border-slate-100 pt-3">
-                  <InfoPair label="사번" value={emp.employee_number ?? '-'} mono />
-                  <InfoPair label="회사" value={companyName ?? '-'} />
-                  <InfoPair label="부서" value={emp.department ?? '-'} />
-                  <InfoPair label="직위" value={emp.position ?? '-'} />
-                  <InfoPair label="입사일" value={formatDateShort(emp.Date_of_joining)} />
+                  <InfoPair label="회사"   value={companyName ?? '-'} />
+                  <InfoPair label="입사일"  value={formatDateShort(emp.Date_of_joining)} />
+                  <InfoPair label="부서"   value={emp.department ?? '-'} />
+                  <InfoPair label="직위"   value={emp.position ?? '-'} />
+                  <InfoPair label="이메일"  value={emp.email ?? '-'} />
                 </div>
                 {/* 액션 */}
                 <div className="flex gap-2 pt-1 border-t border-slate-100">
