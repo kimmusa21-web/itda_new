@@ -26,7 +26,11 @@ export default function Sidebar({
   const pathname = usePathname()
   const router   = useRouter()
   const supabase = createClient()
-  const navItems = roleNavMap[role]
+
+  // manager가 /employee/* 경로에 있으면 직원 모드
+  const isEmployeeMode = role === 'manager' && pathname.startsWith('/employee')
+  const effectiveNavRole: Role = isEmployeeMode ? 'employee' : role
+  const navItems = roleNavMap[effectiveNavRole]
 
   const roleBg: Record<Role, string> = {
     admin:    'bg-indigo-900 text-indigo-200',
@@ -44,7 +48,6 @@ export default function Sidebar({
     router.push('/login')
   }
 
-  // 빙의 중 표시할 레이블
   const impersonationLabel = impersonation
     ? impersonation.type === 'company_manager'
       ? impersonation.companyName
@@ -67,7 +70,7 @@ export default function Sidebar({
           <span className="text-lg font-bold text-white tracking-tight">itda</span>
         </div>
 
-        {/* 역할 뱃지 — 빙의 중이면 점검 모드 강조 */}
+        {/* 역할 뱃지 */}
         {impersonation ? (
           <div className="mt-3 space-y-1">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300">
@@ -101,14 +104,43 @@ export default function Sidebar({
         </div>
       </div>
 
+      {/* 관리자 / 직원으로서 탭 전환 (manager 전용) */}
+      {role === 'manager' && !impersonation && (
+        <div className="px-3 py-3 border-b border-[#1e293b]">
+          <div className="flex rounded-lg bg-[#1e293b] p-0.5">
+            <button
+              onClick={() => router.push('/manager')}
+              className={cn(
+                'flex-1 py-1.5 rounded-md text-xs font-medium transition-all',
+                !isEmployeeMode
+                  ? 'bg-[#0f172a] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200',
+              )}
+            >
+              관리자
+            </button>
+            <button
+              onClick={() => router.push('/employee')}
+              className={cn(
+                'flex-1 py-1.5 rounded-md text-xs font-medium transition-all',
+                isEmployeeMode
+                  ? 'bg-[#0f172a] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200',
+              )}
+            >
+              직원으로서
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 네비게이션 */}
       <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
         {navItems.map(item => {
-          const Icon   = item.icon
-          // prefix 매칭 시 더 구체적인 다른 항목이 있으면 비활성 처리
+          const Icon = item.icon
           const active = pathname === item.href
             || (
-              item.href !== `/${role}` &&
+              item.href !== `/${effectiveNavRole}` &&
               pathname.startsWith(item.href + '/') &&
               !navItems.some(
                 other =>
@@ -138,7 +170,6 @@ export default function Sidebar({
 
       {/* 하단 버튼 영역 */}
       <div className="px-3 py-4 border-t border-[#1e293b] space-y-1">
-        {/* 빙의 종료 버튼 (빙의 중일 때만 표시) */}
         {impersonation && (
           <form action={stopImpersonation}>
             <button
@@ -151,7 +182,6 @@ export default function Sidebar({
           </form>
         )}
 
-        {/* 로그아웃 */}
         <button
           onClick={logout}
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-slate-500 hover:bg-[#1e293b] hover:text-red-400 transition-all"

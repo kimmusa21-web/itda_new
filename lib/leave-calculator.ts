@@ -55,10 +55,7 @@ export function annualLeaveDays(years: number): number {
  * @returns 해당 주기에 발생할 연차 일수 (annual only, 1년 미만은 0)
  */
 export function hireDateAnnualDays(hireDate: Date, cycleYear: number): number {
-  // cycleYear에서의 기념일
-  const anniversary = new Date(hireDate)
-  anniversary.setFullYear(cycleYear)
-  const years = yearsWorked(hireDate, anniversary)
+  const years = cycleYear - hireDate.getFullYear()
   return annualLeaveDays(years)
 }
 

@@ -5,8 +5,12 @@ import { mobileNavMap, type Role } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
 
 export default function BottomTabBar({ role }: { role: Role }) {
-  const pathname  = usePathname()
-  const navItems  = mobileNavMap[role]
+  const pathname = usePathname()
+
+  // manager가 /employee/* 경로에 있으면 직원 모드
+  const isEmployeeMode = role === 'manager' && pathname.startsWith('/employee')
+  const effectiveNavRole: Role = isEmployeeMode ? 'employee' : role
+  const navItems = mobileNavMap[effectiveNavRole]
 
   return (
     <nav
@@ -18,7 +22,7 @@ export default function BottomTabBar({ role }: { role: Role }) {
           const Icon   = item.icon
           const active = pathname === item.href
             || (
-              item.href !== `/${role}` &&
+              item.href !== `/${effectiveNavRole}` &&
               pathname.startsWith(item.href + '/') &&
               !navItems.some(
                 other =>

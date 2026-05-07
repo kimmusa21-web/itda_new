@@ -108,8 +108,9 @@ export async function middleware(request: NextRequest) {
       }
 
       // employee: /employee 이하만 허용
-      // 단, admin + 유효한 employee impersonation 쿠키가 있으면 허용
-      if (path.startsWith('/employee') && !['admin', 'employee'].includes(role ?? '')) {
+      // manager는 본인 데이터 확인 목적으로 /employee/* 접근 허용
+      // admin + 유효한 employee impersonation 쿠키가 있으면 허용
+      if (path.startsWith('/employee') && !['admin', 'employee', 'manager'].includes(role ?? '')) {
         const dest = role ? `/${role}` : '/no-access'
         return NextResponse.redirect(new URL(dest, request.url))
       }
