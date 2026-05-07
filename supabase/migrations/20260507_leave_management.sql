@@ -78,67 +78,67 @@ ALTER TABLE leave_balances    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE leave_adjustments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE leave_requests    ENABLE ROW LEVEL SECURITY;
 
--- leave_policies RLS
+-- leave_policies RLS (profiles.id = auth user id)
 CREATE POLICY "leave_policies_select" ON leave_policies FOR SELECT
   USING (
     company_id IN (
       SELECT e.company_id FROM employees e WHERE e.user_id = auth.uid() AND e.is_active = true
       UNION
-      SELECT p.company_id FROM profiles p WHERE p.user_id = auth.uid() AND p.role IN ('manager','admin')
+      SELECT p.company_id FROM profiles p WHERE p.id = auth.uid() AND p.role IN ('manager','admin')
     )
-    OR EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+    OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
 CREATE POLICY "leave_policies_write" ON leave_policies FOR ALL
   USING (
-    EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role IN ('manager','admin'))
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('manager','admin'))
   );
 
 -- leave_balances RLS
 CREATE POLICY "leave_balances_select" ON leave_balances FOR SELECT
   USING (
     employee_id IN (SELECT id FROM employees WHERE user_id = auth.uid())
-    OR company_id IN (SELECT company_id FROM profiles WHERE user_id = auth.uid() AND role IN ('manager','admin'))
-    OR EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+    OR company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid() AND role IN ('manager','admin'))
+    OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
 CREATE POLICY "leave_balances_write" ON leave_balances FOR ALL
   USING (
-    company_id IN (SELECT company_id FROM profiles WHERE user_id = auth.uid() AND role IN ('manager','admin'))
-    OR EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+    company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid() AND role IN ('manager','admin'))
+    OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
 -- leave_adjustments RLS
 CREATE POLICY "leave_adjustments_select" ON leave_adjustments FOR SELECT
   USING (
     employee_id IN (SELECT id FROM employees WHERE user_id = auth.uid())
-    OR company_id IN (SELECT company_id FROM profiles WHERE user_id = auth.uid() AND role IN ('manager','admin'))
-    OR EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+    OR company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid() AND role IN ('manager','admin'))
+    OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
 CREATE POLICY "leave_adjustments_write" ON leave_adjustments FOR ALL
   USING (
-    company_id IN (SELECT company_id FROM profiles WHERE user_id = auth.uid() AND role IN ('manager','admin'))
-    OR EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+    company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid() AND role IN ('manager','admin'))
+    OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
 -- leave_requests RLS
 CREATE POLICY "leave_requests_select" ON leave_requests FOR SELECT
   USING (
     employee_id IN (SELECT id FROM employees WHERE user_id = auth.uid())
-    OR company_id IN (SELECT company_id FROM profiles WHERE user_id = auth.uid() AND role IN ('manager','admin'))
-    OR EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+    OR company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid() AND role IN ('manager','admin'))
+    OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
 CREATE POLICY "leave_requests_insert" ON leave_requests FOR INSERT
   WITH CHECK (
     employee_id IN (SELECT id FROM employees WHERE user_id = auth.uid() AND is_active = true)
-    OR company_id IN (SELECT company_id FROM profiles WHERE user_id = auth.uid() AND role IN ('manager','admin'))
+    OR company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid() AND role IN ('manager','admin'))
   );
 
 CREATE POLICY "leave_requests_update" ON leave_requests FOR UPDATE
   USING (
     employee_id IN (SELECT id FROM employees WHERE user_id = auth.uid())
-    OR company_id IN (SELECT company_id FROM profiles WHERE user_id = auth.uid() AND role IN ('manager','admin'))
-    OR EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND role = 'admin')
+    OR company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid() AND role IN ('manager','admin'))
+    OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
   );
