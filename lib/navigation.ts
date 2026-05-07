@@ -1,4 +1,4 @@
-import { Bell, Building2, Users, Upload, Home, BarChart3, Wallet, User, UserPlus, ClipboardList, Eye, BadgeDollarSign, Settings, UserMinus, FileText, FolderOpen, type LucideIcon } from 'lucide-react'
+import { Bell, Building2, Users, Upload, Home, BarChart3, Wallet, User, UserPlus, ClipboardList, Eye, BadgeDollarSign, Settings, UserMinus, FileText, FolderOpen, CalendarDays, type LucideIcon } from 'lucide-react'
 import type { Role } from '@/types'
 
 export type { Role }
@@ -28,13 +28,15 @@ export const roleNavMap: RoleNavMap = {
     { label: '급여조회', href: '/manager/payroll',            icon: BarChart3      },
     { label: '퇴사자',   href: '/manager/employees/resigned', icon: UserMinus      },
     { label: '서류관리', href: '/manager/documents',          icon: FolderOpen     },
+    { label: '연차관리', href: '/manager/leave',              icon: CalendarDays   },
     { label: '내 정보',  href: '/manager/profile',            icon: Settings       },
   ],
   employee: [
     { label: '홈',      href: '/employee',           icon: Home       },
     { label: '급여',    href: '/employee/payslips',  icon: Wallet     },
-    { label: '서류신청', href: '/employee/documents', icon: FolderOpen },
-    { label: '내 정보', href: '/employee/profile',   icon: User       },
+    { label: '서류신청', href: '/employee/documents', icon: FolderOpen  },
+    { label: '연차',     href: '/employee/leave',    icon: CalendarDays },
+    { label: '내 정보', href: '/employee/profile',   icon: User        },
   ],
 }
 
@@ -51,12 +53,14 @@ export const mobileNavMap: RoleNavMap = {
     { label: '홈',       href: '/manager',           icon: Home      },
     { label: '기업관리', href: '/manager/company',   icon: Building2 },
     { label: '직원관리', href: '/manager/employees', icon: Users     },
-    { label: '급여조회', href: '/manager/payroll',   icon: BarChart3 },
+    { label: '급여조회', href: '/manager/payroll',   icon: BarChart3    },
+    { label: '연차',     href: '/manager/leave',    icon: CalendarDays },
   ],
   employee: [
     { label: '홈',      href: '/employee',          icon: Home   },
-    { label: '급여',    href: '/employee/payslips', icon: Wallet },
-    { label: '내 정보', href: '/employee/profile',  icon: User   },
+    { label: '급여',    href: '/employee/payslips', icon: Wallet      },
+    { label: '연차',    href: '/employee/leave',    icon: CalendarDays },
+    { label: '내 정보', href: '/employee/profile',  icon: User        },
   ],
 }
 
@@ -102,6 +106,9 @@ export function getPageTitle(pathname: string): string {
     '/employee/profile':             '내 정보',
     '/employee/documents':           '서류신청',
     '/manager/documents':            '서류관리',
+    '/manager/leave':                '연차관리',
+    '/manager/leave/settings':       '연차 정책 설정',
+    '/employee/leave':               '연차관리',
   }
   return map[pathname] ?? 'itda'
 }

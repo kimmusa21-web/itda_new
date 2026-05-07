@@ -484,3 +484,180 @@ export async function sendWelcomeEmail(
     html: `<p>환영합니다, <strong>${name}</strong>님! itda에 오신 것을 환영합니다.</p>`,
   })
 }
+
+/* ── 연차 신청 알림 (매니저 수신) ───────────────────────────── */
+export async function sendLeaveRequestNotification(
+  to: string,
+  params: {
+    managerName:  string
+    employeeName: string
+    leaveType:    string
+    startDate:    string
+    endDate:      string
+    hours:        number
+    reason:       string | null
+  },
+): Promise<{ success: boolean; error?: string }> {
+  const { managerName, employeeName, leaveType, startDate, endDate, hours, reason } = params
+  const typeLabel: Record<string, string> = {
+    full_day: '연차(1일)', half_day_am: '오전 반차', half_day_pm: '오후 반차', hourly: '시간 연차',
+  }
+  const label    = typeLabel[leaveType] ?? leaveType
+  const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const fmtDate  = (d: string) => new Date(d).toLocaleDateString('ko-KR')
+
+  return sendRawEmail({
+    to,
+    subject: `[itda] ${employeeName} 님의 연차 신청`,
+    text: [
+      `${managerName} 담당자님,`,
+      ``,
+      `${employeeName} 직원이 연차를 신청했습니다.`,
+      ``,
+      `  유형   : ${label}`,
+      `  기간   : ${fmtDate(startDate)} ~ ${fmtDate(endDate)}`,
+      `  시간   : ${hours}시간`,
+      reason ? `  사유   : ${reason}` : '',
+      ``,
+      `아래 링크에서 승인 또는 반려해주세요:`,
+      `${appUrl}/manager/leave`,
+    ].filter(Boolean).join('\n'),
+    html: `
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 16px">
+  <div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
+    <div style="background:#059669;padding:28px 32px">
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <p style="color:#a7f3d0;margin:4px 0 0;font-size:13px">연차 신청 알림</p>
+    </div>
+    <div style="padding:32px">
+      <p style="color:#0f172a;font-size:15px;margin:0 0 6px">안녕하세요, <strong>${managerName}</strong> 담당자님.</p>
+      <p style="color:#475569;font-size:14px;margin:0 0 24px"><strong>${employeeName}</strong> 직원이 연차를 신청했습니다.</p>
+      <div style="background:#f0fdf4;border-radius:12px;padding:20px;margin-bottom:24px;border:1px solid #bbf7d0">
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="color:#64748b;font-size:13px;padding:4px 0;width:60px">유형</td><td style="color:#0f172a;font-size:13px;font-weight:600;padding:4px 0">${label}</td></tr>
+          <tr><td style="color:#64748b;font-size:13px;padding:4px 0">기간</td><td style="color:#0f172a;font-size:13px;font-weight:600;padding:4px 0">${fmtDate(startDate)} ~ ${fmtDate(endDate)}</td></tr>
+          <tr><td style="color:#64748b;font-size:13px;padding:4px 0">시간</td><td style="color:#0f172a;font-size:13px;font-weight:600;padding:4px 0">${hours}시간</td></tr>
+          ${reason ? `<tr><td style="color:#64748b;font-size:13px;padding:4px 0">사유</td><td style="color:#0f172a;font-size:13px;padding:4px 0">${reason}</td></tr>` : ''}
+        </table>
+      </div>
+      <a href="${appUrl}/manager/leave" style="display:block;background:#059669;color:white;text-align:center;padding:14px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;margin-bottom:16px">
+        승인 / 반려하기 →
+      </a>
+      <p style="color:#94a3b8;font-size:12px;margin:0">본 메일은 itda 급여관리 서비스에서 자동 발송되었습니다.</p>
+    </div>
+  </div>
+</body></html>`.trim(),
+  })
+}
+
+/* ── 연차 승인 알림 (직원 수신) ─────────────────────────────── */
+export async function sendLeaveApprovalEmail(
+  to: string,
+  params: {
+    employeeName: string
+    leaveType:    string
+    startDate:    string
+    endDate:      string
+    hours:        number
+  },
+): Promise<{ success: boolean; error?: string }> {
+  const { employeeName, leaveType, startDate, endDate, hours } = params
+  const typeLabel: Record<string, string> = {
+    full_day: '연차(1일)', half_day_am: '오전 반차', half_day_pm: '오후 반차', hourly: '시간 연차',
+  }
+  const label   = typeLabel[leaveType] ?? leaveType
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString('ko-KR')
+
+  return sendRawEmail({
+    to,
+    subject: '[itda] 연차 신청이 승인되었습니다',
+    text: [
+      `${employeeName} 님,`,
+      ``,
+      `연차 신청이 승인되었습니다.`,
+      `  유형: ${label}`,
+      `  기간: ${fmtDate(startDate)} ~ ${fmtDate(endDate)}`,
+      `  시간: ${hours}시간`,
+    ].join('\n'),
+    html: `
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 16px">
+  <div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
+    <div style="background:#2563eb;padding:28px 32px">
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <p style="color:#bfdbfe;margin:4px 0 0;font-size:13px">연차 승인 완료</p>
+    </div>
+    <div style="padding:32px">
+      <p style="color:#0f172a;font-size:15px;margin:0 0 6px">안녕하세요, <strong>${employeeName}</strong> 님.</p>
+      <p style="color:#475569;font-size:14px;margin:0 0 24px">연차 신청이 <strong style="color:#059669">승인</strong>되었습니다.</p>
+      <div style="background:#f1f5f9;border-radius:12px;padding:20px;margin-bottom:24px">
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="color:#64748b;font-size:13px;padding:4px 0;width:60px">유형</td><td style="color:#0f172a;font-size:13px;font-weight:600;padding:4px 0">${label}</td></tr>
+          <tr><td style="color:#64748b;font-size:13px;padding:4px 0">기간</td><td style="color:#0f172a;font-size:13px;font-weight:600;padding:4px 0">${fmtDate(startDate)} ~ ${fmtDate(endDate)}</td></tr>
+          <tr><td style="color:#64748b;font-size:13px;padding:4px 0">차감</td><td style="color:#0f172a;font-size:13px;font-weight:600;padding:4px 0">${hours}시간</td></tr>
+        </table>
+      </div>
+      <p style="color:#94a3b8;font-size:12px;margin:0">본 메일은 itda 급여관리 서비스에서 자동 발송되었습니다.</p>
+    </div>
+  </div>
+</body></html>`.trim(),
+  })
+}
+
+/* ── 연차 반려 알림 (직원 수신) ─────────────────────────────── */
+export async function sendLeaveRejectionEmail(
+  to: string,
+  params: {
+    employeeName: string
+    leaveType:    string
+    startDate:    string
+    endDate:      string
+    hours:        number
+    reason:       string
+  },
+): Promise<{ success: boolean; error?: string }> {
+  const { employeeName, leaveType, startDate, endDate, hours, reason } = params
+  const typeLabel: Record<string, string> = {
+    full_day: '연차(1일)', half_day_am: '오전 반차', half_day_pm: '오후 반차', hourly: '시간 연차',
+  }
+  const label   = typeLabel[leaveType] ?? leaveType
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString('ko-KR')
+
+  return sendRawEmail({
+    to,
+    subject: '[itda] 연차 신청이 반려되었습니다',
+    text: [
+      `${employeeName} 님,`,
+      ``,
+      `연차 신청이 반려되었습니다.`,
+      `  유형  : ${label}`,
+      `  기간  : ${fmtDate(startDate)} ~ ${fmtDate(endDate)}`,
+      `  시간  : ${hours}시간`,
+      `  사유  : ${reason}`,
+    ].join('\n'),
+    html: `
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 16px">
+  <div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
+    <div style="background:#dc2626;padding:28px 32px">
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <p style="color:#fecaca;margin:4px 0 0;font-size:13px">연차 반려 안내</p>
+    </div>
+    <div style="padding:32px">
+      <p style="color:#0f172a;font-size:15px;margin:0 0 6px">안녕하세요, <strong>${employeeName}</strong> 님.</p>
+      <p style="color:#475569;font-size:14px;margin:0 0 24px">연차 신청이 <strong style="color:#dc2626">반려</strong>되었습니다.</p>
+      <div style="background:#fef2f2;border-radius:12px;padding:20px;margin-bottom:24px;border:1px solid #fecaca">
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="color:#64748b;font-size:13px;padding:4px 0;width:60px">유형</td><td style="color:#0f172a;font-size:13px;font-weight:600;padding:4px 0">${label}</td></tr>
+          <tr><td style="color:#64748b;font-size:13px;padding:4px 0">기간</td><td style="color:#0f172a;font-size:13px;font-weight:600;padding:4px 0">${fmtDate(startDate)} ~ ${fmtDate(endDate)}</td></tr>
+          <tr><td style="color:#64748b;font-size:13px;padding:4px 0">시간</td><td style="color:#0f172a;font-size:13px;font-weight:600;padding:4px 0">${hours}시간</td></tr>
+          <tr><td style="color:#64748b;font-size:13px;padding:4px 0">반려사유</td><td style="color:#dc2626;font-size:13px;font-weight:600;padding:4px 0">${reason}</td></tr>
+        </table>
+      </div>
+      <p style="color:#94a3b8;font-size:12px;margin:0">문의사항은 담당 매니저에게 연락해주세요.</p>
+    </div>
+  </div>
+</body></html>`.trim(),
+  })
+}
