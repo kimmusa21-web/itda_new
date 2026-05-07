@@ -303,11 +303,11 @@ export async function uploadPayslipCsv(
   const matchFailures: PayslipCsvFailure[] = []
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
-    if (!emailToId.has(row.email.toLowerCase())) {
+    if (!emailToId.has((row.email ?? '').toLowerCase())) {
       matchFailures.push({
         rowNumber: i + 2,
         email:     row.email,
-        reason:    `직원 없음 — company_id=${companyId}, email=${row.email}`,
+        reason:    `직원 없음 — company_id=${companyId}, email=${row.email ?? ''}`,
       })
     }
   }
@@ -324,7 +324,7 @@ export async function uploadPayslipCsv(
 
   /* 8. upsert 데이터 빌드 */
   const upsertRows = rows.map(row =>
-    buildUpsertRecord(row, companyId, emailToId.get(row.email.toLowerCase())!)
+    buildUpsertRecord(row, companyId, emailToId.get((row.email ?? '').toLowerCase())!)
   )
 
   /* 9. bulk upsert */

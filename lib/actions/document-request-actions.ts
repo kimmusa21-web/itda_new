@@ -91,15 +91,11 @@ export async function approveDocumentRequest(
   if (!req) return { success: false, error: '신청 내역을 찾을 수 없습니다' }
   if (req.status !== 'pending') return { success: false, error: '이미 처리된 신청입니다' }
 
-  const emp = req.employees as {
-    id: number; name: string; email: string; registration_number: string | null
-    department: string | null; position: string | null
-    Date_of_joining: string | null; quit_date: string | null
-  }
-  const company = req.companies as {
-    id: number; name: string; representative: string | null; address: string | null
-    tax_accountant_company: string | null; tax_accountant_name: string | null; tax_accountant_email: string | null
-  }
+  type EmpRow = { id: number; name: string; email: string; registration_number: string | null; department: string | null; position: string | null; Date_of_joining: string | null; quit_date: string | null }
+  type CompanyRow = { id: number; name: string; representative: string | null; address: string | null; tax_accountant_company: string | null; tax_accountant_name: string | null; tax_accountant_email: string | null }
+  const empArr = req.employees as unknown as EmpRow[]
+  const emp = empArr[0]
+  const company = req.companies as unknown as CompanyRow
 
   const docType  = req.document_type as DocumentType
   const docLabel = DOCUMENT_TYPE_LABELS[docType]

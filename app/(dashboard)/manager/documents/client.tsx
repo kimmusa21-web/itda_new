@@ -31,7 +31,7 @@ interface DocRequest {
   requested_at:     string
   approved_at:      string | null
   rejected_at:      string | null
-  employees:        Employee | null
+  employees:        Employee[] | null
 }
 
 interface Props {
@@ -129,7 +129,7 @@ export function ManagerDocumentsClient({ requests: initialRequests, hasTaxAccoun
         ) : (
           <ul className="divide-y divide-slate-100">
             {list.map(r => {
-              const emp      = r.employees
+              const emp      = r.employees?.[0] ?? null
               const badge    = STATUS_BADGE[r.status]
               const docLabel = DOCUMENT_TYPE_LABELS[r.document_type as DocumentType] ?? r.document_type
               const isDirect = DIRECT_TYPES.includes(r.document_type as DocumentType)

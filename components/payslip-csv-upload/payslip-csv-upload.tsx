@@ -53,9 +53,9 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
       const rowNumber = idx + 2
       const rowFails: PayslipCsvFailure[] = []
       rowFails.push(...validatePayslipRow(row, rowNumber))
-      const key = `${row.email.toLowerCase()}|${row.accrual_month}`
+      const key = `${(row.email ?? '').toLowerCase()}|${row.accrual_month}`
       if (duplicates.has(key)) {
-        rowFails.push({ rowNumber, email: row.email, reason: `파일 내 중복 (${row.email} / ${row.accrual_month})` })
+        rowFails.push({ rowNumber, email: row.email, reason: `파일 내 중복 (${row.email ?? ''} / ${row.accrual_month})` })
       }
       if (rowFails.length > 0) previewErrors[rowNumber] = rowFails
     })

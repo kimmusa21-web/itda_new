@@ -207,7 +207,7 @@ export function checkPayslipInternalDuplicates(rows: PayslipCsvRow[]): {
 
   rows.forEach((row, idx) => {
     const rowNumber = idx + 2
-    const key = `${row.email.toLowerCase()}|${row.accrual_month}`
+    const key = `${(row.email ?? '').toLowerCase()}|${row.accrual_month}`
 
     if (seen.has(key)) {
       const existing = duplicates.get(key) ?? [seen.get(key)!]
