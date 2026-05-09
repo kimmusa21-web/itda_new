@@ -114,6 +114,39 @@ export async function allocateAnnualLeave(
   return { success: true }
 }
 
+/* ── 1년 미만 직원 월차 소급 적립 (내부 헬퍼) ───────────────── */
+async function catchUpMonthlyLeave(
+  supabase: ReturnType<typeof createClient>,
+  employeeId: number,
+  companyId: number,
+  hireDate: string,
+  weeklyHours: number | null,
+  basis: string,
+): Promise<void> {
+  const hire = new Date(hireDate)
+  const now  = new Date()
+  const dh   = dailyHours(weeklyHours)
+
+  // 입사 다음달 1일부터 이번달 1일까지 순회
+  const cur = new Date(hire.getFullYear(), hire.getMonth() + 1, 1)
+  while (cur <= now) {
+    const period = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`
+    const days   = monthlyAccrualDays(hire, period)
+    if (days > 0) {
+      await supabase.from('leave_balances').upsert({
+        company_id:  companyId,
+        employee_id: employeeId,
+        basis,
+        period,
+        period_type: 'monthly',
+        total_hours: days * dh,
+        expires_at:  calcExpiresAt(period),
+      }, { onConflict: 'employee_id,period,basis', ignoreDuplicates: true })
+    }
+    cur.setMonth(cur.getMonth() + 1)
+  }
+}
+
 /* ── 회사 전체 직원 연차 일괄 발급 ──────────────────────────── */
 export async function allocateLeaveForAllEmployees(year?: number): Promise<{ success: boolean; error?: string; count?: number }> {
   const supabase = createClient()
@@ -137,13 +170,19 @@ export async function allocateLeaveForAllEmployees(year?: number): Promise<{ suc
   const today = new Date()
   let count = 0
   for (const emp of employees) {
-    const hire = new Date(emp.Date_of_joining!)
+    const hire      = new Date(emp.Date_of_joining!)
+    const msWorked  = today.getTime() - hire.getTime()
+    const underYear = msWorked < 365.25 * 24 * 3600 * 1000
 
-    // 입사일 기준: 아직 첫 기념일이 안 지난 직원은 월차만 적용
-    if (policy.basis === 'hire_date') {
-      const msWorked = today.getTime() - hire.getTime()
-      if (msWorked < 365.25 * 24 * 3600 * 1000) continue
+    // 1년 미만 직원: 월차 소급 적립
+    if (underYear) {
+      await catchUpMonthlyLeave(
+        supabase, emp.id, ctx.companyId, emp.Date_of_joining!, emp.weekly_work_hours, policy.basis,
+      )
     }
+
+    // 입사일 기준 + 1년 미만: 연차 발급 스킵 (월차만)
+    if (policy.basis === 'hire_date' && underYear) continue
 
     const res = await allocateAnnualLeave(
       emp.id, ctx.companyId, emp.Date_of_joining!, emp.weekly_work_hours, policy.basis, targetYear,
