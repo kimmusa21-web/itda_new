@@ -116,17 +116,50 @@ export async function createEmployeeWithInvite(
     return { success: false, error: '이미 재직 중인 직원입니다' }
   }
 
-  // 초대 발송됐으나 미가입(user_id=null) 확인 — 재발송 유도
+  // 초대 발송됐으나 미가입(user_id=null) — 기존 레코드에 초대 재발송
   const { data: pendingEmployee } = await service
     .from('employees')
-    .select('id')
+    .select('id, name, email')
     .eq('company_id', companyId)
     .ilike('email', normalizedEmail)
     .is('user_id', null)
     .maybeSingle()
 
   if (pendingEmployee) {
-    return { success: false, error: '이미 초대가 발송된 이메일입니다. 초대 재발송을 이용하세요.' }
+    const employeeName = input.name.trim() || pendingEmployee.name
+
+    // 기존 미사용 토큰 만료 처리
+    await service
+      .from('employee_invites')
+      .update({ used_at: new Date().toISOString() })
+      .eq('employee_id', pendingEmployee.id)
+      .is('used_at', null)
+
+    // 새 초대 토큰 생성
+    const token     = randomUUID()
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+
+    const { error: inviteErr } = await service.from('employee_invites').insert({
+      company_id:  companyId,
+      employee_id: pendingEmployee.id,
+      email:       normalizedEmail,
+      name:        employeeName,
+      token,
+      expires_at:  expiresAt.toISOString(),
+      invited_by:  user.id,
+    })
+
+    if (inviteErr) {
+      return { success: false, error: '초대 토큰 생성 실패: ' + inviteErr.message }
+    }
+
+    const emailResult = await sendInviteEmail(normalizedEmail, employeeName, token)
+    if (!emailResult.success) {
+      return { success: false, error: `초대 이메일 발송 실패: ${emailResult.error}` }
+    }
+
+    revalidatePath('/manager/employees')
+    return { success: true }
   }
   // 퇴사자(is_active=false, user_id 있음)는 재입사 허용 → 신규 레코드 생성
 

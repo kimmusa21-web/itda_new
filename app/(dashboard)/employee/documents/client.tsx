@@ -32,7 +32,10 @@ const STATUS_BADGE = {
   rejected: { label: '반려됨',  cls: 'bg-red-50 text-red-700 border border-red-200'        },
 }
 
-const DIRECT_TYPES: DocumentType[] = ['employment_certificate', 'career_certificate']
+const DIRECT_TYPES: DocumentType[] = ['employment_certificate']
+
+const CURRENT_YEAR = new Date().getFullYear()
+const YEAR_OPTIONS = Array.from({ length: 6 }, (_, i) => CURRENT_YEAR - i)
 
 export function DocumentsClient({ requests: initialRequests, employeeName }: Props) {
   const [requests, setRequests] = useState(initialRequests)
@@ -42,12 +45,14 @@ export function DocumentsClient({ requests: initialRequests, employeeName }: Pro
     purpose:       '',
     address:       '',
     note:          '',
+    year:          String(CURRENT_YEAR),
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState<string | null>(null)
   const [success, setSuccess]       = useState(false)
 
-  const isDirect = DIRECT_TYPES.includes(form.document_type)
+  const isDirect    = DIRECT_TYPES.includes(form.document_type)
+  const needsYear   = form.document_type === 'withholding_tax'
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -55,11 +60,15 @@ export function DocumentsClient({ requests: initialRequests, employeeName }: Pro
 
     setSubmitting(true)
     setError(null)
+    const noteWithYear = needsYear
+      ? [`신청연도: ${form.year}`, form.note].filter(Boolean).join('\n')
+      : form.note || undefined
+
     const res = await createDocumentRequest({
       document_type: form.document_type,
       purpose:       form.purpose,
       address:       form.address || undefined,
-      note:          form.note   || undefined,
+      note:          noteWithYear,
     })
     setSubmitting(false)
 
@@ -69,7 +78,7 @@ export function DocumentsClient({ requests: initialRequests, employeeName }: Pro
     setTimeout(() => {
       setSuccess(false)
       setShowForm(false)
-      setForm({ document_type: 'employment_certificate', purpose: '', address: '', note: '' })
+      setForm({ document_type: 'employment_certificate', purpose: '', address: '', note: '', year: String(CURRENT_YEAR) })
       // 목록 새로고침
       window.location.reload()
     }, 1500)
@@ -133,6 +142,24 @@ export function DocumentsClient({ requests: initialRequests, employeeName }: Pro
                     : '✉ 승인 시 전담 세무사에게 발급 요청 이메일이 발송됩니다'}
                 </p>
               </div>
+
+              {/* 연도 선택 — 원천징수영수증(연도별)만 표시 */}
+              {needsYear && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    신청 연도 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    className="input"
+                    value={form.year}
+                    onChange={e => setForm(p => ({ ...p, year: e.target.value }))}
+                  >
+                    {YEAR_OPTIONS.map(y => (
+                      <option key={y} value={String(y)}>{y}년</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* 제출용도 */}
               <div>

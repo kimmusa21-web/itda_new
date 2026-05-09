@@ -47,7 +47,7 @@ const STATUS_BADGE = {
   rejected: { label: '반려됨',  cls: 'bg-red-50 text-red-700 border border-red-200'        },
 }
 
-const DIRECT_TYPES: DocumentType[] = ['employment_certificate', 'career_certificate']
+const DIRECT_TYPES: DocumentType[] = ['employment_certificate']
 
 export function ManagerDocumentsClient({ requests: initialRequests, hasTaxAccountant }: Props) {
   const [requests, setRequests] = useState(initialRequests)
