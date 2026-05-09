@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Plus, Upload } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { getCompanyEmployees } from '@/lib/supabase/queries/employee'
 import { ManagerEmployeesClient } from './client'
@@ -9,6 +10,9 @@ import EmployeeExportButton from '@/components/employees/employee-export-button'
 export const metadata = { title: '직원관리 | itda' }
 
 export default async function ManagerEmployeesPage() {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
   const ctx = await getEffectiveManagerContext()
 
   if (!ctx?.companyId) {
@@ -44,7 +48,11 @@ export default async function ManagerEmployeesPage() {
         </div>
       </div>
 
-      <ManagerEmployeesClient initialEmployees={employees} companyName={companyName} />
+      <ManagerEmployeesClient
+        initialEmployees={employees}
+        companyName={companyName}
+        managerUserId={user?.id ?? null}
+      />
     </div>
   )
 }

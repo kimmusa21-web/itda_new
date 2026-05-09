@@ -1,6 +1,7 @@
 import { redirect }   from 'next/navigation'
 import Link           from 'next/link'
 import { Plus, BarChart3, Upload, Users, CalendarDays, FolderOpen, UserPlus, ChevronRight, CalendarX } from 'lucide-react'
+import { ManagerViewToggle } from '@/components/layout/ManagerViewToggle'
 import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { getCompanyEmployees }  from '@/lib/supabase/queries/employee'
@@ -69,6 +70,9 @@ export default async function ManagerDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* 관리자 / 직원 화면 전환 탭 */}
+      <ManagerViewToggle currentMode="manager" />
+
       {/* 헤더 */}
       <div className="flex items-start justify-between gap-4">
         <div>

@@ -22,7 +22,7 @@ export default async function EmployeePayslipsPage() {
     .single()
 
   const role = profile?.role
-  if (role !== 'employee' && role !== 'admin') redirect(`/${role ?? 'admin'}`)
+  if (role !== 'employee' && role !== 'admin' && role !== 'manager') redirect(`/${role ?? 'admin'}`)
 
   const empCtx = await getEffectiveEmployeeContext()
   const companyName = (profile?.companies as any)?.name ?? ''

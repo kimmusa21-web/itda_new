@@ -25,9 +25,10 @@ function avatarBg(name: string): string {
 interface Props {
   initialEmployees: EmployeeRow[]
   companyName: string
+  managerUserId: string | null
 }
 
-export function ManagerEmployeesClient({ initialEmployees, companyName }: Props) {
+export function ManagerEmployeesClient({ initialEmployees, companyName, managerUserId }: Props) {
   const [employees, setEmployees] = useState(initialEmployees)
   const [filter, setFilter]       = useState<Filter>('active')
   const [search, setSearch]       = useState('')
@@ -103,6 +104,7 @@ export function ManagerEmployeesClient({ initialEmployees, companyName }: Props)
             <EmployeeListItem
               key={emp.id}
               emp={emp}
+              isManager={!!managerUserId && emp.user_id === managerUserId}
               onEdit={() => setEditTarget(emp)}
               onResign={() => setResignTarget(emp)}
             />
@@ -132,7 +134,7 @@ export function ManagerEmployeesClient({ initialEmployees, companyName }: Props)
 }
 
 /* ── 직원 카드 ─────────────────────────────────────────────── */
-function EmployeeListItem({ emp, onEdit, onResign }: { emp: EmployeeRow; onEdit: () => void; onResign: () => void }) {
+function EmployeeListItem({ emp, isManager, onEdit, onResign }: { emp: EmployeeRow; isManager: boolean; onEdit: () => void; onResign: () => void }) {
   const bg       = avatarBg(emp.name ?? '?')
   const initials = getInitials(emp.name ?? '?')
   const isLinked  = !!emp.user_id
@@ -170,6 +172,9 @@ function EmployeeListItem({ emp, onEdit, onResign }: { emp: EmployeeRow; onEdit:
             <span className="flex items-center gap-0.5 text-xs text-slate-600 font-mono bg-slate-100 px-1.5 py-0.5 rounded">
               <Hash size={9} />{emp.employee_number}
             </span>
+          )}
+          {isManager && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-violet-100 text-violet-700">담당자(나)</span>
           )}
           {isInvited ? (
             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">초대 대기</span>

@@ -18,7 +18,7 @@ export default async function EmployeeProfilePage() {
     .single()
 
   const role = profile?.role
-  if (role !== 'employee' && role !== 'admin') redirect(`/${role ?? 'login'}`)
+  if (role !== 'employee' && role !== 'admin' && role !== 'manager') redirect(`/${role ?? 'login'}`)
 
   const empCtx = await getEffectiveEmployeeContext()
 

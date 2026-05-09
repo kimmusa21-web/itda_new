@@ -17,9 +17,9 @@ export default async function EmployeeDashboard() {
   const { data: profile } = await supabase
     .from('profiles').select('role, companies(name)').eq('id', user.id).single()
 
-  // admin + impersonation은 허용, 그 외 employee만
+  // admin + impersonation, manager(직원 겸직) 허용
   const role = profile?.role
-  if (role !== 'employee' && role !== 'admin') redirect(`/${role ?? 'login'}`)
+  if (role !== 'employee' && role !== 'admin' && role !== 'manager') redirect(`/${role ?? 'login'}`)
 
   const empCtx = await getEffectiveEmployeeContext()
 

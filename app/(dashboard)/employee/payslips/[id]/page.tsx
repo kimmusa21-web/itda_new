@@ -20,7 +20,7 @@ export default async function EmployeePayslipDetailPage({ params }: Props) {
   const { data: profile } = await supabase
     .from('profiles').select('role').eq('id', user.id).single()
   const role = profile?.role
-  if (role !== 'employee' && role !== 'admin') redirect(`/${role ?? 'admin'}`)
+  if (role !== 'employee' && role !== 'admin' && role !== 'manager') redirect(`/${role ?? 'admin'}`)
 
   const id = parseInt(params.id, 10)
   if (isNaN(id)) notFound()
