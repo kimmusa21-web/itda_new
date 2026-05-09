@@ -2,6 +2,7 @@ import { redirect }     from 'next/navigation'
 import Link             from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { ArrowLeft, Building2, Calendar } from 'lucide-react'
+import { WithdrawnDownloadButtons } from './download-buttons'
 
 export const metadata = { title: '탈퇴 기업 | itda' }
 
@@ -97,6 +98,11 @@ export default async function WithdrawnCompaniesPage() {
                     데이터 보관 만료: <span className="text-slate-600 font-medium">{deleteAfter}</span>
                   </p>
                 </div>
+
+                <WithdrawnDownloadButtons
+                  companyId={c.id}
+                  companyName={c.name}
+                />
               </Link>
             )
           })}
