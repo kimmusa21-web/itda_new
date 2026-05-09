@@ -56,9 +56,10 @@ export function EmployeeLeaveClient({
   const [endDate,    setEndDate]    = useState('')
   const [hourCount,  setHourCount]  = useState('')
   const [reason,     setReason]     = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [cancelling, setCancelling] = useState<number | null>(null)
-  const [toast,      setToast]      = useState<{ msg: string; ok: boolean } | null>(null)
+  const [submitting,   setSubmitting]   = useState(false)
+  const [cancelling,   setCancelling]   = useState<number | null>(null)
+  const [confirmingId, setConfirmingId] = useState<number | null>(null)
+  const [toast,        setToast]        = useState<{ msg: string; ok: boolean } | null>(null)
 
   function showToast(msg: string, ok = true) {
     setToast({ msg, ok })
@@ -98,13 +99,22 @@ export function EmployeeLeaveClient({
     window.location.reload()
   }
 
-  async function handleCancel(id: number) {
+  async function doCancel(id: number) {
+    setConfirmingId(null)
     setCancelling(id)
     const res = await cancelLeaveRequest(id)
     setCancelling(null)
     if (!res.success) { showToast(res.error ?? '취소 실패', false); return }
     setReqs(prev => prev.map(r => r.id === id ? { ...r, status: 'cancelled' as const } : r))
     showToast('취소되었습니다')
+  }
+
+  function handleCancelClick(r: LeaveRequest) {
+    if (r.status === 'approved') {
+      setConfirmingId(r.id)
+    } else {
+      doCancel(r.id)
+    }
   }
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('ko-KR')
@@ -377,16 +387,41 @@ export function EmployeeLeaveClient({
                     )}>
                       {r.status === 'approved' ? `-${dayUsed}` : dayUsed}일
                     </p>
-                    {r.status === 'pending' && (
-                      <button
-                        onClick={() => handleCancel(r.id)}
-                        disabled={cancelling === r.id}
-                        className="text-xs text-red-400 hover:text-red-600 mt-0.5"
-                      >
-                        {cancelling === r.id
-                          ? <Loader2 size={10} className="animate-spin inline" />
-                          : '취소'}
-                      </button>
+
+                    {/* 승인된 다일 연차: 부분 취소 불가 안내 */}
+                    {r.status === 'approved' && r.leave_type === 'full_day' && r.start_date !== r.end_date && (
+                      <p className="text-[10px] text-orange-400 mt-0.5">전체 취소 후 재신청</p>
+                    )}
+
+                    {/* pending: 바로 취소 / approved: 인라인 확인 */}
+                    {(r.status === 'pending' || r.status === 'approved') && (
+                      confirmingId === r.id ? (
+                        <div className="flex items-center gap-2 mt-1 justify-end">
+                          <span className="text-[10px] text-slate-500">취소할까요?</span>
+                          <button
+                            onClick={() => doCancel(r.id)}
+                            className="text-xs font-semibold text-red-600 hover:underline"
+                          >
+                            확인
+                          </button>
+                          <button
+                            onClick={() => setConfirmingId(null)}
+                            className="text-xs text-slate-400 hover:underline"
+                          >
+                            닫기
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleCancelClick(r)}
+                          disabled={cancelling === r.id}
+                          className="text-xs text-red-400 hover:text-red-600 mt-0.5"
+                        >
+                          {cancelling === r.id
+                            ? <Loader2 size={10} className="animate-spin inline" />
+                            : '취소'}
+                        </button>
+                      )
                     )}
                   </div>
                 </li>

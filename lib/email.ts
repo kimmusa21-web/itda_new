@@ -664,6 +664,72 @@ export async function sendLeaveApprovalEmail(
   })
 }
 
+/* ── 연차 취소 알림 (매니저 수신, 승인된 연차를 직원이 취소 시) ── */
+export async function sendLeaveCancellationNotification(
+  to: string,
+  params: {
+    managerName:  string
+    employeeName: string
+    leaveType:    string
+    startDate:    string
+    endDate:      string
+    hours:        number
+  },
+): Promise<{ success: boolean; error?: string }> {
+  const { managerName, employeeName, leaveType, startDate, endDate, hours } = params
+  const typeLabel: Record<string, string> = {
+    full_day: '연차(1일)', half_day_am: '오전 반차', half_day_pm: '오후 반차', hourly: '시간 연차',
+  }
+  const label    = typeLabel[leaveType] ?? leaveType
+  const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const fmtDate  = (d: string) => new Date(d).toLocaleDateString('ko-KR')
+
+  return sendRawEmail({
+    to,
+    subject: `[itda] ${employeeName} 님이 승인된 연차를 취소했습니다`,
+    text: [
+      `${managerName} 담당자님,`,
+      ``,
+      `${employeeName} 직원이 승인된 연차를 취소했습니다. 잔액이 자동으로 복원되었습니다.`,
+      ``,
+      `  유형 : ${label}`,
+      `  기간 : ${fmtDate(startDate)} ~ ${fmtDate(endDate)}`,
+      `  시간 : ${hours}시간`,
+      ``,
+      `자세한 내용은 아래 링크에서 확인하세요:`,
+      `${appUrl}/manager/leave`,
+    ].join('\n'),
+    html: `
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 16px">
+  <div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
+    <div style="background:#f59e0b;padding:28px 32px">
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <p style="color:#fef3c7;margin:4px 0 0;font-size:13px">연차 취소 알림</p>
+    </div>
+    <div style="padding:32px">
+      <p style="color:#0f172a;font-size:15px;margin:0 0 6px">안녕하세요, <strong>${managerName}</strong> 담당자님.</p>
+      <p style="color:#475569;font-size:14px;margin:0 0 24px">
+        <strong>${employeeName}</strong> 직원이 승인된 연차를 취소했습니다.<br>
+        연차 잔액이 자동으로 복원되었습니다.
+      </p>
+      <div style="background:#fffbeb;border-radius:12px;padding:20px;margin-bottom:24px;border:1px solid #fde68a">
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="color:#64748b;font-size:13px;padding:4px 0;width:60px">유형</td><td style="color:#0f172a;font-size:13px;font-weight:600;padding:4px 0">${label}</td></tr>
+          <tr><td style="color:#64748b;font-size:13px;padding:4px 0">기간</td><td style="color:#0f172a;font-size:13px;font-weight:600;padding:4px 0">${fmtDate(startDate)} ~ ${fmtDate(endDate)}</td></tr>
+          <tr><td style="color:#64748b;font-size:13px;padding:4px 0">복원</td><td style="color:#059669;font-size:13px;font-weight:600;padding:4px 0">+${hours}시간</td></tr>
+        </table>
+      </div>
+      <a href="${appUrl}/manager/leave" style="display:block;background:#f59e0b;color:white;text-align:center;padding:14px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;margin-bottom:16px">
+        연차 현황 확인하기 →
+      </a>
+      <p style="color:#94a3b8;font-size:12px;margin:0">본 메일은 itda 급여관리 서비스에서 자동 발송되었습니다.</p>
+    </div>
+  </div>
+</body></html>`.trim(),
+  })
+}
+
 /* ── 연차 반려 알림 (직원 수신) ─────────────────────────────── */
 export async function sendLeaveRejectionEmail(
   to: string,

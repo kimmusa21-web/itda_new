@@ -1,6 +1,6 @@
 import { redirect }   from 'next/navigation'
 import Link           from 'next/link'
-import { Plus, BarChart3, Upload, Users, CalendarDays, FolderOpen, UserPlus, ChevronRight } from 'lucide-react'
+import { Plus, BarChart3, Upload, Users, CalendarDays, FolderOpen, UserPlus, ChevronRight, CalendarX } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { getCompanyEmployees }  from '@/lib/supabase/queries/employee'
@@ -29,7 +29,9 @@ export default async function ManagerDashboard() {
     .from('profiles').select('name').eq('id', user.id).single()
 
   /* ── 데이터 병렬 조회 ── */
-  const [employees, months, pendingLeave, pendingDocs] = await Promise.all([
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  const [employees, months, pendingLeave, pendingDocs, cancelledLeave] = await Promise.all([
     getCompanyEmployees(companyId),
     getAvailableMonthsV2(companyId),
     supabase
@@ -44,6 +46,14 @@ export default async function ManagerDashboard() {
       .eq('company_id', companyId)
       .eq('status', 'pending')
       .order('requested_at', { ascending: false }),
+    supabase
+      .from('leave_requests')
+      .select('id, leave_type, start_date, end_date, hours_requested, cancelled_at, employees(name)')
+      .eq('company_id', companyId)
+      .eq('status', 'cancelled')
+      .not('cancelled_at', 'is', null)
+      .gte('cancelled_at', sevenDaysAgo)
+      .order('cancelled_at', { ascending: false }),
   ])
 
   const activeEmployees = employees.filter(e => e.is_active)
@@ -51,10 +61,11 @@ export default async function ManagerDashboard() {
   const latestMonth     = months[0] ?? null
   const recentEmployees = activeEmployees.slice(0, 4)
 
-  const leaveList = pendingLeave.data ?? []
-  const docList   = pendingDocs.data  ?? []
+  const leaveList     = pendingLeave.data   ?? []
+  const docList       = pendingDocs.data    ?? []
+  const cancelledList = cancelledLeave.data ?? []
 
-  const totalPending = pendingInvites.length + leaveList.length + docList.length
+  const totalPending = pendingInvites.length + leaveList.length + docList.length + cancelledList.length
 
   return (
     <div className="space-y-6">
@@ -218,6 +229,50 @@ export default async function ManagerDashboard() {
               </div>
             )}
           </div>
+
+          {/* 연차 취소 알림 (최근 7일) */}
+          {cancelledList.length > 0 && (
+            <div className="card p-0 overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center">
+                    <CalendarX size={14} className="text-orange-500" />
+                  </div>
+                  <span className="text-sm font-medium text-slate-800">연차 취소 알림</span>
+                  <span className="text-xs font-semibold text-orange-500 bg-orange-50 px-1.5 py-0.5 rounded-full">
+                    {cancelledList.length}
+                  </span>
+                </div>
+                <Link href="/manager/leave" className="flex items-center gap-0.5 text-xs text-slate-400 hover:text-blue-600 transition-colors">
+                  전체 <ChevronRight size={13} />
+                </Link>
+              </div>
+              <div className="divide-y divide-slate-50">
+                {cancelledList.slice(0, 3).map((req: any) => (
+                  <div key={req.id} className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-7 h-7 rounded-full bg-orange-50 flex items-center justify-center text-[10px] font-semibold text-orange-600 flex-shrink-0">
+                      {((req.employees as any)?.name ?? '?').slice(0, 2)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-slate-800 truncate">
+                        {(req.employees as any)?.name ?? '—'}
+                        <span className="text-slate-400 ml-1">· {leaveTypeLabel[req.leave_type] ?? req.leave_type}</span>
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        {req.start_date} ~ {req.end_date} ({req.hours_requested}h 복원)
+                      </p>
+                    </div>
+                    <span className="text-[10px] text-orange-500 bg-orange-50 px-1.5 py-0.5 rounded-full flex-shrink-0">취소됨</span>
+                  </div>
+                ))}
+                {cancelledList.length > 3 && (
+                  <Link href="/manager/leave" className="flex items-center justify-center py-2 text-xs text-slate-400 hover:text-blue-600 transition-colors">
+                    +{cancelledList.length - 3}건 더 보기
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* 증명서 신청 대기 */}
           <div className="card p-0 overflow-hidden">

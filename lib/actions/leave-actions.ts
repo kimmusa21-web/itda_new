@@ -2,7 +2,7 @@
 
 import { revalidatePath }    from 'next/cache'
 import { createClient }      from '@/lib/supabase/server'
-import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
+import { getEffectiveManagerContext, getEffectiveEmployeeContext } from '@/lib/impersonation/get-effective-context'
 import {
   dailyHours, calcRequestHours, calcExpiresAt,
   monthlyAccrualDays, fiscalYearAnnualDays, hireDateAnnualDays,
@@ -11,6 +11,7 @@ import {
   sendLeaveRequestNotification,
   sendLeaveApprovalEmail,
   sendLeaveRejectionEmail,
+  sendLeaveCancellationNotification,
 } from '@/lib/email'
 import type { LeaveBasis, LeaveType } from '@/types/leave'
 
@@ -482,7 +483,7 @@ export async function cancelLeaveRequest(requestId: number): Promise<{ success: 
 
   const { data: req } = await supabase
     .from('leave_requests')
-    .select('status, balance_id, hours_requested, employee_id')
+    .select('status, balance_id, hours_requested, employee_id, leave_type, start_date, end_date')
     .eq('id', requestId)
     .single()
 
@@ -491,15 +492,39 @@ export async function cancelLeaveRequest(requestId: number): Promise<{ success: 
   if (req.employee_id !== empCtx.employeeId) return { success: false, error: '권한이 없습니다' }
   if (!['pending', 'approved'].includes(req.status)) return { success: false, error: '취소할 수 없는 상태입니다' }
 
-  await supabase.from('leave_requests').update({ status: 'cancelled' }).eq('id', requestId)
+  const cancelledAt = new Date().toISOString()
+  await supabase.from('leave_requests')
+    .update({ status: 'cancelled', cancelled_at: cancelledAt })
+    .eq('id', requestId)
 
-  // 승인됐던 경우 잔액 복원
-  if (req.status === 'approved' && req.balance_id) {
-    const { data: bal } = await supabase.from('leave_balances').select('used_hours').eq('id', req.balance_id).single()
-    if (bal) {
-      await supabase.from('leave_balances')
-        .update({ used_hours: Math.max(0, bal.used_hours - req.hours_requested), updated_at: new Date().toISOString() })
-        .eq('id', req.balance_id)
+  // 승인됐던 경우 잔액 복원 + 매니저 알림
+  if (req.status === 'approved') {
+    if (req.balance_id) {
+      const { data: bal } = await supabase.from('leave_balances').select('used_hours').eq('id', req.balance_id).single()
+      if (bal) {
+        await supabase.from('leave_balances')
+          .update({ used_hours: Math.max(0, bal.used_hours - req.hours_requested), updated_at: cancelledAt })
+          .eq('id', req.balance_id)
+      }
+    }
+
+    // 매니저에게 취소 알림
+    const { data: emp } = await supabase
+      .from('employees').select('name, company_id').eq('id', req.employee_id).single()
+    if (emp) {
+      const { data: mgr } = await supabase
+        .from('profiles').select('email, name')
+        .eq('company_id', emp.company_id).eq('role', 'manager').single()
+      if (mgr?.email) {
+        await sendLeaveCancellationNotification(mgr.email, {
+          managerName:  mgr.name ?? '담당자',
+          employeeName: emp.name,
+          leaveType:    req.leave_type,
+          startDate:    req.start_date,
+          endDate:      req.end_date,
+          hours:        req.hours_requested,
+        })
+      }
     }
   }
 
