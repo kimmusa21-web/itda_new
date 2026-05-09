@@ -174,13 +174,13 @@ export async function allocateLeaveForAllEmployees(year?: number): Promise<{ suc
     const msWorked  = today.getTime() - hire.getTime()
     const underYear = msWorked < 365.25 * 24 * 3600 * 1000
 
-    // 모든 직원: 월차 소급 적립 (1년 이상이어도 첫 해 미적립분 정산)
-    await catchUpMonthlyLeave(
-      supabase, emp.id, ctx.companyId, emp.Date_of_joining!, emp.weekly_work_hours, policy.basis,
-    )
-
-    // 입사일 기준 + 1년 미만: 연차 발급 스킵 (월차만)
-    if (policy.basis === 'hire_date' && underYear) continue
+    // 1년 미만 직원: 월차 소급 적립 후 연차 스킵
+    if (underYear) {
+      await catchUpMonthlyLeave(
+        supabase, emp.id, ctx.companyId, emp.Date_of_joining!, emp.weekly_work_hours, policy.basis,
+      )
+      if (policy.basis === 'hire_date') continue
+    }
 
     const res = await allocateAnnualLeave(
       emp.id, ctx.companyId, emp.Date_of_joining!, emp.weekly_work_hours, policy.basis, targetYear,
