@@ -44,7 +44,7 @@ export const roleNavMap: RoleNavMap = {
 export const mobileNavMap: RoleNavMap = {
   admin: [
     { label: '대시보드', href: '/admin',                icon: Home      },
-    { label: '직원',     href: '/admin/employees',      icon: Users     },
+    { label: '직원관리', href: '/admin/employees',      icon: Users     },
     { label: '급여조회', href: '/admin/payroll',        icon: BarChart3 },
     { label: '업로드',   href: '/admin/payroll/upload', icon: Upload    },
     { label: '기업',     href: '/admin/companies',      icon: Building2 },

@@ -1,15 +1,18 @@
-import { redirect }            from 'next/navigation'
-import Link                    from 'next/link'
-import { Plus, BarChart3, Users, Upload } from 'lucide-react'
-import { createClient }        from '@/lib/supabase/server'
+import { redirect }   from 'next/navigation'
+import Link           from 'next/link'
+import { Plus, BarChart3, Upload, Users, CalendarDays, FolderOpen, UserPlus, ChevronRight } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
-import { getCompanyEmployees } from '@/lib/supabase/queries/employee'
+import { getCompanyEmployees }  from '@/lib/supabase/queries/employee'
 import { getAvailableMonthsV2 } from '@/lib/supabase/queries/payslip-v2'
-import { formatMonth }         from '@/lib/utils'
-import EmptyState              from '@/components/common/empty-state'
-import { InviteList }          from '@/components/manager-request/invite-list'
+import { formatMonth } from '@/lib/utils'
+import EmptyState from '@/components/common/empty-state'
 
 export const metadata = { title: '대시보드 | itda' }
+
+const leaveTypeLabel: Record<string, string> = {
+  full_day: '연차', half_day_am: '오전반차', half_day_pm: '오후반차', hourly: '시간연차',
+}
 
 export default async function ManagerDashboard() {
   const supabase = createClient()
@@ -22,37 +25,36 @@ export default async function ManagerDashboard() {
   const companyId   = ctx.companyId
   const companyName = ctx.companyName
 
-  // admin 본인 프로필 이름 조회 (greeting용)
   const { data: profile } = await supabase
     .from('profiles').select('name').eq('id', user.id).single()
 
   /* ── 데이터 병렬 조회 ── */
-  const [employees, months, invitesResult] = await Promise.all([
+  const [employees, months, pendingLeave, pendingDocs] = await Promise.all([
     getCompanyEmployees(companyId),
     getAvailableMonthsV2(companyId),
     supabase
-      .from('employees')
-      .select('id, name, email, department, position, Date_of_joining, is_active, user_id, created_at')
+      .from('leave_requests')
+      .select('id, leave_type, start_date, end_date, hours_requested, requested_at, employees(name)')
       .eq('company_id', companyId)
-      .order('created_at', { ascending: false }),
+      .eq('status', 'pending')
+      .order('requested_at', { ascending: false }),
+    supabase
+      .from('document_requests')
+      .select('id, document_type, requested_at, employees(name)')
+      .eq('company_id', companyId)
+      .eq('status', 'pending')
+      .order('requested_at', { ascending: false }),
   ])
 
   const activeEmployees = employees.filter(e => e.is_active)
+  const pendingInvites  = employees.filter(e => !e.is_active && !e.user_id)
   const latestMonth     = months[0] ?? null
-
   const recentEmployees = activeEmployees.slice(0, 4)
 
-  const inviteList = (invitesResult.data ?? []).map(e => ({
-    id:         e.id as number,
-    name:       e.name as string,
-    email:      e.email as string,
-    department: e.department as string | null,
-    position:   e.position as string | null,
-    joinDate:   e.Date_of_joining as string | null,
-    isActive:   e.is_active as boolean,
-    hasAccount: e.user_id !== null,
-    createdAt:  e.created_at as string,
-  }))
+  const leaveList = pendingLeave.data ?? []
+  const docList   = pendingDocs.data  ?? []
+
+  const totalPending = pendingInvites.length + leaveList.length + docList.length
 
   return (
     <div className="space-y-6">
@@ -111,7 +113,164 @@ export default async function ManagerDashboard() {
         </Link>
       </div>
 
-      {/* 직원 목록 */}
+      {/* ── 신청 현황 (통합) ───────────────────────────────────── */}
+      <section>
+        <div className="section-header">
+          <div className="flex items-center gap-2">
+            <h2 className="section-title">신청 현황</h2>
+            {totalPending > 0 && (
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                {totalPending > 99 ? '99+' : totalPending}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+
+          {/* 직원 등록 대기 */}
+          <div className="card p-0 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center">
+                  <UserPlus size={14} className="text-indigo-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-800">직원 등록 대기</span>
+                {pendingInvites.length > 0 && (
+                  <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full">
+                    {pendingInvites.length}
+                  </span>
+                )}
+              </div>
+              <Link href="/manager/employees" className="flex items-center gap-0.5 text-xs text-slate-400 hover:text-blue-600 transition-colors">
+                전체 <ChevronRight size={13} />
+              </Link>
+            </div>
+            {pendingInvites.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-4">대기 중인 등록 신청이 없습니다</p>
+            ) : (
+              <div className="divide-y divide-slate-50">
+                {pendingInvites.slice(0, 3).map(emp => (
+                  <div key={emp.id} className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-semibold text-slate-600 flex-shrink-0">
+                      {(emp.name ?? '?').slice(0, 2)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-slate-800 truncate">{emp.name}</p>
+                      <p className="text-[10px] text-slate-400 truncate">{emp.email}</p>
+                    </div>
+                    <span className="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full flex-shrink-0">가입 대기</span>
+                  </div>
+                ))}
+                {pendingInvites.length > 3 && (
+                  <Link href="/manager/employees" className="flex items-center justify-center py-2 text-xs text-slate-400 hover:text-blue-600 transition-colors">
+                    +{pendingInvites.length - 3}명 더 보기
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 연차 신청 대기 */}
+          <div className="card p-0 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
+                  <CalendarDays size={14} className="text-emerald-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-800">연차 신청</span>
+                {leaveList.length > 0 && (
+                  <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
+                    {leaveList.length}
+                  </span>
+                )}
+              </div>
+              <Link href="/manager/leave" className="flex items-center gap-0.5 text-xs text-slate-400 hover:text-blue-600 transition-colors">
+                전체 <ChevronRight size={13} />
+              </Link>
+            </div>
+            {leaveList.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-4">대기 중인 연차 신청이 없습니다</p>
+            ) : (
+              <div className="divide-y divide-slate-50">
+                {leaveList.slice(0, 3).map((req: any) => (
+                  <div key={req.id} className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-7 h-7 rounded-full bg-emerald-50 flex items-center justify-center text-[10px] font-semibold text-emerald-700 flex-shrink-0">
+                      {((req.employees as any)?.name ?? '?').slice(0, 2)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-slate-800 truncate">
+                        {(req.employees as any)?.name ?? '—'}
+                        <span className="text-slate-400 ml-1">· {leaveTypeLabel[req.leave_type] ?? req.leave_type}</span>
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        {req.start_date} ~ {req.end_date} ({req.hours_requested}h)
+                      </p>
+                    </div>
+                    <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full flex-shrink-0">승인 대기</span>
+                  </div>
+                ))}
+                {leaveList.length > 3 && (
+                  <Link href="/manager/leave" className="flex items-center justify-center py-2 text-xs text-slate-400 hover:text-blue-600 transition-colors">
+                    +{leaveList.length - 3}건 더 보기
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 증명서 신청 대기 */}
+          <div className="card p-0 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
+                  <FolderOpen size={14} className="text-amber-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-800">증명서 신청</span>
+                {docList.length > 0 && (
+                  <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">
+                    {docList.length}
+                  </span>
+                )}
+              </div>
+              <Link href="/manager/documents" className="flex items-center gap-0.5 text-xs text-slate-400 hover:text-blue-600 transition-colors">
+                전체 <ChevronRight size={13} />
+              </Link>
+            </div>
+            {docList.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-4">대기 중인 증명서 신청이 없습니다</p>
+            ) : (
+              <div className="divide-y divide-slate-50">
+                {docList.slice(0, 3).map((req: any) => (
+                  <div key={req.id} className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-7 h-7 rounded-full bg-amber-50 flex items-center justify-center text-[10px] font-semibold text-amber-700 flex-shrink-0">
+                      {((req.employees as any)?.name ?? '?').slice(0, 2)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-slate-800 truncate">
+                        {(req.employees as any)?.name ?? '—'}
+                        <span className="text-slate-400 ml-1">· {req.document_type}</span>
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        {new Date(req.requested_at).toLocaleDateString('ko-KR')}
+                      </p>
+                    </div>
+                    <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full flex-shrink-0">처리 대기</span>
+                  </div>
+                ))}
+                {docList.length > 3 && (
+                  <Link href="/manager/documents" className="flex items-center justify-center py-2 text-xs text-slate-400 hover:text-blue-600 transition-colors">
+                    +{docList.length - 3}건 더 보기
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+
+        </div>
+      </section>
+
+      {/* 재직 직원 */}
       <section>
         <div className="section-header">
           <h2 className="section-title">
@@ -127,7 +286,7 @@ export default async function ManagerDashboard() {
           <EmptyState
             icon={Users}
             title="등록된 직원이 없습니다"
-            description="'직원 등록 요청' 버튼으로 직원을 추가하거나 CSV로 대량 등록하세요."
+            description="직원 등록 버튼으로 직원을 추가하거나 CSV로 대량 등록하세요."
           />
         ) : (
           <div className="space-y-2">
@@ -158,44 +317,6 @@ export default async function ManagerDashboard() {
             )}
           </div>
         )}
-      </section>
-
-      {/* 빠른 메뉴 */}
-      <section>
-        <h2 className="section-title mb-3">빠른 메뉴</h2>
-        <div className="grid grid-cols-2 gap-2">
-          {[
-            { href: '/manager/employees/create', icon: Plus,          label: '직원 등록',     sub: '개별 등록' },
-            { href: '/manager/employees/upload', icon: Upload,        label: '직원 CSV 등록', sub: '대량 등록' },
-            { href: '/manager/employees',        icon: Users,         label: '직원관리',      sub: '목록 보기' },
-            { href: '/manager/payroll/upload',   icon: Upload,        label: '급여업로드',    sub: 'CSV 등록'  },
-          ].map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all"
-            >
-              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-                <item.icon size={15} className="text-slate-600" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-800 truncate">{item.label}</p>
-                <p className="text-[10px] text-slate-400">{item.sub}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* 초대 내역 */}
-      <section>
-        <div className="section-header">
-          <h2 className="section-title">초대 내역</h2>
-          <Link href="/manager/requests" className="text-xs text-blue-600 hover:underline">
-            전체 보기
-          </Link>
-        </div>
-        <InviteList companyId={companyId} initialList={inviteList} />
       </section>
     </div>
   )
