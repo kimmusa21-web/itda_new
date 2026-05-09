@@ -234,10 +234,13 @@ export async function getMyLeaveBalances() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
+  const empCtx = await getEffectiveEmployeeContext()
+  if (!empCtx) return []
+
   const { data: emp } = await supabase
     .from('employees')
     .select('id, company_id, weekly_work_hours')
-    .eq('user_id', user.id)
+    .eq('id', empCtx.employeeId)
     .eq('is_active', true)
     .single()
   if (!emp) return []
@@ -274,10 +277,13 @@ export async function requestLeave(data: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: '로그인이 필요합니다' }
 
+  const empCtx = await getEffectiveEmployeeContext()
+  if (!empCtx) return { success: false, error: '직원 정보를 찾을 수 없습니다' }
+
   const { data: emp } = await supabase
     .from('employees')
     .select('id, company_id, weekly_work_hours, name, email')
-    .eq('user_id', user.id)
+    .eq('id', empCtx.employeeId)
     .eq('is_active', true)
     .single()
   if (!emp) return { success: false, error: '직원 정보를 찾을 수 없습니다' }
@@ -471,16 +477,18 @@ export async function cancelLeaveRequest(requestId: number): Promise<{ success: 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: '인증 필요' }
 
+  const empCtx = await getEffectiveEmployeeContext()
+  if (!empCtx) return { success: false, error: '직원 정보를 찾을 수 없습니다' }
+
   const { data: req } = await supabase
     .from('leave_requests')
-    .select('status, balance_id, hours_requested, employees(user_id)')
+    .select('status, balance_id, hours_requested, employee_id')
     .eq('id', requestId)
     .single()
 
   if (!req) return { success: false, error: '신청 내역을 찾을 수 없습니다' }
 
-  const empArr = req.employees as unknown as { user_id: string }[]
-  if (empArr?.[0]?.user_id !== user.id) return { success: false, error: '권한이 없습니다' }
+  if (req.employee_id !== empCtx.employeeId) return { success: false, error: '권한이 없습니다' }
   if (!['pending', 'approved'].includes(req.status)) return { success: false, error: '취소할 수 없는 상태입니다' }
 
   await supabase.from('leave_requests').update({ status: 'cancelled' }).eq('id', requestId)
@@ -581,22 +589,14 @@ export async function getCompanyLeaveOverview() {
 
 /* ── 직원용 내 연차 신청 이력 조회 ─────────────────────────── */
 export async function getMyLeaveRequests() {
+  const empCtx = await getEffectiveEmployeeContext()
+  if (!empCtx) return []
+
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
-
-  const { data: emp } = await supabase
-    .from('employees')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .single()
-  if (!emp) return []
-
   const { data } = await supabase
     .from('leave_requests')
     .select('*')
-    .eq('employee_id', emp.id)
+    .eq('employee_id', empCtx.employeeId)
     .order('requested_at', { ascending: false })
     .limit(50)
 
@@ -605,22 +605,14 @@ export async function getMyLeaveRequests() {
 
 /* ── 직원 조정 이력 조회 (직원도 볼 수 있음) ───────────────── */
 export async function getMyLeaveAdjustments() {
+  const empCtx = await getEffectiveEmployeeContext()
+  if (!empCtx) return []
+
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
-
-  const { data: emp } = await supabase
-    .from('employees')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .single()
-  if (!emp) return []
-
   const { data } = await supabase
     .from('leave_adjustments')
     .select('*')
-    .eq('employee_id', emp.id)
+    .eq('employee_id', empCtx.employeeId)
     .order('created_at', { ascending: false })
 
   return data ?? []
