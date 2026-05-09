@@ -165,13 +165,16 @@ export async function POST(req: Request) {
     console.log(`[complete-invite] employees 연결: id=${employeeRow.id}`)
   }
 
-  /* ── 9. profiles upsert (실제 이메일 저장) ────────────────── */
+  /* ── 9. profiles upsert ──────────────────────────────────────
+     profiles.email = syntheticEmail (auth.users.email와 동일하게 유지)
+     실제 이메일은 employees.email에 보관 — profiles unique 제약 충돌 방지
+  ──────────────────────────────────────────────────────────── */
   const { error: profileErr } = await supabaseAdmin
     .from('profiles')
     .upsert(
       {
         id:         authUserId,
-        email:      normalizedEmail,          // 실제 이메일 보관 (로그인 UI 표시용)
+        email:      syntheticEmail,           // auth.users.email과 일치
         name:       invite.name || (employeeRow.name ?? normalizedEmail),
         role:       'employee',
         company_id: invite.company_id,
