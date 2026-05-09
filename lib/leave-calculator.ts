@@ -51,11 +51,13 @@ export function annualLeaveDays(years: number): number {
 /**
  * 입사일 기준: 특정 주기(연도 cycle)의 연차 발생일수
  * @param hireDate 입사일
- * @param cycleYear 주기 시작 연도 (입사 N주년이 속하는 해)
+ * @param cycleYear cycleYear년의 입사 기념일 기준 근속연수로 계산
  * @returns 해당 주기에 발생할 연차 일수 (annual only, 1년 미만은 0)
  */
 export function hireDateAnnualDays(hireDate: Date, cycleYear: number): number {
-  const years = cycleYear - hireDate.getFullYear()
+  // cycleYear년의 입사 기념일 시점 실제 근속연수 사용
+  const anniversary = new Date(cycleYear, hireDate.getMonth(), hireDate.getDate())
+  const years = Math.floor(yearsWorked(hireDate, anniversary))
   return annualLeaveDays(years)
 }
 
