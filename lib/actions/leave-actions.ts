@@ -138,9 +138,12 @@ export async function allocateLeaveForAllEmployees(year?: number): Promise<{ suc
   let count = 0
   for (const emp of employees) {
     const hire = new Date(emp.Date_of_joining!)
-    // 1년 미만 근속자는 월차만 적용 — 연차 발급 스킵
-    const msWorked = today.getTime() - hire.getTime()
-    if (msWorked < 365.25 * 24 * 3600 * 1000) continue
+
+    // 입사일 기준: 아직 첫 기념일이 안 지난 직원은 월차만 적용
+    if (policy.basis === 'hire_date') {
+      const msWorked = today.getTime() - hire.getTime()
+      if (msWorked < 365.25 * 24 * 3600 * 1000) continue
+    }
 
     const res = await allocateAnnualLeave(
       emp.id, ctx.companyId, emp.Date_of_joining!, emp.weekly_work_hours, policy.basis, targetYear,
