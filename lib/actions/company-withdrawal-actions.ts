@@ -55,6 +55,20 @@ export async function approveWithdrawal(
     })
     .eq('id', requestId)
 
+  // 해당 회사 소속 모든 Auth 계정 비활성화 (manager + employees)
+  const { data: members } = await service
+    .from('profiles')
+    .select('id')
+    .eq('company_id', request.company_id)
+
+  if (members && members.length > 0) {
+    await Promise.all(
+      members.map((m: { id: string }) =>
+        service.auth.admin.updateUserById(m.id, { ban_duration: '876600h' }),
+      ),
+    )
+  }
+
   revalidatePath('/admin/companies')
   revalidatePath('/admin/companies/withdrawn')
   revalidatePath('/admin/requests')
