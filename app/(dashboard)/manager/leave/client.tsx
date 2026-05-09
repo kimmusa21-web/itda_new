@@ -209,6 +209,7 @@ export function ManagerLeaveClient({ policy, employees, balances, pendingRequest
                 <thead className="bg-slate-50 text-xs text-slate-500">
                   <tr>
                     <th className="text-left px-4 py-3 font-medium">직원</th>
+                    <th className="text-left px-4 py-3 font-medium">입사일</th>
                     <th className="text-right px-4 py-3 font-medium">발생(h)</th>
                     <th className="text-right px-4 py-3 font-medium">조정(h)</th>
                     <th className="text-right px-4 py-3 font-medium">사용(h)</th>
@@ -223,6 +224,11 @@ export function ManagerLeaveClient({ policy, employees, balances, pendingRequest
                         <td className="px-4 py-3">
                           <p className="font-medium text-slate-800">{emp.name}</p>
                           <p className="text-xs text-slate-400">{[emp.department, emp.position].filter(Boolean).join(' · ')}</p>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-500 whitespace-nowrap">
+                          {emp.Date_of_joining
+                            ? new Date(emp.Date_of_joining).toLocaleDateString('ko-KR')
+                            : '—'}
                         </td>
                         <td className="px-4 py-3 text-right text-slate-600">{s.total.toFixed(1)}</td>
                         <td className={cn('px-4 py-3 text-right', s.adj < 0 ? 'text-red-600' : s.adj > 0 ? 'text-green-600' : 'text-slate-400')}>
