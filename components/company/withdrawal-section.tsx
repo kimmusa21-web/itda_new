@@ -105,13 +105,12 @@ export function WithdrawalSection({ companyId, companyName, hasPending }: Props)
                   <li>전체 직원 급여대장 및 급여명세서</li>
                   <li>근로소득 원천징수 내역</li>
                   <li>4대보험 관련 급여 데이터</li>
-                  <li>연말정산 기초 자료</li>
                 </ul>
               </div>
 
               <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
                 <p className="text-xs text-amber-700">
-                  <span className="font-semibold">법적 보관 의무:</span> 근로기준법 및 세법에 따라
+                  <span className="font-semibold">법적 보관 의무:</span> 근로기준법 제32조에 따라
                   급여·세무 서류는 최소 3년간 보관해야 합니다. 탈퇴 전 반드시 필요한 자료를 다운로드하세요.
                 </p>
               </div>
@@ -124,7 +123,7 @@ export function WithdrawalSection({ companyId, companyName, hasPending }: Props)
                 <ul className="text-xs text-blue-600 space-y-0.5 list-disc list-inside">
                   <li>월별 급여대장 (엑셀)</li>
                   <li>직원별 급여명세서</li>
-                  <li>연간 근로소득 원천징수 영수증</li>
+                  <li>연차유급휴가 사용 및 정산내역</li>
                 </ul>
               </div>
             </div>
@@ -169,7 +168,7 @@ export function WithdrawalSection({ companyId, companyName, hasPending }: Props)
                 <div>
                   <p className="text-sm font-medium text-slate-800">필요한 급여 데이터를 모두 다운로드했습니다</p>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    급여대장, 급여명세서, 원천징수 내역 등 법정 보관 서류를 사전에 저장했음을 확인합니다.
+                    급여대장, 급여명세서, 연차유급휴가 사용내역 등 법정 보관 서류를 사전에 저장했음을 확인합니다.
                   </p>
                 </div>
               </button>
