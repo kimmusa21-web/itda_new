@@ -21,5 +21,5 @@ export default async function LeaveSettingsPage() {
     .eq('company_id', ctx.companyId)
     .single()
 
-  return <LeaveSettingsClient policy={policy} />
+  return <LeaveSettingsClient policy={policy} companyId={ctx.companyId} />
 }

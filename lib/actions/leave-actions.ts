@@ -35,6 +35,42 @@ export async function saveLeavePolicy(data: {
   return { success: true }
 }
 
+/* ── 발생 기준 변경 (기존 레코드 삭제 후 새 기준으로 재발급) ── */
+export async function resetAndChangeLeaveBasis(data: {
+  basis:            LeaveBasis
+  allow_negative:   boolean
+  auto_approve:     boolean
+  settle_on_resign: boolean
+}): Promise<{ success: boolean; error?: string }> {
+  const supabase = createClient()
+  const ctx = await getEffectiveManagerContext()
+  if (!ctx?.companyId) return { success: false, error: '회사 정보가 없습니다' }
+
+  const currentPolicy = await getLeavePolicy(ctx.companyId)
+  const oldBasis = currentPolicy?.basis
+
+  // 기존 basis 레코드 전체 삭제
+  if (oldBasis && oldBasis !== data.basis) {
+    const { error: delErr } = await supabase
+      .from('leave_balances')
+      .delete()
+      .eq('company_id', ctx.companyId)
+      .eq('basis', oldBasis)
+    if (delErr) return { success: false, error: `기존 데이터 삭제 실패: ${delErr.message}` }
+  }
+
+  // 새 정책 저장
+  const { error: saveErr } = await supabase
+    .from('leave_policies')
+    .upsert({ company_id: ctx.companyId, ...data, updated_at: new Date().toISOString() },
+             { onConflict: 'company_id' })
+  if (saveErr) return { success: false, error: saveErr.message }
+
+  revalidatePath('/manager/leave')
+  revalidatePath('/manager/leave/settings')
+  return { success: true }
+}
+
 /* ── 정책 조회 ──────────────────────────────────────────────── */
 export async function getLeavePolicy(companyId: number) {
   const supabase = createClient()

@@ -2,29 +2,55 @@
 
 import { useState }        from 'react'
 import { useRouter }       from 'next/navigation'
-import { Settings, CheckCircle, XCircle, Loader2, Info } from 'lucide-react'
+import { Settings, CheckCircle, XCircle, Loader2, Info, AlertTriangle, Download } from 'lucide-react'
 import { cn }              from '@/lib/utils'
-import { saveLeavePolicy } from '@/lib/actions/leave-actions'
+import { saveLeavePolicy, resetAndChangeLeaveBasis } from '@/lib/actions/leave-actions'
 import type { LeaveBasis } from '@/types/leave'
 
-interface Props { policy: {
-  basis: LeaveBasis; allow_negative: boolean; auto_approve: boolean; settle_on_resign: boolean
-} | null }
+interface Props {
+  policy: {
+    basis: LeaveBasis; allow_negative: boolean; auto_approve: boolean; settle_on_resign: boolean
+  } | null
+  companyId: number
+}
 
-export function LeaveSettingsClient({ policy }: Props) {
-  const router  = useRouter()
-  const isNew   = !policy
+export function LeaveSettingsClient({ policy, companyId }: Props) {
+  const router       = useRouter()
+  const isNew        = !policy
+  const originalBasis = policy?.basis ?? 'hire_date'
 
-  const [basis,          setBasis]          = useState<LeaveBasis>(policy?.basis ?? 'hire_date')
+  const [basis,          setBasis]          = useState<LeaveBasis>(originalBasis)
   const [allowNegative,  setAllowNegative]  = useState(policy?.allow_negative  ?? false)
   const [autoApprove,    setAutoApprove]    = useState(policy?.auto_approve     ?? false)
   const [settleOnResign, setSettleOnResign] = useState(policy?.settle_on_resign ?? true)
-  const [saving,  setSaving]  = useState(false)
-  const [toast,   setToast]   = useState<{ msg: string; ok: boolean } | null>(null)
+  const [saving,         setSaving]         = useState(false)
+  const [downloading,    setDownloading]    = useState(false)
+  const [toast,          setToast]          = useState<{ msg: string; ok: boolean } | null>(null)
+
+  const basisChanged = !isNew && basis !== originalBasis
 
   function showToast(msg: string, ok = true) {
     setToast({ msg, ok })
-    setTimeout(() => setToast(null), 3000)
+    setTimeout(() => setToast(null), 3500)
+  }
+
+  async function handleDownload() {
+    setDownloading(true)
+    try {
+      const res = await fetch(`/api/companies/${companyId}/export/leave-usage`)
+      if (!res.ok) { showToast('다운로드 실패', false); return }
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `연차사용내역_${new Date().toISOString().slice(0, 10)}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      showToast('다운로드 중 오류가 발생했습니다', false)
+    } finally {
+      setDownloading(false)
+    }
   }
 
   async function handleSave() {
@@ -34,6 +60,20 @@ export function LeaveSettingsClient({ policy }: Props) {
     if (!res.success) { showToast(res.error ?? '저장 실패', false); return }
     showToast('연차 정책이 저장되었습니다')
     if (isNew) router.push('/manager/leave')
+  }
+
+  async function handleBasisChange() {
+    setSaving(true)
+    const res = await resetAndChangeLeaveBasis({ basis, allow_negative: allowNegative, auto_approve: autoApprove, settle_on_resign: settleOnResign })
+    setSaving(false)
+    if (!res.success) { showToast(res.error ?? '변경 실패', false); return }
+    showToast('연차 기준이 변경되었습니다. 연차관리 → 일괄 발급을 실행해주세요.')
+    setTimeout(() => router.push('/manager/leave'), 2000)
+  }
+
+  const BASIS_LABEL: Record<LeaveBasis, string> = {
+    hire_date:   '입사일 기준',
+    fiscal_year: '회계연도 기준',
   }
 
   return (
@@ -60,8 +100,8 @@ export function LeaveSettingsClient({ policy }: Props) {
           <p className="text-sm font-medium text-slate-700 mb-3">연차 발생 기준</p>
           <div className="grid grid-cols-2 gap-3">
             {([
-              ['hire_date',    '입사일 기준',    '직원 입사일 기념일마다 연차 발생'],
-              ['fiscal_year',  '회계연도 기준',  '매년 1월 1일 기준으로 연차 일괄 발생'],
+              ['hire_date',   '입사일 기준',   '직원 입사일 기념일마다 연차 발생'],
+              ['fiscal_year', '회계연도 기준', '매년 1월 1일 기준으로 연차 일괄 발생'],
             ] as [LeaveBasis, string, string][]).map(([val, label, desc]) => (
               <button
                 key={val}
@@ -84,9 +124,9 @@ export function LeaveSettingsClient({ policy }: Props) {
 
         {/* 토글 옵션들 */}
         {([
-          [allowNegative,  setAllowNegative,  '마이너스 연차 허용',   '잔여 연차가 없어도 신청·승인 가능 (추후 차감)'],
-          [autoApprove,    setAutoApprove,    '자동 승인',            '직원 신청 시 매니저 승인 없이 즉시 처리'],
-          [settleOnResign, setSettleOnResign, '퇴직 시 정산',         '퇴직 처리 시 미사용 연차를 자동으로 비교·계산'],
+          [allowNegative,  setAllowNegative,  '마이너스 연차 허용',  '잔여 연차가 없어도 신청·승인 가능 (추후 차감)'],
+          [autoApprove,    setAutoApprove,    '자동 승인',           '직원 신청 시 매니저 승인 없이 즉시 처리'],
+          [settleOnResign, setSettleOnResign, '퇴직 시 정산',        '퇴직 처리 시 미사용 연차를 자동으로 비교·계산'],
         ] as [boolean, (v: boolean) => void, string, string][]).map(([val, setter, label, desc]) => (
           <label key={label} className="flex items-start justify-between gap-4 cursor-pointer">
             <div>
@@ -109,14 +149,60 @@ export function LeaveSettingsClient({ policy }: Props) {
         ))}
       </div>
 
-      {/* 저장 버튼 */}
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="w-full bg-emerald-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-      >
-        {saving ? <><Loader2 size={16} className="animate-spin" />저장 중...</> : '설정 저장'}
-      </button>
+      {/* 기준 변경 경고 */}
+      {basisChanged && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">연차 발생 기준 변경 안내</p>
+              <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                <span className="font-medium">{BASIS_LABEL[originalBasis]}</span> →{' '}
+                <span className="font-medium">{BASIS_LABEL[basis]}</span>으로 변경됩니다.
+              </p>
+              <ul className="text-xs text-amber-700 mt-2 space-y-1 list-disc list-inside">
+                <li>기존 <span className="font-medium">{BASIS_LABEL[originalBasis]}</span> 기준 연차 데이터가 모두 삭제됩니다.</li>
+                <li>변경 후 <span className="font-medium">연차관리 → 일괄 발급</span>을 실행하면 새 기준으로 재발급됩니다.</li>
+                <li>기존 연차 신청·승인 이력은 삭제되지 않습니다.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-white border border-amber-300 text-amber-700 hover:bg-amber-100 transition-colors font-medium"
+            >
+              {downloading
+                ? <><Loader2 size={13} className="animate-spin" />다운로드 중...</>
+                : <><Download size={13} />현재 연차 데이터 다운로드</>}
+            </button>
+            <p className="text-xs text-amber-600">변경 전 백업을 권장합니다</p>
+          </div>
+
+          <button
+            onClick={handleBasisChange}
+            disabled={saving}
+            className="w-full bg-amber-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-amber-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {saving
+              ? <><Loader2 size={15} className="animate-spin" />처리 중...</>
+              : '기준 변경 적용'}
+          </button>
+        </div>
+      )}
+
+      {/* 일반 저장 버튼 (기준 미변경 시) */}
+      {!basisChanged && (
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full bg-emerald-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {saving ? <><Loader2 size={16} className="animate-spin" />저장 중...</> : '설정 저장'}
+        </button>
+      )}
 
       {toast && (
         <div className={cn(
