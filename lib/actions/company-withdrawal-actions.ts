@@ -56,16 +56,20 @@ export async function approveWithdrawal(
     .eq('id', requestId)
 
   // 해당 회사 소속 모든 Auth 계정 비활성화 (manager + employees)
-  const { data: members } = await service
-    .from('profiles')
-    .select('id')
-    .eq('company_id', request.company_id)
+  // profiles와 employees를 모두 조회해 누락 방지
+  const [{ data: profileMembers }, { data: employeeMembers }] = await Promise.all([
+    service.from('profiles').select('id').eq('company_id', request.company_id),
+    service.from('employees').select('user_id').eq('company_id', request.company_id).not('user_id', 'is', null),
+  ])
 
-  if (members && members.length > 0) {
+  const userIds = new Set<string>([
+    ...(profileMembers  ?? []).map((m: { id: string }) => m.id),
+    ...(employeeMembers ?? []).filter((e: { user_id: string | null }) => e.user_id).map((e: { user_id: string }) => e.user_id),
+  ])
+
+  if (userIds.size > 0) {
     await Promise.all(
-      members.map((m: { id: string }) =>
-        service.auth.admin.updateUserById(m.id, { ban_duration: '876600h' }),
-      ),
+      [...userIds].map(id => service.auth.admin.updateUserById(id, { ban_duration: '87600h' })),
     )
   }
 
