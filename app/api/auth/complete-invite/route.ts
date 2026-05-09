@@ -82,12 +82,11 @@ export async function POST(req: Request) {
 
   const normalizedEmail = invite.email.trim().toLowerCase()
 
-  /* ── 5. Supabase Auth 계정 생성 ───────────────────────────── */
-  // createUser가 이미 존재하는 이메일이면 에러 반환 → 에러 메시지로 구분
+  /* ── 5. Supabase Auth 계정 생성 (또는 이직/재입사 처리) ──────── */
   const { data: newUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email:         normalizedEmail,
     password,
-    email_confirm: true,           // 이미 이메일 초대로 인증됨 → 자동 확인
+    email_confirm: true,
     user_metadata: {
       name:       invite.name,
       company_id: invite.company_id,
@@ -97,21 +96,8 @@ export async function POST(req: Request) {
   let authUserId: string
 
   if (authError) {
-    const isConflict =
-      authError.message.toLowerCase().includes('already been registered') ||
-      authError.message.toLowerCase().includes('already exists') ||
-      authError.message.toLowerCase().includes('duplicate') ||
-      authError.status === 422
-
-    if (!isConflict) {
-      console.error('[complete-invite] Auth 계정 생성 실패:', authError.message)
-      return NextResponse.json(
-        { error: '계정 생성 중 오류가 발생했습니다: ' + authError.message },
-        { status: 500 },
-      )
-    }
-
-    // 재입사 케이스: 이미 Auth 계정이 존재 → 기존 계정을 새 employee 레코드에 연결
+    // createUser 실패 시 → 이메일 중복 여부와 무관하게 기존 계정 조회
+    // (Supabase 에러 메시지 패턴에 의존하지 않고 직접 확인)
     const { data: existingProfile } = await supabaseAdmin
       .from('profiles')
       .select('id')
@@ -119,15 +105,19 @@ export async function POST(req: Request) {
       .maybeSingle()
 
     if (!existingProfile) {
+      // 기존 계정도 없는데 createUser도 실패 → 진짜 서버 오류
+      console.error('[complete-invite] Auth 계정 생성 실패:', authError.message)
       return NextResponse.json(
-        { error: '이미 가입된 이메일입니다. 로그인하거나 비밀번호 재설정을 이용하세요.' },
-        { status: 409 },
+        { error: '계정 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 500 },
       )
     }
 
-    // 기존 auth user_id로 새 employee 레코드 연결
+    // 이직/재입사: 기존 계정을 새 회사 employee 레코드에 연결
+    // 초대 폼에서 입력한 비밀번호로 갱신 (기존 비밀번호 덮어쓰기)
     authUserId = existingProfile.id
-    console.log(`[complete-invite] 재입사 처리: 기존 계정 재사용 (authUserId=${authUserId})`)
+    await supabaseAdmin.auth.admin.updateUserById(authUserId, { password })
+    console.log(`[complete-invite] 이직/재입사 처리: 기존 계정 재사용 (authUserId=${authUserId})`)
   } else {
     authUserId = newUser!.user.id
   }
