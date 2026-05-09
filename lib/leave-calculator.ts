@@ -74,24 +74,24 @@ export function fiscalYearAnnualDays(hireDate: Date, fiscalYear: number): number
 
   if (hireDate > fiscalEnd) return 0  // 해당 연도에 미입사
 
-  // 회계연도 중 입사 → 당해연도 입사일~연말 일할 계산
+  // 회계연도 중 입사 → 당해연도 입사일~연말 일할 계산 (소수점 2자리)
   if (hireDate > fiscalStart) {
     const remainDays = Math.floor(
       (fiscalEnd.getTime() - hireDate.getTime()) / (1000 * 60 * 60 * 24)
     ) + 1
-    return Math.round(15 * (remainDays / 365))
+    return +((15 * remainDays / 365).toFixed(2))
   }
 
   // 회계연도 시작 이전 입사
   const years = yearsWorked(hireDate, fiscalStart)
 
   if (years < 1) {
-    // 첫 번째 Jan 1 도래 — 이전 연도 입사일~연말 일할 계산
+    // 첫 번째 Jan 1 도래 — 이전 연도 입사일~연말 일할 계산 (소수점 2자리)
     const workedDays = Math.floor(
       (prevFiscalEnd.getTime() - hireDate.getTime()) / (1000 * 60 * 60 * 24)
     ) + 1
     if (workedDays <= 0) return 0
-    return Math.round(15 * (workedDays / 365))
+    return +((15 * workedDays / 365).toFixed(2))
   }
 
   return annualLeaveDays(years)

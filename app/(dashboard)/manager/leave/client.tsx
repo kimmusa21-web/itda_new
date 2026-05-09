@@ -45,7 +45,7 @@ function empBalanceSummary(empId: number, balances: Balance[], weeklyHours: numb
   const used  = emBal.reduce((s, b) => s + b.used_hours, 0)
   const adj   = emBal.reduce((s, b) => s + b.adj_hours, 0)
   const rem   = total + adj - used
-  return { total, used, adj, rem, remDays: dh > 0 ? +(rem / dh).toFixed(1) : 0 }
+  return { total, used, adj, rem, remDays: dh > 0 ? +(rem / dh).toFixed(2) : 0 }
 }
 
 export function ManagerLeaveClient({ policy, employees, balances, pendingRequests, adjustments, currentYear }: Props) {
@@ -271,7 +271,7 @@ export function ManagerLeaveClient({ policy, employees, balances, pendingRequest
                     <span className="font-medium text-slate-800 text-sm">{emp.name}</span>
                     <span className="text-xs text-slate-400">{[emp.department, emp.position].filter(Boolean).join(' · ')}</span>
                     <span className={cn('text-xs font-semibold', s.rem < 0 ? 'text-red-600' : 'text-slate-600')}>
-                      잔여 {s.remDays}일({+s.rem.toFixed(1)}h)
+                      잔여 {s.remDays}일({+s.rem.toFixed(2)}h)
                     </span>
                   </div>
                   <ChevronDown size={16} className={cn('text-slate-400 transition-transform', isOpen && 'rotate-180')} />
@@ -318,7 +318,7 @@ export function ManagerLeaveClient({ policy, employees, balances, pendingRequest
                         >
                           {empBals.map(b => (
                             <option key={b.id} value={b.id}>
-                              {b.period} ({b.period_type === 'monthly' ? '월차' : '연간'}) — 잔여 {((b.total_hours + b.adj_hours - b.used_hours) / dailyHours(emp.weekly_work_hours)).toFixed(1)}일({+(b.total_hours + b.adj_hours - b.used_hours).toFixed(1)}h)
+                              {b.period} ({b.period_type === 'monthly' ? '월차' : '연간'}) — 잔여 {((b.total_hours + b.adj_hours - b.used_hours) / dailyHours(emp.weekly_work_hours)).toFixed(2)}일({+(b.total_hours + b.adj_hours - b.used_hours).toFixed(2)}h)
                             </option>
                           ))}
                         </select>

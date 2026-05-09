@@ -46,7 +46,7 @@ export function EmployeeLeaveClient({
   const adjHours   = balances.reduce((s, b) => s + b.adj_hours,   0)
   const remHours   = totalHours + adjHours - usedHours
 
-  const toDay = (h: number) => dh > 0 ? +(h / dh).toFixed(1) : 0
+  const toDay = (h: number) => dh > 0 ? +(h / dh).toFixed(2) : 0
 
   /* ── 신청 폼 상태 ── */
   const [reqs,       setReqs]       = useState(initReqs)
