@@ -23,7 +23,8 @@ export default async function ManagerLeavePage() {
 
   if (!policy) redirect('/manager/leave/settings')
 
-  const year = String(new Date().getFullYear())
+  const year  = new Date().getFullYear()
+  const today = new Date().toISOString().slice(0, 10)
 
   const { data: employees } = await supabase
     .from('employees')
@@ -32,12 +33,14 @@ export default async function ManagerLeavePage() {
     .eq('is_active', true)
     .order('name')
 
+  // 만료되지 않은 잔액 전체 조회 (전년도 월차 포함)
   const { data: balances } = await supabase
     .from('leave_balances')
     .select('*')
     .eq('company_id', ctx.companyId)
     .eq('basis', policy.basis)
-    .or(`period.eq.${year},period.like.${year}-%`)
+    .gte('expires_at', today)
+    .order('period')
 
   const { data: pendingRequests } = await supabase
     .from('leave_requests')
@@ -60,7 +63,7 @@ export default async function ManagerLeavePage() {
       balances={balances ?? []}
       pendingRequests={pendingRequests ?? []}
       adjustments={adjustments ?? []}
-      currentYear={parseInt(year)}
+      currentYear={year}
     />
   )
 }
