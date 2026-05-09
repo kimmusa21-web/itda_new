@@ -472,6 +472,65 @@ export async function sendTaxDocumentRequestEmail(
   })
 }
 
+/* ── 비밀번호 재설정 이메일 ──────────────────────────────────── */
+export async function sendPasswordResetEmail(
+  to: string,
+  name: string,
+  resetLink: string,
+): Promise<{ success: boolean; error?: string }> {
+  return sendRawEmail({
+    to,
+    subject: '[itda] 비밀번호 재설정 안내',
+    text: [
+      `안녕하세요, ${name}님.`,
+      ``,
+      `아래 링크를 클릭하여 비밀번호를 재설정해주세요.`,
+      ``,
+      resetLink,
+      ``,
+      `링크는 1시간 동안 유효합니다.`,
+      `본인이 요청하지 않은 경우 이 이메일을 무시하세요.`,
+    ].join('\n'),
+    html: `
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 16px">
+  <div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
+    <div style="background:#2563eb;padding:28px 32px">
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <p style="color:#bfdbfe;margin:4px 0 0;font-size:13px">비밀번호 재설정</p>
+    </div>
+    <div style="padding:32px">
+      <p style="color:#0f172a;font-size:15px;margin:0 0 6px">안녕하세요, <strong>${name}</strong>님.</p>
+      <p style="color:#475569;font-size:14px;margin:0 0 28px;line-height:1.6">
+        비밀번호 재설정 요청이 접수되었습니다.<br>
+        아래 버튼을 클릭하여 새 비밀번호를 설정해주세요.
+      </p>
+      <a href="${resetLink}"
+         style="display:block;background:#2563eb;color:white;text-align:center;padding:15px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;margin-bottom:24px">
+        비밀번호 재설정하기 →
+      </a>
+      <div style="background:#f1f5f9;border-radius:10px;padding:14px 16px;margin-bottom:20px">
+        <p style="color:#64748b;font-size:12px;margin:0;line-height:1.7">
+          버튼이 작동하지 않으면 아래 URL을 복사하여 브라우저에 붙여넣으세요.<br>
+          <span style="color:#2563eb;word-break:break-all;font-size:11px">${resetLink}</span>
+        </p>
+      </div>
+      <p style="color:#94a3b8;font-size:12px;margin:0;line-height:1.7">
+        이 링크는 <strong>1시간</strong> 동안 유효합니다.<br>
+        본인이 요청하지 않은 경우 이 이메일을 무시하세요.
+      </p>
+    </div>
+    <div style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0">
+      <p style="color:#94a3b8;font-size:11px;margin:0">© itda 급여관리 · 본 메일은 발신 전용입니다.</p>
+    </div>
+  </div>
+</body>
+</html>`.trim(),
+  })
+}
+
 /* ── 초대 완료 알림 이메일 (선택적) ─────────────────────────── */
 export async function sendWelcomeEmail(
   to: string,

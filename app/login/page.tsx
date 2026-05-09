@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Eye, EyeOff } from 'lucide-react'
+import { resolveAuthEmailsForLogin, sendPasswordResetByRealEmail } from '@/lib/actions/auth-actions'
 
 export default function LoginPage() {
   return (
@@ -26,39 +27,43 @@ function LoginPageInner() {
   const [loading,  setLoading]  = useState(false)
   const [message,  setMessage]  = useState<{ type: 'error'|'success'; text: string } | null>(null)
 
+  /* ── 로그인 성공 후 리다이렉트 ── */
+  async function afterSignIn() {
+    if (redirectPath && redirectPath.startsWith('/')) { router.push(redirectPath); return }
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: profile } = await supabase
+      .from('profiles').select('role').eq('id', user!.id).single()
+    router.push(`/${profile?.role ?? 'employee'}`)
+  }
+
   /* ── 로그인 ── */
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); setMessage(null)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setMessage({ type: 'error', text: '이메일 또는 비밀번호가 올바르지 않습니다.' })
-      setLoading(false); return
+    // 1. 실제 이메일로 직접 시도 (어드민/매니저는 실제 이메일이 Auth 이메일)
+    const { error: directErr } = await supabase.auth.signInWithPassword({ email, password })
+    if (!directErr) { await afterSignIn(); return }
+
+    // 2. 직원 계정 탐색 — 사번 기반 synthetic 이메일(emp{id}@itda.internal)로 재시도
+    const syntheticEmails = await resolveAuthEmailsForLogin(email)
+    for (const syntheticEmail of syntheticEmails) {
+      const { error: synErr } = await supabase.auth.signInWithPassword({ email: syntheticEmail, password })
+      if (!synErr) { await afterSignIn(); return }
     }
 
-    /* redirect 파라미터가 있고 안전한 내부 경로면 그쪽으로 이동 */
-    if (redirectPath && redirectPath.startsWith('/')) {
-      router.push(redirectPath)
-      return
-    }
-
-    /* 역할 조회 후 리다이렉트 */
-    const { data: profile } = await supabase
-      .from('profiles').select('role').eq('id', (await supabase.auth.getUser()).data.user!.id).single()
-    router.push(`/${profile?.role ?? 'employee'}`)
+    setMessage({ type: 'error', text: '이메일 또는 비밀번호가 올바르지 않습니다.' })
+    setLoading(false)
   }
 
   /* ── 비밀번호 재설정 ── */
   async function handleReset() {
     if (!email) { setMessage({ type: 'error', text: '이메일을 먼저 입력해주세요.' }); return }
     setLoading(true)
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    })
+    const result = await sendPasswordResetByRealEmail(email)
     setLoading(false)
-    if (error) setMessage({ type: 'error', text: '메일 발송에 실패했습니다.' })
-    else       setMessage({ type: 'success', text: '비밀번호 재설정 이메일을 발송했습니다. 메일함을 확인하세요.' })
+    if (result.success) setMessage({ type: 'success', text: '비밀번호 재설정 이메일을 발송했습니다. 메일함을 확인하세요.' })
+    else                setMessage({ type: 'error',   text: result.error ?? '메일 발송에 실패했습니다.' })
   }
 
   return (
