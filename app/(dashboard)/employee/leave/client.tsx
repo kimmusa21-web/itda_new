@@ -277,7 +277,9 @@ export function EmployeeLeaveClient({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-800">{periodLabel}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">소멸: {fmtDate(b.expires_at)}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      부여: {fmtDate(b.created_at)} · 소멸: {fmtDate(b.expires_at)}
+                    </p>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-sm font-bold text-blue-700">+{dayTotal}일</p>
