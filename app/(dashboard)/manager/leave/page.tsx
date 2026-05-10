@@ -33,13 +33,12 @@ export default async function ManagerLeavePage() {
     .eq('is_active', true)
     .order('name')
 
-  // 만료되지 않은 잔액 전체 조회 (전년도 월차 포함)
+  // 잔액 전체 조회 (이력 포함 — 만료 필터 없음)
   const { data: balances } = await supabase
     .from('leave_balances')
     .select('*')
     .eq('company_id', ctx.companyId)
     .eq('basis', policy.basis)
-    .gte('expires_at', today)
     .order('period')
 
   const { data: pendingRequests } = await supabase
@@ -49,12 +48,20 @@ export default async function ManagerLeavePage() {
     .eq('status', 'pending')
     .order('requested_at', { ascending: false })
 
+  // 승인·취소 신청 전체 (직원별 현황 + Excel용)
+  const { data: allRequests } = await supabase
+    .from('leave_requests')
+    .select('id, employee_id, leave_type, start_date, end_date, hours_requested, reason, status')
+    .eq('company_id', ctx.companyId)
+    .in('status', ['approved', 'cancelled'])
+    .order('start_date', { ascending: false })
+
   const { data: adjustments } = await supabase
     .from('leave_adjustments')
     .select('*')
     .eq('company_id', ctx.companyId)
     .order('created_at', { ascending: false })
-    .limit(100)
+    .limit(500)
 
   return (
     <ManagerLeaveClient
@@ -62,6 +69,7 @@ export default async function ManagerLeavePage() {
       employees={employees ?? []}
       balances={balances ?? []}
       pendingRequests={pendingRequests ?? []}
+      allRequests={allRequests ?? []}
       adjustments={adjustments ?? []}
       currentYear={year}
     />

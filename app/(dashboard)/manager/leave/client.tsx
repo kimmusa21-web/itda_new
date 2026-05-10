@@ -1,43 +1,49 @@
 'use client'
 
-import { useState }   from 'react'
+import { useState, useMemo } from 'react'
 import {
-  Calendar, CheckCircle, XCircle, Clock, Users,
-  ChevronDown, Loader2, AlertCircle, Settings, Plus, Minus,
+  Calendar, CheckCircle, XCircle, Clock,
+  ChevronDown, Loader2, Settings, Plus, Minus, Download,
 } from 'lucide-react'
-import { cn }          from '@/lib/utils'
+import * as XLSX from 'xlsx'
+import { cn }         from '@/lib/utils'
 import {
   approveLeaveRequest, rejectLeaveRequest,
   adjustLeaveBalance, allocateLeaveForAllEmployees,
 } from '@/lib/actions/leave-actions'
-import { dailyHours }  from '@/lib/leave-calculator'
-import { LEAVE_TYPE_LABELS, LEAVE_STATUS_LABELS } from '@/types/leave'
+import { dailyHours } from '@/lib/leave-calculator'
+import { LEAVE_TYPE_LABELS } from '@/types/leave'
 import type { LeaveType } from '@/types/leave'
 
-interface Employee { id: number; name: string; department: string | null; position: string | null; Date_of_joining: string | null; weekly_work_hours: number | null }
-interface Balance  { id: number; employee_id: number; period: string; period_type: string; total_hours: number; used_hours: number; adj_hours: number; expires_at: string }
-interface Request  { id: number; employee_id: number; leave_type: LeaveType; start_date: string; end_date: string; hours_requested: number; reason: string | null; status: string; requested_at: string; rejection_reason: string | null; employees: { id: number; name: string; department: string | null; position: string | null }[] | null }
+/* ── 타입 ──────────────────────────────────────────────────── */
+interface Employee   { id: number; name: string; department: string | null; position: string | null; Date_of_joining: string | null; weekly_work_hours: number | null }
+interface Balance    { id: number; employee_id: number; period: string; period_type: string; total_hours: number; used_hours: number; adj_hours: number; expires_at: string }
+interface Request    { id: number; employee_id: number; leave_type: LeaveType; start_date: string; end_date: string; hours_requested: number; reason: string | null; status: string; requested_at: string; rejection_reason: string | null; employees: { id: number; name: string; department: string | null; position: string | null }[] | null }
+interface AllRequest { id: number; employee_id: number; leave_type: LeaveType; start_date: string; end_date: string; hours_requested: number; reason: string | null; status: string }
 interface Adjustment { id: number; employee_id: number; hours: number; reason: string; created_at: string }
-interface Policy { basis: string; allow_negative: boolean; auto_approve: boolean; settle_on_resign: boolean }
+interface Policy     { basis: string; allow_negative: boolean; auto_approve: boolean; settle_on_resign: boolean }
 
 interface Props {
   policy:          Policy
   employees:       Employee[]
   balances:        Balance[]
   pendingRequests: Request[]
+  allRequests:     AllRequest[]
   adjustments:     Adjustment[]
   currentYear:     number
 }
 
 type Tab = 'overview' | 'requests' | 'adjust'
 
-const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  pending:   { label: '대기',   cls: 'bg-amber-50 text-amber-700 border border-amber-200'   },
-  approved:  { label: '승인',   cls: 'bg-green-50 text-green-700 border border-green-200'   },
-  rejected:  { label: '반려',   cls: 'bg-red-50 text-red-700 border border-red-200'         },
-  cancelled: { label: '취소',   cls: 'bg-slate-50 text-slate-500 border border-slate-200'   },
+interface DetailEvent {
+  sortDate:  string
+  dateLabel: string
+  kind:      'accrual' | 'usage' | 'adjustment'
+  label:     string
+  hours:     number
 }
 
+/* ── 요약 계산 ─────────────────────────────────────────────── */
 function empBalanceSummary(empId: number, balances: Balance[], weeklyHours: number | null) {
   const dh    = dailyHours(weeklyHours)
   const emBal = balances.filter(b => b.employee_id === empId)
@@ -48,12 +54,15 @@ function empBalanceSummary(empId: number, balances: Balance[], weeklyHours: numb
   return { total, used, adj, rem, remDays: dh > 0 ? +(rem / dh).toFixed(2) : 0 }
 }
 
-export function ManagerLeaveClient({ policy, employees, balances, pendingRequests, adjustments, currentYear }: Props) {
+/* ── 메인 컴포넌트 ─────────────────────────────────────────── */
+export function ManagerLeaveClient({
+  policy, employees, balances, pendingRequests, allRequests, adjustments, currentYear,
+}: Props) {
   const [tab,          setTab]          = useState<Tab>('requests')
   const [processing,   setProcessing]   = useState<number | null>(null)
   const [rejectId,     setRejectId]     = useState<number | null>(null)
   const [rejectReason, setRejectReason] = useState('')
-  const [adjOpen,      setAdjOpen]      = useState<number | null>(null)  // employee_id
+  const [adjOpen,      setAdjOpen]      = useState<number | null>(null)
   const [adjHours,     setAdjHours]     = useState('')
   const [adjSign,      setAdjSign]      = useState<1 | -1>(-1)
   const [adjReason,    setAdjReason]    = useState('')
@@ -61,6 +70,10 @@ export function ManagerLeaveClient({ policy, employees, balances, pendingRequest
   const [allocating,   setAllocating]   = useState(false)
   const [toast,        setToast]        = useState<{ msg: string; ok: boolean } | null>(null)
   const [reqs,         setReqs]         = useState(pendingRequests)
+
+  // 직원별 현황 탭 상태
+  const [ovYear,  setOvYear]  = useState(currentYear)
+  const [ovEmpId, setOvEmpId] = useState<number | 'all'>('all')
 
   function showToast(msg: string, ok = true) {
     setToast({ msg, ok })
@@ -107,8 +120,146 @@ export function ManagerLeaveClient({ policy, employees, balances, pendingRequest
     showToast(`${res.count}명에게 ${currentYear}년 연차 발급 완료`)
   }
 
+  /* ── 직원별 현황 헬퍼 ────────────────────────────────────── */
+
+  // 데이터에서 존재하는 연도 목록
+  const availableYears = useMemo(() => {
+    const years = new Set<number>([currentYear])
+    balances.forEach(b   => years.add(parseInt(b.period.slice(0, 4))))
+    allRequests.forEach(r => years.add(parseInt(r.start_date.slice(0, 4))))
+    adjustments.forEach(a => years.add(parseInt(a.created_at.slice(0, 4))))
+    return Array.from(years).sort((a, b) => b - a)
+  }, [balances, allRequests, adjustments, currentYear])
+
+  function yearBalances(empId: number, year: number) {
+    return balances.filter(b => b.employee_id === empId && parseInt(b.period.slice(0, 4)) === year)
+  }
+
+  function empYearSummary(empId: number, year: number, weeklyHours: number | null) {
+    const dh    = dailyHours(weeklyHours)
+    const bals  = yearBalances(empId, year)
+    const reqs  = allRequests.filter(r => r.employee_id === empId && parseInt(r.start_date.slice(0, 4)) === year && r.status === 'approved')
+    const adjs  = adjustments.filter(a => a.employee_id === empId && parseInt(a.created_at.slice(0, 4)) === year)
+    const total = bals.reduce((s, b) => s + b.total_hours, 0)
+    const used  = reqs.reduce((s, r) => s + r.hours_requested, 0)
+    const adj   = adjs.reduce((s, a) => s + a.hours, 0)
+    const rem   = total + adj - used
+    const toDays = (h: number) => dh > 0 ? +(h / dh).toFixed(2) : 0
+    return { total, used, adj, rem, toDays }
+  }
+
+  // 발생·사용·조정 이벤트 목록 생성
+  function buildDetailEvents(emp: Employee, year: number): DetailEvent[] {
+    const events: DetailEvent[] = []
+
+    // 발생 (leave_balances)
+    yearBalances(emp.id, year).forEach(b => {
+      const isMonthly = b.period_type === 'monthly'
+      let sortDate: string
+      if (isMonthly) {
+        if (emp.Date_of_joining) {
+          const hireDay     = parseInt(emp.Date_of_joining.slice(8, 10))
+          const [py, pm]    = b.period.split('-').map(Number)
+          const lastDay     = new Date(py, pm, 0).getDate()
+          const day         = String(Math.min(hireDay, lastDay)).padStart(2, '0')
+          sortDate          = `${b.period}-${day}`
+        } else {
+          sortDate = `${b.period}-01`
+        }
+      } else {
+        sortDate = policy.basis === 'hire_date' && emp.Date_of_joining
+          ? `${year}-${emp.Date_of_joining.slice(5, 10)}`
+          : `${year}-01-01`
+      }
+      events.push({
+        sortDate,
+        dateLabel: sortDate,
+        kind:  'accrual',
+        label: isMonthly ? `월차 적립 (${b.period})` : `연간 연차 발생 (${year}년)`,
+        hours: b.total_hours,
+      })
+    })
+
+    // 사용 (approved leave_requests)
+    allRequests
+      .filter(r => r.employee_id === emp.id && parseInt(r.start_date.slice(0, 4)) === year && r.status === 'approved')
+      .forEach(r => {
+        const typeLabel = LEAVE_TYPE_LABELS[r.leave_type] ?? r.leave_type
+        const dateRange = r.start_date !== r.end_date ? ` (${r.start_date}~${r.end_date})` : ''
+        events.push({
+          sortDate:  r.start_date,
+          dateLabel: r.start_date,
+          kind:      'usage',
+          label:     `${typeLabel}${dateRange}`,
+          hours:     -r.hours_requested,
+        })
+      })
+
+    // 조정 (leave_adjustments)
+    adjustments
+      .filter(a => a.employee_id === emp.id && parseInt(a.created_at.slice(0, 4)) === year)
+      .forEach(a => {
+        events.push({
+          sortDate:  a.created_at.slice(0, 10),
+          dateLabel: a.created_at.slice(0, 10),
+          kind:      'adjustment',
+          label:     a.reason,
+          hours:     a.hours,
+        })
+      })
+
+    return events.sort((a, b) => a.sortDate.localeCompare(b.sortDate))
+  }
+
+  // Excel 다운로드
+  function handleExcelExport() {
+    const wb = XLSX.utils.book_new()
+    const targets = ovEmpId === 'all' ? employees : employees.filter(e => e.id === ovEmpId)
+
+    // 시트 1: 요약
+    const summaryHeader = ['직원명', '부서', '직위', '입사일', '발생(h)', '발생(일)', '사용(h)', '사용(일)', '조정(h)', '조정(일)', '잔여(h)', '잔여(일)']
+    const summaryRows = targets.map(emp => {
+      const s = empYearSummary(emp.id, ovYear, emp.weekly_work_hours)
+      return [
+        emp.name, emp.department ?? '', emp.position ?? '', emp.Date_of_joining ?? '',
+        +s.total.toFixed(1), s.toDays(s.total),
+        +s.used.toFixed(1),  s.toDays(s.used),
+        +s.adj.toFixed(1),   s.toDays(s.adj),
+        +s.rem.toFixed(1),   s.toDays(s.rem),
+      ]
+    })
+    const ws1 = XLSX.utils.aoa_to_sheet([summaryHeader, ...summaryRows])
+    ws1['!cols'] = [{ wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, ...Array(8).fill({ wch: 9 })]
+    XLSX.utils.book_append_sheet(wb, ws1, `${ovYear}년 요약`)
+
+    // 시트 2: 상세 이벤트
+    const detailHeader = ['직원명', '날짜', '구분', '내용', '변동(h)', '변동(일)']
+    const detailRows: (string | number)[][] = []
+    targets.forEach(emp => {
+      const dh     = dailyHours(emp.weekly_work_hours)
+      const events = buildDetailEvents(emp, ovYear)
+      events.forEach(ev => {
+        const kindLabel = ev.kind === 'accrual' ? '발생' : ev.kind === 'usage' ? '사용' : '조정'
+        detailRows.push([
+          emp.name, ev.dateLabel, kindLabel, ev.label,
+          +ev.hours.toFixed(1),
+          dh > 0 ? +(ev.hours / dh).toFixed(2) : 0,
+        ])
+      })
+    })
+    const ws2 = XLSX.utils.aoa_to_sheet([detailHeader, ...detailRows])
+    ws2['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 6 }, { wch: 32 }, { wch: 8 }, { wch: 8 }]
+    XLSX.utils.book_append_sheet(wb, ws2, `${ovYear}년 상세`)
+
+    const empName = ovEmpId !== 'all' ? (employees.find(e => e.id === ovEmpId)?.name ?? '') : '전체'
+    XLSX.writeFile(wb, `연차현황_${empName}_${ovYear}년.xlsx`)
+  }
+
   const basisLabel = policy.basis === 'hire_date' ? '입사일' : '회계연도'
   const fmtDate    = (d: string) => new Date(d).toLocaleDateString('ko-KR')
+  const today      = new Date().toISOString().slice(0, 10)
+  // 수동 조정 탭: 만료되지 않은 잔액만 선택 가능
+  const activeBals = balances.filter(b => b.expires_at >= today)
 
   return (
     <div className="space-y-5 max-w-4xl">
@@ -161,8 +312,8 @@ export function ManagerLeaveClient({ policy, employees, balances, pendingRequest
           ) : (
             <ul className="divide-y divide-slate-100">
               {reqs.map(r => {
-                const empInfo = (r.employees as unknown as { name: string; department: string | null; position: string | null }[])?.[0]
-                const isProc  = processing === r.id
+                const empInfo  = (r.employees as unknown as { name: string; department: string | null; position: string | null }[])?.[0]
+                const isProc   = processing === r.id
                 const typeLabel = LEAVE_TYPE_LABELS[r.leave_type] ?? r.leave_type
                 return (
                   <li key={r.id} className="px-5 py-4">
@@ -200,53 +351,163 @@ export function ManagerLeaveClient({ policy, employees, balances, pendingRequest
 
       {/* ─ 직원별 현황 탭 ─ */}
       {tab === 'overview' && (
-        <div className="card overflow-hidden">
-          {employees.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 text-sm">재직 중인 직원이 없습니다</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-xs text-slate-500">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-medium">직원</th>
-                    <th className="text-left px-4 py-3 font-medium">입사일</th>
-                    <th className="text-right px-4 py-3 font-medium">발생(h)</th>
-                    <th className="text-right px-4 py-3 font-medium">조정(h)</th>
-                    <th className="text-right px-4 py-3 font-medium">사용(h)</th>
-                    <th className="text-right px-4 py-3 font-medium">잔여(일)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {employees.map(emp => {
-                    const s = empBalanceSummary(emp.id, balances, emp.weekly_work_hours)
-                    return (
-                      <tr key={emp.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3">
-                          <p className="font-medium text-slate-800">{emp.name}</p>
-                          <p className="text-xs text-slate-400">{[emp.department, emp.position].filter(Boolean).join(' · ')}</p>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-500 whitespace-nowrap">
-                          {emp.Date_of_joining
-                            ? new Date(emp.Date_of_joining).toLocaleDateString('ko-KR')
-                            : '—'}
-                        </td>
-                        <td className="px-4 py-3 text-right text-slate-600">{s.total.toFixed(1)}</td>
-                        <td className={cn('px-4 py-3 text-right', s.adj < 0 ? 'text-red-600' : s.adj > 0 ? 'text-green-600' : 'text-slate-400')}>
-                          {s.adj >= 0 ? '+' : ''}{s.adj.toFixed(1)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-slate-600">{s.used.toFixed(1)}</td>
-                        <td className="px-4 py-3 text-right font-semibold">
-                          <span className={cn(s.rem < 0 ? 'text-red-600' : 'text-slate-800')}>
-                            {s.remDays}일
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+        <div className="space-y-4">
+
+          {/* 필터 바 */}
+          <div className="flex flex-wrap items-center gap-2 justify-between">
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                className="input text-sm w-28"
+                value={ovYear}
+                onChange={e => setOvYear(Number(e.target.value))}
+              >
+                {availableYears.map(y => <option key={y} value={y}>{y}년</option>)}
+              </select>
+              <select
+                className="input text-sm w-36"
+                value={ovEmpId === 'all' ? 'all' : String(ovEmpId)}
+                onChange={e => setOvEmpId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              >
+                <option value="all">전체 직원</option>
+                {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
             </div>
-          )}
+            <button
+              onClick={handleExcelExport}
+              className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <Download size={13} />Excel 다운로드
+            </button>
+          </div>
+
+          {/* 요약 테이블 */}
+          <div className="card overflow-hidden">
+            {employees.length === 0 ? (
+              <div className="py-16 text-center text-slate-400 text-sm">재직 중인 직원이 없습니다</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-xs text-slate-500">
+                    <tr>
+                      <th className="text-left px-4 py-3 font-medium">직원</th>
+                      <th className="text-left px-4 py-3 font-medium">입사일</th>
+                      <th className="text-right px-4 py-3 font-medium">발생(h)</th>
+                      <th className="text-right px-4 py-3 font-medium">조정(h)</th>
+                      <th className="text-right px-4 py-3 font-medium">사용(h)</th>
+                      <th className="text-right px-4 py-3 font-medium">잔여(일)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(ovEmpId === 'all' ? employees : employees.filter(e => e.id === ovEmpId)).map(emp => {
+                      const s = empYearSummary(emp.id, ovYear, emp.weekly_work_hours)
+                      const isSelected = ovEmpId === emp.id
+                      return (
+                        <tr
+                          key={emp.id}
+                          onClick={() => setOvEmpId(prev => prev === emp.id ? 'all' : emp.id)}
+                          className={cn(
+                            'cursor-pointer transition-colors',
+                            isSelected ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-slate-50',
+                          )}
+                        >
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-slate-800">{emp.name}</p>
+                            <p className="text-xs text-slate-400">{[emp.department, emp.position].filter(Boolean).join(' · ')}</p>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-500 whitespace-nowrap">
+                            {emp.Date_of_joining ? new Date(emp.Date_of_joining).toLocaleDateString('ko-KR') : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-right text-slate-600">{s.total.toFixed(1)}</td>
+                          <td className={cn('px-4 py-3 text-right', s.adj < 0 ? 'text-red-600' : s.adj > 0 ? 'text-green-600' : 'text-slate-400')}>
+                            {s.adj >= 0 ? '+' : ''}{s.adj.toFixed(1)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-slate-600">{s.used.toFixed(1)}</td>
+                          <td className="px-4 py-3 text-right font-semibold">
+                            <span className={cn(s.rem < 0 ? 'text-red-600' : 'text-slate-800')}>
+                              {s.toDays(s.rem)}일
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* 상세 이벤트 (직원 선택 시) */}
+          {typeof ovEmpId === 'number' && (() => {
+            const emp = employees.find(e => e.id === ovEmpId)
+            if (!emp) return null
+            const events = buildDetailEvents(emp, ovYear)
+            const dh     = dailyHours(emp.weekly_work_hours)
+
+            if (events.length === 0) return (
+              <div className="card p-8 text-center text-slate-400 text-sm">
+                {ovYear}년 해당 내역이 없습니다
+              </div>
+            )
+
+            let running = 0
+            return (
+              <div className="card overflow-hidden">
+                <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-slate-800">
+                    {emp.name} · {ovYear}년 상세 내역
+                  </p>
+                  <button
+                    onClick={() => setOvEmpId('all')}
+                    className="text-xs text-slate-400 hover:text-slate-600"
+                  >
+                    닫기
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs" style={{ minWidth: 520 }}>
+                    <thead className="bg-slate-50 text-slate-500">
+                      <tr>
+                        {['날짜', '구분', '내용', '변동(h)', '변동(일)', '누계(일)'].map(h => (
+                          <th key={h} className="px-4 py-2.5 text-left font-medium whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {events.map((ev, i) => {
+                        running += ev.hours
+                        const kindCls =
+                          ev.kind === 'accrual'    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                          ev.kind === 'usage'      ? 'bg-red-50 text-red-600 border border-red-200' :
+                                                     'bg-amber-50 text-amber-700 border border-amber-200'
+                        const kindLabel =
+                          ev.kind === 'accrual' ? '발생' : ev.kind === 'usage' ? '사용' : '조정'
+                        return (
+                          <tr key={i} className="hover:bg-slate-50">
+                            <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap font-mono">{ev.dateLabel}</td>
+                            <td className="px-4 py-2.5">
+                              <span className={cn('px-1.5 py-0.5 rounded text-[11px] font-medium', kindCls)}>
+                                {kindLabel}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-slate-700">{ev.label}</td>
+                            <td className={cn('px-4 py-2.5 text-right font-mono', ev.hours >= 0 ? 'text-emerald-600' : 'text-red-600')}>
+                              {ev.hours >= 0 ? '+' : ''}{ev.hours.toFixed(1)}h
+                            </td>
+                            <td className={cn('px-4 py-2.5 text-right font-mono', ev.hours >= 0 ? 'text-emerald-600' : 'text-red-600')}>
+                              {ev.hours >= 0 ? '+' : ''}{dh > 0 ? +(ev.hours / dh).toFixed(2) : 0}일
+                            </td>
+                            <td className="px-4 py-2.5 text-right font-mono text-slate-700 font-medium">
+                              {dh > 0 ? +(running / dh).toFixed(2) : 0}일
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
 
@@ -255,8 +516,8 @@ export function ManagerLeaveClient({ policy, employees, balances, pendingRequest
         <div className="space-y-3">
           <p className="text-xs text-slate-400">결근 등으로 인한 연차 차감 또는 추가 부여 시 사용합니다. 직원도 이력을 확인할 수 있습니다.</p>
           {employees.map(emp => {
-            const empBals = balances.filter(b => b.employee_id === emp.id)
-            const s       = empBalanceSummary(emp.id, balances, emp.weekly_work_hours)
+            const empActiveBals = activeBals.filter(b => b.employee_id === emp.id)
+            const s       = empBalanceSummary(emp.id, activeBals, emp.weekly_work_hours)
             const isOpen  = adjOpen === emp.id
             const isProc  = processing === emp.id
             const empAdjs = adjustments.filter(a => a.employee_id === emp.id)
@@ -264,7 +525,7 @@ export function ManagerLeaveClient({ policy, employees, balances, pendingRequest
             return (
               <div key={emp.id} className="card overflow-hidden">
                 <button
-                  onClick={() => { setAdjOpen(isOpen ? null : emp.id); setAdjHours(''); setAdjReason(''); setAdjBalId(empBals[0]?.id ?? null) }}
+                  onClick={() => { setAdjOpen(isOpen ? null : emp.id); setAdjHours(''); setAdjReason(''); setAdjBalId(empActiveBals[0]?.id ?? null) }}
                   className="w-full px-5 py-4 flex items-center justify-between hover:bg-slate-50"
                 >
                   <div className="flex items-center gap-3">
@@ -279,7 +540,6 @@ export function ManagerLeaveClient({ policy, employees, balances, pendingRequest
 
                 {isOpen && (
                   <div className="px-5 pb-5 border-t border-slate-100 pt-4 space-y-4">
-                    {/* 조정 이력 */}
                     {empAdjs.length > 0 && (
                       <div className="text-xs space-y-1">
                         <p className="text-slate-500 font-medium mb-2">조정 이력</p>
@@ -295,7 +555,6 @@ export function ManagerLeaveClient({ policy, employees, balances, pendingRequest
                       </div>
                     )}
 
-                    {/* 조정 폼 */}
                     <div className="space-y-3">
                       <div className="flex gap-2">
                         <button onClick={() => setAdjSign(-1)}
@@ -310,13 +569,13 @@ export function ManagerLeaveClient({ policy, employees, balances, pendingRequest
                         </button>
                       </div>
 
-                      {empBals.length > 1 && (
+                      {empActiveBals.length > 1 && (
                         <select
                           value={adjBalId ?? ''}
                           onChange={e => setAdjBalId(Number(e.target.value))}
                           className="input text-xs"
                         >
-                          {empBals.map(b => (
+                          {empActiveBals.map(b => (
                             <option key={b.id} value={b.id}>
                               {b.period} ({b.period_type === 'monthly' ? '월차' : '연간'}) — 잔여 {((b.total_hours + b.adj_hours - b.used_hours) / dailyHours(emp.weekly_work_hours)).toFixed(2)}일({+(b.total_hours + b.adj_hours - b.used_hours).toFixed(2)}h)
                             </option>
@@ -326,10 +585,7 @@ export function ManagerLeaveClient({ policy, employees, balances, pendingRequest
 
                       <div className="flex gap-2">
                         <input
-                          type="number"
-                          min="0.5"
-                          step="0.5"
-                          placeholder="시간 수"
+                          type="number" min="0.5" step="0.5" placeholder="시간 수"
                           value={adjHours}
                           onChange={e => setAdjHours(e.target.value)}
                           className="input w-28 text-sm"
