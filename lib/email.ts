@@ -423,7 +423,7 @@ export async function sendTaxDocumentRequestEmail(
 
   return sendRawEmail({
     to,
-    subject: `[itda] ${companyName} — ${documentType} 발급 요청`,
+    subject: `[${companyName}] ${employeeName}님이 "${documentType}${reqYear ? ` (${reqYear}년)` : ''}"을 신청하였습니다.`,
     text: [
       `${greetOrg}${taxAccountantName} 담당자님,`,
       '',
