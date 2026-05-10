@@ -9,6 +9,7 @@ export interface EmailPayload {
   subject: string
   html: string
   text?: string
+  attachments?: { filename: string; content: Buffer }[]
 }
 
 /* ── 저수준: 실제 이메일 발송 (교체 포인트) ─────────────────── */
@@ -35,10 +36,11 @@ async function sendRawEmail(payload: EmailPayload): Promise<{ success: boolean; 
     const from = process.env.EMAIL_FROM ?? 'itda <noreply@itda.kr>'
     const { error } = await resend.emails.send({
       from,
-      to:      payload.to,
-      subject: payload.subject,
-      html:    payload.html,
-      text:    payload.text,
+      to:          payload.to,
+      subject:     payload.subject,
+      html:        payload.html,
+      text:        payload.text,
+      attachments: payload.attachments,
     })
     if (error) return { success: false, error: error.message }
     return { success: true }
@@ -262,6 +264,22 @@ export async function sendInviteEmail(
   })
 }
 
+/* ── 재직/경력증명서 PDF 생성 ────────────────────────────────── */
+async function generateCertPdf(params: Parameters<typeof import('./pdf/employment-certificate').EmploymentCertificateDoc>[0]): Promise<Buffer | null> {
+  try {
+    const [{ renderToBuffer }, { EmploymentCertificateDoc }, React] = await Promise.all([
+      import('@react-pdf/renderer'),
+      import('./pdf/employment-certificate'),
+      import('react'),
+    ])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return await renderToBuffer(React.default.createElement(EmploymentCertificateDoc, params) as any)
+  } catch (e) {
+    console.error('[PDF] 생성 실패:', e)
+    return null
+  }
+}
+
 /* ── 재직증명서 이메일 ───────────────────────────────────────── */
 export async function sendEmploymentCertificateEmail(
   to: string,
@@ -307,9 +325,19 @@ export async function sendEmploymentCertificateEmail(
   const [iy, im, id_] = issuedDate.split('-')
   const issuedStr = `${iy}년 ${parseInt(im)}월 ${parseInt(id_)}일`
 
+  // PDF 생성 (실패해도 이메일은 발송)
+  const pdfBuffer = await generateCertPdf({
+    docNumber, docType, employeeName, regNumber, address,
+    startDate, endDate, purpose, department, position,
+    companyName, representative, companyAddress, issuedDate,
+  })
+
   return sendRawEmail({
     to,
     subject: `[itda] ${docType} 발급 안내 — ${companyName}`,
+    attachments: pdfBuffer
+      ? [{ filename: `${docType}_${employeeName}.pdf`, content: pdfBuffer }]
+      : undefined,
     text: [
       docNumber,
       '',

@@ -11,6 +11,7 @@
     "check": "npm run type-check && npm run lint"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.5.1",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.4",
     "lucide-react": "^0.383.0",
