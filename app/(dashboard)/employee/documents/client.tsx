@@ -45,23 +45,32 @@ export function DocumentsClient({ requests: initialRequests, employeeName }: Pro
     purpose:       '',
     address:       '',
     note:          '',
-    year:          String(CURRENT_YEAR),
+    years:         [String(CURRENT_YEAR)],
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState<string | null>(null)
   const [success, setSuccess]       = useState(false)
 
-  const isDirect    = DIRECT_TYPES.includes(form.document_type)
-  const needsYear   = form.document_type === 'withholding_tax'
+  const isDirect  = DIRECT_TYPES.includes(form.document_type)
+  const needsYear = form.document_type === 'withholding_tax'
+
+  function toggleYear(y: string) {
+    setForm(p => ({
+      ...p,
+      years: p.years.includes(y) ? p.years.filter(v => v !== y) : [...p.years, y],
+    }))
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.purpose.trim()) { setError('제출용도를 입력해주세요'); return }
+    if (needsYear && form.years.length === 0) { setError('신청 연도를 하나 이상 선택해주세요'); return }
 
     setSubmitting(true)
     setError(null)
+    const sortedYears  = [...form.years].sort()
     const noteWithYear = needsYear
-      ? [`신청연도: ${form.year}`, form.note].filter(Boolean).join('\n')
+      ? [`신청연도: ${sortedYears.join(', ')}`, form.note].filter(Boolean).join('\n')
       : form.note || undefined
 
     const res = await createDocumentRequest({
@@ -78,8 +87,7 @@ export function DocumentsClient({ requests: initialRequests, employeeName }: Pro
     setTimeout(() => {
       setSuccess(false)
       setShowForm(false)
-      setForm({ document_type: 'employment_certificate', purpose: '', address: '', note: '', year: String(CURRENT_YEAR) })
-      // 목록 새로고침
+      setForm({ document_type: 'employment_certificate', purpose: '', address: '', note: '', years: [String(CURRENT_YEAR)] })
       window.location.reload()
     }, 1500)
   }
@@ -143,21 +151,33 @@ export function DocumentsClient({ requests: initialRequests, employeeName }: Pro
                 </p>
               </div>
 
-              {/* 연도 선택 — 원천징수영수증(연도별)만 표시 */}
+              {/* 연도 선택 — 원천징수영수증(연도별)만 표시, 다중 선택 */}
               {needsYear && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">
                     신청 연도 <span className="text-red-500">*</span>
+                    <span className="ml-1.5 text-xs font-normal text-slate-400">복수 선택 가능</span>
                   </label>
-                  <select
-                    className="input"
-                    value={form.year}
-                    onChange={e => setForm(p => ({ ...p, year: e.target.value }))}
-                  >
-                    {YEAR_OPTIONS.map(y => (
-                      <option key={y} value={String(y)}>{y}년</option>
-                    ))}
-                  </select>
+                  <div className="flex flex-wrap gap-2">
+                    {YEAR_OPTIONS.map(y => {
+                      const val     = String(y)
+                      const checked = form.years.includes(val)
+                      return (
+                        <button
+                          key={y}
+                          type="button"
+                          onClick={() => toggleYear(val)}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                            checked
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400'
+                          }`}
+                        >
+                          {y}년
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
 

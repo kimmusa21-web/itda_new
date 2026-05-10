@@ -416,14 +416,14 @@ export async function sendTaxDocumentRequestEmail(
   const posStr    = [employeeDepartment, employeePosition].filter(Boolean).join(' / ') || null
   const greetOrg  = taxAccountantCompany ? `${taxAccountantCompany} ` : ''
 
-  // note에서 "신청연도: YYYY" 추출
-  const yearMatch = note?.match(/신청연도:\s*(\d{4})/)
-  const reqYear   = yearMatch?.[1] ?? null
-  const extraNote = note?.replace(/신청연도:\s*\d{4}\n?/, '').trim() || null
+  // note에서 "신청연도: YYYY, YYYY, ..." 추출
+  const yearMatch = note?.match(/신청연도:\s*([\d,\s]+)/)
+  const reqYear   = yearMatch?.[1]?.trim().replace(/\s*,\s*/g, ', ') ?? null
+  const extraNote = note?.replace(/신청연도:\s*[\d,\s]+\n?/, '').trim() || null
 
   return sendRawEmail({
     to,
-    subject: `[${companyName}] ${employeeName}님이 "${documentType}${reqYear ? ` (${reqYear}년)` : ''}"을 신청하였습니다.`,
+    subject: `[${companyName}] ${employeeName}님이 "${documentType}${reqYear ? ` — ${reqYear}년` : ''}"을 신청하였습니다.`,
     text: [
       `${greetOrg}${taxAccountantName} 담당자님,`,
       '',
