@@ -1,4 +1,4 @@
-import { Bell, Building2, Users, Upload, Home, BarChart3, Wallet, User, UserPlus, ClipboardList, Eye, BadgeDollarSign, Settings, UserMinus, FileText, FolderOpen, CalendarDays, type LucideIcon } from 'lucide-react'
+import { Bell, Building2, Users, Upload, Home, BarChart3, Wallet, User, UserPlus, ClipboardList, Eye, BadgeDollarSign, Settings, FileText, FolderOpen, CalendarDays, type LucideIcon } from 'lucide-react'
 import type { Role } from '@/types'
 
 export type { Role }
@@ -13,7 +13,6 @@ export const roleNavMap: RoleNavMap = {
     { label: '기업신청',   href: '/admin/requests',          icon: Bell            },
     { label: '기업관리',   href: '/admin/companies',         icon: Building2       },
     { label: '직원관리',   href: '/admin/employees',          icon: Users           },
-    { label: '퇴사자관리', href: '/admin/employees/resigned', icon: UserMinus       },
     { label: '급여조회',   href: '/admin/payroll',            icon: BarChart3       },
     { label: '급여업로드', href: '/admin/payroll/upload',    icon: Upload          },
     { label: '퇴직금 산정', href: '/admin/severance',        icon: BadgeDollarSign },
@@ -26,7 +25,6 @@ export const roleNavMap: RoleNavMap = {
     { label: '기업관리', href: '/manager/company',            icon: Building2      },
     { label: '직원관리', href: '/manager/employees',          icon: Users          },
     { label: '급여조회', href: '/manager/payroll',            icon: BarChart3      },
-    { label: '퇴사자',   href: '/manager/employees/resigned', icon: UserMinus      },
     { label: '서류관리', href: '/manager/documents',          icon: FolderOpen     },
     { label: '연차관리', href: '/manager/leave',              icon: CalendarDays   },
     { label: '내 정보',  href: '/manager/profile',            icon: Settings       },
