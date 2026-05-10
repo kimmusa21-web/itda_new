@@ -66,11 +66,16 @@ export function ManagerDocumentsClient({ requests: initialRequests, hasTaxAccoun
 
   async function handleApprove(id: number) {
     setProcessing(id)
-    const res = await approveDocumentRequest(id)
-    setProcessing(null)
-    if (!res.success) { showToast(res.error ?? '오류가 발생했습니다', false); return }
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'approved', approved_at: new Date().toISOString() } : r))
-    showToast(res.warning ? `승인 완료 (이메일 발송 실패 — 세무사에게 별도 연락 필요)` : '승인 완료 — 이메일이 발송되었습니다')
+    try {
+      const res = await approveDocumentRequest(id)
+      if (!res.success) { showToast(res.error ?? '오류가 발생했습니다', false); return }
+      setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'approved', approved_at: new Date().toISOString() } : r))
+      showToast(res.warning ? '승인 완료 (이메일 발송 실패 — 세무사에게 별도 연락 필요)' : '승인 완료 — 이메일이 발송되었습니다')
+    } catch {
+      showToast('오류가 발생했습니다. 다시 시도해주세요.', false)
+    } finally {
+      setProcessing(null)
+    }
   }
 
   async function handleReject() {

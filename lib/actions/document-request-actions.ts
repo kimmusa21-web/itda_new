@@ -77,9 +77,11 @@ export async function approveDocumentRequest(
 
   type EmpRow = { id: number; name: string; email: string; registration_number: string | null; department: string | null; position: string | null; Date_of_joining: string | null; quit_date: string | null }
   type CompanyRow = { id: number; name: string; representative: string | null; address: string | null; tax_accountant_company: string | null; tax_accountant_name: string | null; tax_accountant_email: string | null }
-  const empArr = req.employees as unknown as EmpRow[]
-  const emp = empArr[0]
+  const empRaw = req.employees as unknown as EmpRow | EmpRow[]
+  const emp    = Array.isArray(empRaw) ? empRaw[0] : empRaw
   const company = req.companies as unknown as CompanyRow
+
+  if (!emp) return { success: false, error: '직원 정보를 찾을 수 없습니다' }
 
   const docType  = req.document_type as DocumentType
   const docLabel = DOCUMENT_TYPE_LABELS[docType]
