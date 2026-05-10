@@ -106,7 +106,7 @@ export function CompanyForm({ mode, initialData, successHref, cancelHref, hideSt
     }
 
     setSubmitState('success')
-    setTimeout(() => router.push(successHref ?? '/admin/companies'), 1200)
+    setTimeout(() => router.push(successHref ?? '/admin/companies'), 800)
   }
 
   /* ── 성공 ──────────────────────────────────────────────── */
@@ -119,7 +119,6 @@ export function CompanyForm({ mode, initialData, successHref, cancelHref, hideSt
         <h2 className="text-lg font-bold text-slate-900 mb-1">
           {mode === 'create' ? '회사가 등록되었습니다' : '수정이 완료되었습니다'}
         </h2>
-        <p className="text-sm text-slate-500">{successHref ? '이동합니다...' : '기업관리 목록으로 이동합니다...'}</p>
       </div>
     )
   }

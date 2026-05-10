@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { CompanyForm } from '@/components/company/company-form'
-import { WithdrawalSection } from '@/components/company/withdrawal-section'
 
 export const metadata = { title: '기업관리 | itda' }
 
@@ -26,14 +25,6 @@ export default async function ManagerCompanyPage() {
     .eq('id', ctx.companyId)
     .single()
 
-  // 기존 탈퇴신청 여부 확인
-  const { data: pendingWithdrawal } = await supabase
-    .from('company_withdrawal_requests')
-    .select('id')
-    .eq('company_id', ctx.companyId)
-    .eq('status', 'pending')
-    .maybeSingle()
-
   if (!company) {
     return (
       <div className="card p-10 text-center text-slate-400">
@@ -43,7 +34,7 @@ export default async function ManagerCompanyPage() {
   }
 
   return (
-    <div className="max-w-2xl space-y-0">
+    <div className="max-w-2xl">
       <CompanyForm
         mode="edit"
         managerMode
@@ -69,13 +60,6 @@ export default async function ManagerCompanyPage() {
           payroll_start_day:       (company as any).payroll_start_day ?? null,
         }}
       />
-      <div className="card p-5 mt-4">
-        <WithdrawalSection
-          companyId={company.id}
-          companyName={company.name}
-          hasPending={!!pendingWithdrawal}
-        />
-      </div>
     </div>
   )
 }
