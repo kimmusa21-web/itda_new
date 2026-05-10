@@ -94,6 +94,11 @@ export async function accrueMonthlyLeave(
   const supabase = createClient()
   const hire = new Date(hireDate)
   const now  = new Date()
+
+  // 이번 달의 입사일 기념일(만근일)이 아직 도래하지 않았으면 적립 보류
+  const anniversaryThisMonth = new Date(now.getFullYear(), now.getMonth(), hire.getDate())
+  if (now < anniversaryThisMonth) return { success: true }
+
   const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
   const days = monthlyAccrualDays(hire, period)
@@ -167,6 +172,12 @@ async function catchUpMonthlyLeave(
   // 입사 다음달 1일부터 이번달 1일까지 순회
   const cur = new Date(hire.getFullYear(), hire.getMonth() + 1, 1)
   while (cur <= now) {
+    // 이번 달이면 입사 기념일(만근일)이 지났는지 확인
+    const isCurrentMonth = cur.getFullYear() === now.getFullYear() && cur.getMonth() === now.getMonth()
+    if (isCurrentMonth) {
+      const anniversaryThisMonth = new Date(now.getFullYear(), now.getMonth(), hire.getDate())
+      if (now < anniversaryThisMonth) break
+    }
     const period = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`
     const days   = monthlyAccrualDays(hire, period)
     if (days > 0) {
