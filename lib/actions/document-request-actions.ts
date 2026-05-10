@@ -129,14 +129,17 @@ export async function approveDocumentRequest(
       return { success: false, error: '세무사/회계사 이메일이 등록되어 있지 않습니다. 기업관리 페이지에서 세무사 정보를 먼저 등록해 주세요.' }
     }
     emailResult = await sendTaxDocumentRequestEmail(company.tax_accountant_email, {
-      taxAccountantName: company.tax_accountant_name ?? '담당자',
-      employeeName:      emp.name,
-      employeeEmail:     emp.email,
-      companyName:       company.name,
-      documentType:      docLabel,
-      purpose:           req.purpose,
-      note:              req.note,
-      requestedAt:       req.requested_at,
+      taxAccountantName:    company.tax_accountant_name ?? '담당자',
+      taxAccountantCompany: company.tax_accountant_company,
+      employeeName:         emp.name,
+      employeeEmail:        emp.email,
+      employeeDepartment:   emp.department,
+      employeePosition:     emp.position,
+      companyName:          company.name,
+      documentType:         docLabel,
+      purpose:              req.purpose,
+      note:                 req.note,
+      requestedAt:          req.requested_at,
     })
   }
 

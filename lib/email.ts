@@ -393,38 +393,55 @@ export async function sendEmploymentCertificateEmail(
 export async function sendTaxDocumentRequestEmail(
   to: string,
   params: {
-    taxAccountantName: string
-    employeeName:      string
-    employeeEmail:     string
-    companyName:       string
-    documentType:      string
-    purpose:           string | null
-    note:              string | null
-    requestedAt:       string
+    taxAccountantName:    string
+    taxAccountantCompany: string | null
+    employeeName:         string
+    employeeEmail:        string
+    employeeDepartment:   string | null
+    employeePosition:     string | null
+    companyName:          string
+    documentType:         string
+    purpose:              string | null
+    note:                 string | null
+    requestedAt:          string
   },
 ): Promise<{ success: boolean; error?: string }> {
-  const { taxAccountantName, employeeName, employeeEmail, companyName, documentType, purpose, note, requestedAt } = params
-  const reqDate = new Date(requestedAt).toLocaleDateString('ko-KR')
+  const {
+    taxAccountantName, taxAccountantCompany,
+    employeeName, employeeEmail, employeeDepartment, employeePosition,
+    companyName, documentType, purpose, note, requestedAt,
+  } = params
+
+  const reqDate   = new Date(requestedAt).toLocaleDateString('ko-KR')
+  const posStr    = [employeeDepartment, employeePosition].filter(Boolean).join(' / ') || null
+  const greetOrg  = taxAccountantCompany ? `${taxAccountantCompany} ` : ''
+
+  // note에서 "신청연도: YYYY" 추출
+  const yearMatch = note?.match(/신청연도:\s*(\d{4})/)
+  const reqYear   = yearMatch?.[1] ?? null
+  const extraNote = note?.replace(/신청연도:\s*\d{4}\n?/, '').trim() || null
 
   return sendRawEmail({
     to,
     subject: `[itda] ${companyName} — ${documentType} 발급 요청`,
     text: [
-      `${taxAccountantName} 담당자님,`,
+      `${greetOrg}${taxAccountantName} 담당자님,`,
       '',
       `${companyName} 소속 직원의 ${documentType} 발급을 요청드립니다.`,
       '',
-      `  직원명 : ${employeeName}`,
-      `  이메일 : ${employeeEmail}`,
-      `  서류종류: ${documentType}`,
-      `  제출용도: ${purpose ?? '—'}`,
-      `  신청일  : ${reqDate}`,
-      note ? `  메모    : ${note}` : '',
+      `  소속회사   : ${companyName}`,
+      posStr ? `  부서/직급  : ${posStr}` : '',
+      `  직원명     : ${employeeName}`,
+      `  신청서류   : ${documentType}${reqYear ? ` (${reqYear}년)` : ''}`,
+      `  제출용도   : ${purpose ?? '—'}`,
+      `  신청일     : ${reqDate}`,
+      extraNote ? `  메모       : ${extraNote}` : '',
       '',
-      '발급 후 직원 이메일로 직접 전달해 주시기 바랍니다.',
+      `발급 완료 후 아래 이메일로 회신 부탁드립니다.`,
+      `  회신 이메일: ${employeeEmail}`,
       '',
       '본 메일은 itda 급여관리 서비스에서 자동 발송되었습니다.',
-    ].filter(l => l !== undefined).join('\n'),
+    ].filter(Boolean).join('\n'),
     html: `
 <!DOCTYPE html>
 <html lang="ko">
@@ -436,27 +453,39 @@ export async function sendTaxDocumentRequestEmail(
       <p style="color:#94a3b8;margin:4px 0 0;font-size:13px">서류발급 요청</p>
     </div>
     <div style="padding:32px">
-      <p style="color:#0f172a;font-size:15px;margin:0 0 6px">안녕하세요, <strong>${taxAccountantName}</strong> 담당자님.</p>
+      <p style="color:#0f172a;font-size:15px;margin:0 0 6px">
+        안녕하세요, ${greetOrg ? `<strong>${greetOrg}</strong>` : ''}<strong>${taxAccountantName}</strong> 담당자님.
+      </p>
       <p style="color:#475569;font-size:14px;margin:0 0 28px;line-height:1.6">
-        <strong>${companyName}</strong> 소속 직원의 서류 발급을 요청드립니다.<br>
-        발급 후 직원 이메일로 직접 전달해 주시기 바랍니다.
+        <strong>${companyName}</strong> 소속 직원의 서류 발급을 요청드립니다.
       </p>
 
-      <div style="background:#f1f5f9;border-radius:12px;padding:24px;margin-bottom:28px">
+      <!-- 신청 정보 -->
+      <div style="background:#f1f5f9;border-radius:12px;padding:24px;margin-bottom:20px">
+        <p style="color:#0f172a;font-size:12px;font-weight:700;margin:0 0 12px;text-transform:uppercase;letter-spacing:.05em">신청 정보</p>
         <table style="width:100%;border-collapse:collapse">
-          <tr><td style="color:#64748b;font-size:13px;padding:5px 0;width:80px">직원명</td>
+          <tr><td style="color:#64748b;font-size:13px;padding:5px 0;width:90px">소속회사</td>
+              <td style="color:#0f172a;font-size:13px;font-weight:600;padding:5px 0">${companyName}</td></tr>
+          ${posStr ? `<tr><td style="color:#64748b;font-size:13px;padding:5px 0">부서/직급</td>
+              <td style="color:#0f172a;font-size:13px;padding:5px 0">${posStr}</td></tr>` : ''}
+          <tr><td style="color:#64748b;font-size:13px;padding:5px 0">직원명</td>
               <td style="color:#0f172a;font-size:13px;font-weight:600;padding:5px 0">${employeeName}</td></tr>
-          <tr><td style="color:#64748b;font-size:13px;padding:5px 0">이메일</td>
-              <td style="color:#2563eb;font-size:13px;padding:5px 0">${employeeEmail}</td></tr>
-          <tr><td style="color:#64748b;font-size:13px;padding:5px 0">서류종류</td>
-              <td style="color:#0f172a;font-size:13px;font-weight:600;padding:5px 0">${documentType}</td></tr>
+          <tr><td style="color:#64748b;font-size:13px;padding:5px 0">신청서류</td>
+              <td style="color:#0f172a;font-size:13px;font-weight:700;padding:5px 0">${documentType}${reqYear ? `<span style="color:#64748b;font-weight:400"> (${reqYear}년)</span>` : ''}</td></tr>
           <tr><td style="color:#64748b;font-size:13px;padding:5px 0">제출용도</td>
               <td style="color:#0f172a;font-size:13px;padding:5px 0">${purpose ?? '—'}</td></tr>
           <tr><td style="color:#64748b;font-size:13px;padding:5px 0">신청일</td>
               <td style="color:#0f172a;font-size:13px;padding:5px 0">${reqDate}</td></tr>
-          ${note ? `<tr><td style="color:#64748b;font-size:13px;padding:5px 0">메모</td>
-              <td style="color:#0f172a;font-size:13px;padding:5px 0">${note}</td></tr>` : ''}
+          ${extraNote ? `<tr><td style="color:#64748b;font-size:13px;padding:5px 0">메모</td>
+              <td style="color:#0f172a;font-size:13px;padding:5px 0">${extraNote}</td></tr>` : ''}
         </table>
+      </div>
+
+      <!-- 회신 이메일 강조 -->
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:18px 20px;margin-bottom:24px">
+        <p style="color:#1e40af;font-size:12px;font-weight:700;margin:0 0 6px">발급 완료 후 아래 이메일로 회신 부탁드립니다</p>
+        <a href="mailto:${employeeEmail}"
+           style="color:#2563eb;font-size:15px;font-weight:700;text-decoration:none">${employeeEmail}</a>
       </div>
 
       <p style="color:#94a3b8;font-size:12px;margin:0;line-height:1.7">
