@@ -208,11 +208,11 @@ export function ManagerLeaveClient({
         })
       })
 
-    return events.sort((a, b) => a.sortDate.localeCompare(b.sortDate))
+    return events.sort((a, b) => b.sortDate.localeCompare(a.sortDate))  // 최신순
   }
 
-  // Excel 다운로드
-  function handleExcelExport() {
+  // Excel 다운로드 (mode: 'summary' | 'detail' | 'both')
+  function handleExcelExport(mode: 'summary' | 'detail' | 'both' = 'both') {
     const wb = XLSX.utils.book_new()
     const targets = ovEmpId === 'all' ? employees : employees.filter(e => e.id === ovEmpId)
 
@@ -228,31 +228,36 @@ export function ManagerLeaveClient({
         +s.rem.toFixed(1),   s.toDays(s.rem),
       ]
     })
-    const ws1 = XLSX.utils.aoa_to_sheet([summaryHeader, ...summaryRows])
-    ws1['!cols'] = [{ wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, ...Array(8).fill({ wch: 9 })]
-    XLSX.utils.book_append_sheet(wb, ws1, `${ovYear}년 요약`)
+    if (mode === 'summary' || mode === 'both') {
+      const ws1 = XLSX.utils.aoa_to_sheet([summaryHeader, ...summaryRows])
+      ws1['!cols'] = [{ wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, ...Array(8).fill({ wch: 9 })]
+      XLSX.utils.book_append_sheet(wb, ws1, `${ovYear}년 요약`)
+    }
 
-    // 시트 2: 상세 이벤트
-    const detailHeader = ['직원명', '날짜', '구분', '내용', '변동(h)', '변동(일)']
-    const detailRows: (string | number)[][] = []
-    targets.forEach(emp => {
-      const dh     = dailyHours(emp.weekly_work_hours)
-      const events = buildDetailEvents(emp, ovYear)
-      events.forEach(ev => {
-        const kindLabel = ev.kind === 'accrual' ? '발생' : ev.kind === 'usage' ? '사용' : '조정'
-        detailRows.push([
-          emp.name, ev.dateLabel, kindLabel, ev.label,
-          +ev.hours.toFixed(1),
-          dh > 0 ? +(ev.hours / dh).toFixed(2) : 0,
-        ])
+    if (mode === 'detail' || mode === 'both') {
+      // 상세 이벤트 (최신순)
+      const detailHeader = ['직원명', '날짜', '구분', '내용', '변동(h)', '변동(일)']
+      const detailRows: (string | number)[][] = []
+      targets.forEach(emp => {
+        const dh     = dailyHours(emp.weekly_work_hours)
+        const events = buildDetailEvents(emp, ovYear)  // 최신순
+        events.forEach(ev => {
+          const kindLabel = ev.kind === 'accrual' ? '발생' : ev.kind === 'usage' ? '사용' : '조정'
+          detailRows.push([
+            emp.name, ev.dateLabel, kindLabel, ev.label,
+            +ev.hours.toFixed(1),
+            dh > 0 ? +(ev.hours / dh).toFixed(2) : 0,
+          ])
+        })
       })
-    })
-    const ws2 = XLSX.utils.aoa_to_sheet([detailHeader, ...detailRows])
-    ws2['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 6 }, { wch: 32 }, { wch: 8 }, { wch: 8 }]
-    XLSX.utils.book_append_sheet(wb, ws2, `${ovYear}년 상세`)
+      const ws2 = XLSX.utils.aoa_to_sheet([detailHeader, ...detailRows])
+      ws2['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 6 }, { wch: 32 }, { wch: 8 }, { wch: 8 }]
+      XLSX.utils.book_append_sheet(wb, ws2, `${ovYear}년 상세`)
+    }
 
-    const empName = ovEmpId !== 'all' ? (employees.find(e => e.id === ovEmpId)?.name ?? '') : '전체'
-    XLSX.writeFile(wb, `연차현황_${empName}_${ovYear}년.xlsx`)
+    const empName  = ovEmpId !== 'all' ? (employees.find(e => e.id === ovEmpId)?.name ?? '') : '전체'
+    const modeSuffix = mode === 'summary' ? '_요약' : mode === 'detail' ? '_상세' : ''
+    XLSX.writeFile(wb, `연차현황_${empName}_${ovYear}년${modeSuffix}.xlsx`)
   }
 
   const basisLabel = policy.basis === 'hire_date' ? '입사일' : '회계연도'
@@ -372,12 +377,27 @@ export function ManagerLeaveClient({
                 {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
               </select>
             </div>
-            <button
-              onClick={handleExcelExport}
-              className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-            >
-              <Download size={13} />Excel 다운로드
-            </button>
+            <div className="flex items-center gap-1">
+              <select
+                id="excel-mode"
+                className="input text-xs h-8 rounded-r-none border-r-0 pr-1"
+                defaultValue="both"
+                onChange={() => {}}
+              >
+                <option value="both">요약+상세</option>
+                <option value="summary">요약만</option>
+                <option value="detail">상세만</option>
+              </select>
+              <button
+                onClick={() => {
+                  const sel = (document.getElementById('excel-mode') as HTMLSelectElement).value as 'summary' | 'detail' | 'both'
+                  handleExcelExport(sel)
+                }}
+                className="flex items-center gap-1 text-xs px-3 h-8 rounded-l-none rounded-r-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                <Download size={13} />다운로드
+              </button>
+            </div>
           </div>
 
           {/* 요약 테이블 */}
@@ -449,7 +469,12 @@ export function ManagerLeaveClient({
               </div>
             )
 
-            let running = 0
+            // 누계: 시간순으로 누적 계산 후, 역순 인덱스로 매핑
+            const chronoCumulatives: number[] = []
+            let acc = 0
+            ;[...events].reverse().forEach(ev => { acc += ev.hours; chronoCumulatives.push(acc) })
+            // events[i](최신순) → chronoCumulatives[events.length - 1 - i]
+
             return (
               <div className="card overflow-hidden">
                 <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
@@ -474,7 +499,7 @@ export function ManagerLeaveClient({
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {events.map((ev, i) => {
-                        running += ev.hours
+                        const cumulative = chronoCumulatives[events.length - 1 - i]
                         const kindCls =
                           ev.kind === 'accrual'    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
                           ev.kind === 'usage'      ? 'bg-red-50 text-red-600 border border-red-200' :
@@ -497,7 +522,7 @@ export function ManagerLeaveClient({
                               {ev.hours >= 0 ? '+' : ''}{dh > 0 ? +(ev.hours / dh).toFixed(2) : 0}일
                             </td>
                             <td className="px-4 py-2.5 text-right font-mono text-slate-700 font-medium">
-                              {dh > 0 ? +(running / dh).toFixed(2) : 0}일
+                              {dh > 0 ? +(cumulative / dh).toFixed(2) : 0}일
                             </td>
                           </tr>
                         )
