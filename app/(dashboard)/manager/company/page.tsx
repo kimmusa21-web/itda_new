@@ -58,6 +58,9 @@ export default async function ManagerCompanyPage() {
           payslip_note_overrides:  (company as any).payslip_note_overrides ?? null,
           payroll_day:             (company as any).payroll_day ?? null,
           payroll_start_day:       (company as any).payroll_start_day ?? null,
+          tax_accountant_company:  (company as any).tax_accountant_company ?? '',
+          tax_accountant_name:     (company as any).tax_accountant_name ?? '',
+          tax_accountant_email:    (company as any).tax_accountant_email ?? '',
         }}
       />
     </div>
