@@ -437,7 +437,7 @@ export async function sendTaxDocumentRequestEmail(
       `  신청일     : ${reqDate}`,
       extraNote ? `  메모       : ${extraNote}` : '',
       '',
-      `발급 완료 후 아래 이메일로 회신 부탁드립니다.`,
+      `아래의 이메일로 발급 부탁드립니다.`,
       `  회신 이메일: ${employeeEmail}`,
       '',
       '본 메일은 itda 급여관리 서비스에서 자동 발송되었습니다.',
@@ -483,7 +483,7 @@ export async function sendTaxDocumentRequestEmail(
 
       <!-- 회신 이메일 강조 -->
       <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:18px 20px;margin-bottom:24px">
-        <p style="color:#1e40af;font-size:12px;font-weight:700;margin:0 0 6px">발급 완료 후 아래 이메일로 회신 부탁드립니다</p>
+        <p style="color:#1e40af;font-size:12px;font-weight:700;margin:0 0 6px">아래의 이메일로 발급 부탁드립니다</p>
         <a href="mailto:${employeeEmail}"
            style="color:#2563eb;font-size:15px;font-weight:700;text-decoration:none">${employeeEmail}</a>
       </div>
