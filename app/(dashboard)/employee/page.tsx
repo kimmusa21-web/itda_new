@@ -7,8 +7,7 @@ import { getEmployeePayslips } from '@/lib/employee-payslips'
 import { formatAccrualMonth }  from '@/lib/payslip-utils'
 import NoticeCard              from '@/components/common/notice-card'
 import { notices as mockNotices } from '@/lib/mock-data'
-import { DOCUMENT_TYPE_LABELS } from '@/lib/actions/document-request-actions'
-import type { DocumentType }    from '@/lib/actions/document-request-actions'
+import { DOCUMENT_TYPE_LABELS, type DocumentType } from '@/lib/document-types'
 
 export default async function EmployeeDashboard() {
   const supabase = createClient()

@@ -14,9 +14,8 @@ import { cn } from '@/lib/utils'
 import {
   approveDocumentRequest,
   rejectDocumentRequest,
-  DOCUMENT_TYPE_LABELS,
-  type DocumentType,
 } from '@/lib/actions/document-request-actions'
+import { DOCUMENT_TYPE_LABELS, type DocumentType } from '@/lib/document-types'
 
 interface Employee { id: number; name: string; email: string; department: string | null; position: string | null }
 

@@ -6,7 +6,8 @@
 import { useState } from 'react'
 import { FolderOpen, Plus, X, CheckCircle, Clock, XCircle, Loader2, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { createDocumentRequest, DOCUMENT_TYPE_LABELS, type DocumentType } from '@/lib/actions/document-request-actions'
+import { createDocumentRequest } from '@/lib/actions/document-request-actions'
+import { DOCUMENT_TYPE_LABELS, type DocumentType } from '@/lib/document-types'
 
 interface DocRequest {
   id:               number
