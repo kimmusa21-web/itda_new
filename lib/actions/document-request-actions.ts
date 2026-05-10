@@ -56,7 +56,7 @@ export async function createDocumentRequest(input: {
 /* ── 매니저: 승인 ────────────────────────────────────────────── */
 export async function approveDocumentRequest(
   requestId: number,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; warning?: string }> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: '인증이 필요합니다' }
@@ -129,10 +129,7 @@ export async function approveDocumentRequest(
     })
   }
 
-  if (!emailResult.success) {
-    return { success: false, error: `이메일 발송 실패: ${emailResult.error}` }
-  }
-
+  // DB 상태 먼저 업데이트 — 이메일 실패와 무관하게 승인 처리
   const { error: updErr } = await supabase
     .from('document_requests')
     .update({ status: 'approved', approved_at: new Date().toISOString() })
@@ -141,6 +138,12 @@ export async function approveDocumentRequest(
   if (updErr) return { success: false, error: updErr.message }
 
   revalidatePath('/manager/documents')
+
+  // 이메일 발송 결과는 승인 자체에 영향 없음 — 실패 시 경고만 반환
+  if (!emailResult.success) {
+    return { success: true, warning: `승인 완료, 이메일 발송 실패: ${emailResult.error}` }
+  }
+
   return { success: true }
 }
 
