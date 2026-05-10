@@ -1,13 +1,14 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { Building2, CalendarDays, Briefcase, UserCircle2, ArrowRight, Wallet } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import Link         from 'next/link'
+import { Bell, Wallet, CalendarDays, FileText, ArrowRight } from 'lucide-react'
+import { createClient }      from '@/lib/supabase/server'
 import { getEffectiveEmployeeContext } from '@/lib/impersonation/get-effective-context'
 import { getEmployeePayslips } from '@/lib/employee-payslips'
-import { formatAccrualMonth, formatDateDot } from '@/lib/payslip-utils'
-import { formatDateShort } from '@/lib/utils'
-import NoticeCard from '@/components/common/notice-card'
+import { formatAccrualMonth }  from '@/lib/payslip-utils'
+import NoticeCard              from '@/components/common/notice-card'
 import { notices as mockNotices } from '@/lib/mock-data'
+import { DOCUMENT_TYPE_LABELS } from '@/lib/actions/document-request-actions'
+import type { DocumentType }    from '@/lib/actions/document-request-actions'
 
 export default async function EmployeeDashboard() {
   const supabase = createClient()
@@ -17,7 +18,6 @@ export default async function EmployeeDashboard() {
   const { data: profile } = await supabase
     .from('profiles').select('role, companies(name)').eq('id', user.id).single()
 
-  // admin + impersonation, manager(직원 겸직) 허용
   const role = profile?.role
   if (role !== 'employee' && role !== 'admin' && role !== 'manager') redirect(`/${role ?? 'login'}`)
 
@@ -30,127 +30,123 @@ export default async function EmployeeDashboard() {
     if (co?.name) companyName = co.name
   }
 
-  /* ── 급여 목록 ── */
-  const payslips = empCtx ? await getEmployeePayslips(empCtx.employeeId) : []
-  const current  = payslips[0] ?? null
-  const history  = payslips.slice(1)
+  // 최신 급여명세서
+  const payslips     = empCtx ? await getEmployeePayslips(empCtx.employeeId) : []
+  const latestPayslip = payslips[0] ?? null
+
+  // 최신 승인 연차
+  const { data: latestLeave } = empCtx
+    ? await supabase
+        .from('leave_requests')
+        .select('id, leave_type, start_date, end_date')
+        .eq('employee_id', empCtx.employeeId)
+        .eq('status', 'approved')
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null }
+
+  // 최신 승인 서류
+  const { data: latestDoc } = empCtx
+    ? await supabase
+        .from('document_requests')
+        .select('id, document_type')
+        .eq('employee_id', empCtx.employeeId)
+        .eq('status', 'approved')
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null }
+
+  const hasNotifications = latestPayslip || latestLeave || latestDoc
 
   return (
     <div className="space-y-6">
       <div>
         <p className="text-xs text-slate-500">{companyName}</p>
-        <h1 className="text-xl font-semibold text-slate-900 mt-0.5">내 급여</h1>
+        <h1 className="text-xl font-semibold text-slate-900 mt-0.5">
+          안녕하세요{empCtx ? `, ${empCtx.employeeName}님` : ''}
+        </h1>
       </div>
 
-      {/* 최신 급여 카드 */}
-      {current ? (
-        <div className="rounded-2xl overflow-hidden border border-slate-200">
-          <div className="bg-[#0f172a] px-5 py-5">
-            <p className="text-blue-300 text-xs mb-1">{formatAccrualMonth(current.accrualMonth)} 급여명세서</p>
-            <p className="text-white text-3xl font-semibold tracking-tight">—</p>
-            <p className="text-slate-400 text-xs mt-2">
-              지급일 {current.paymentDate ? formatDateDot(current.paymentDate) : '-'}
-            </p>
-          </div>
-          <div className="bg-white px-5 py-3">
+      {/* 알림 */}
+      <section>
+        <h2 className="text-sm font-semibold text-slate-700 mb-3">알림</h2>
+        <div className="space-y-2.5">
+          {latestPayslip && (
             <Link
-              href={`/employee/payslips/${current.id}`}
-              className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+              href={`/employee/payslips/${latestPayslip.id}`}
+              className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all"
             >
-              명세서 상세 보기
-              <ArrowRight size={15} />
+              <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <Wallet size={16} className="text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900">급여명세서 발급</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {formatAccrualMonth(latestPayslip.accrualMonth)} 명세서가 발급되었습니다
+                </p>
+              </div>
+              <ArrowRight size={15} className="text-slate-400 flex-shrink-0" />
             </Link>
-          </div>
-        </div>
-      ) : (
-        <div className="card p-10 text-center text-slate-400">
-          <Wallet size={32} className="mx-auto mb-3 text-slate-300" />
-          <p className="text-sm font-medium text-slate-600 mb-1">아직 급여 데이터가 없습니다</p>
-          <p className="text-xs text-slate-400">어드민이 급여를 업로드하면 이곳에서 확인할 수 있습니다</p>
-        </div>
-      )}
+          )}
 
-      {/* 지급 이력 */}
-      {history.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-slate-700">지급 이력</h2>
-            <Link href="/employee/payslips" className="text-xs text-blue-600 hover:underline">전체 보기</Link>
-          </div>
-          <div className="space-y-2.5">
-            {history.slice(0, 3).map(p => (
-              <Link key={p.id} href={`/employee/payslips/${p.id}`}
-                className="flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">{formatAccrualMonth(p.accrualMonth)}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <CalendarDays size={11} className="text-slate-400" />
-                    <span className="text-xs text-slate-400">
-                      지급일 {p.paymentDate ? formatDateDot(p.paymentDate) : '-'}
-                    </span>
-                  </div>
-                </div>
-                <ChevronRight />
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+          {latestLeave && (
+            <Link
+              href="/employee/leave"
+              className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all"
+            >
+              <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <CalendarDays size={16} className="text-emerald-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900">연차 신청 승인</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {latestLeave.start_date}
+                  {latestLeave.start_date !== latestLeave.end_date && ` ~ ${latestLeave.end_date}`}
+                  {' '}연차가 승인되었습니다
+                </p>
+              </div>
+              <ArrowRight size={15} className="text-slate-400 flex-shrink-0" />
+            </Link>
+          )}
 
-      {/* 내 정보 */}
-      {empCtx && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-slate-700">내 정보</h2>
-            <Link href="/employee/profile" className="text-xs text-blue-600 hover:underline">상세 보기</Link>
-          </div>
-          <div className="card p-4 space-y-3">
-            <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-semibold text-white bg-blue-600 flex-shrink-0">
-                {empCtx.employeeName.slice(0, 2)}
+          {latestDoc && (
+            <Link
+              href="/employee/documents"
+              className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all"
+            >
+              <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
+                <FileText size={16} className="text-violet-600" />
               </div>
-              <div>
-                <p className="text-base font-semibold text-slate-900">{empCtx.employeeName}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{empCtx.employeeEmail}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900">서류 신청 승인</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {DOCUMENT_TYPE_LABELS[latestDoc.document_type as DocumentType] ?? latestDoc.document_type} 발급이 처리되었습니다
+                </p>
               </div>
+              <ArrowRight size={15} className="text-slate-400 flex-shrink-0" />
+            </Link>
+          )}
+
+          {!hasNotifications && (
+            <div className="card p-10 text-center text-slate-400">
+              <Bell size={28} className="mx-auto mb-3 opacity-30" />
+              <p className="text-sm">새로운 알림이 없습니다</p>
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-              <InfoRow icon={Building2}    label="소속"   value={companyName} />
-              <InfoRow icon={Briefcase}    label="부서"   value={empCtx.department ?? '-'} />
-              <InfoRow icon={UserCircle2}  label="직위"   value={empCtx.position ?? '-'} />
-              <InfoRow icon={CalendarDays} label="입사일" value={formatDateShort(empCtx.dateOfJoining)} />
-            </div>
-          </div>
-        </section>
-      )}
+          )}
+        </div>
+      </section>
 
       {/* 공지사항 */}
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-700">공지사항</h2>
-        </div>
+        <h2 className="text-sm font-semibold text-slate-700 mb-3">공지사항</h2>
         <div className="space-y-2.5">
-          {mockNotices.slice(0, 2).map(n => (
+          {mockNotices.slice(0, 3).map(n => (
             <NoticeCard key={n.id} notice={n} />
           ))}
         </div>
       </section>
-    </div>
-  )
-}
-
-function ChevronRight() {
-  return <ArrowRight size={15} className="text-slate-400" />
-}
-
-function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
-  return (
-    <div className="flex items-start gap-2">
-      <Icon size={13} className="text-slate-400 mt-0.5 flex-shrink-0" />
-      <div>
-        <p className="text-[10px] text-slate-400 font-medium">{label}</p>
-        <p className="text-sm text-slate-800 mt-0.5 font-medium">{value || '-'}</p>
-      </div>
     </div>
   )
 }

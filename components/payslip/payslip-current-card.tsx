@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight, CalendarDays, CheckCircle2, Clock } from 'lucide-react'
+import { ArrowRight, CalendarDays } from 'lucide-react'
 import { formatMonth, formatDateDot } from '@/lib/utils'
 
 interface Props {
@@ -9,8 +9,7 @@ interface Props {
   status:       'paid' | 'pending'
 }
 
-export function PayslipCurrentCard({ id, accrualMonth, paymentDate, status }: Props) {
-  const isPending = status === 'pending'
+export function PayslipCurrentCard({ id, accrualMonth, paymentDate }: Props) {
   const [year, month] = accrualMonth.split('-')
 
   return (
@@ -26,20 +25,11 @@ export function PayslipCurrentCard({ id, accrualMonth, paymentDate, status }: Pr
               {year}년 {parseInt(month)}월
             </p>
           </div>
-          {isPending ? (
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-400/15 text-amber-400 border border-amber-400/30 flex-shrink-0">
-              <Clock size={10} />지급예정
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex-shrink-0">
-              <CheckCircle2 size={10} />지급완료
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-1.5">
           <CalendarDays size={12} className="text-slate-500" />
           <span className="text-xs text-slate-500">
-            {isPending ? '예정 지급일 ' : '지급일 '}
+            지급일{' '}
             <span className="text-slate-400 font-medium">
               {paymentDate ? formatDateDot(paymentDate) : '—'}
             </span>

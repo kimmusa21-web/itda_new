@@ -15,19 +15,21 @@ import {
 
 export type DocumentType =
   | 'employment_certificate'
+  | 'career_certificate'
   | 'withholding_tax'
   | 'earned_income_withholding_ledger'
   | 'withholding_tax_confirmation'
 
 export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   employment_certificate:           '재직증명서',
+  career_certificate:               '경력증명서',
   withholding_tax:                  '원천징수영수증(연도별)',
   earned_income_withholding_ledger: '근로소득원천징수부',
   withholding_tax_confirmation:     '갑종근로소득에대한원천징수확인서',
 }
 
-// 재직증명서는 직원 이메일로 직접 발급, 나머지는 세무사 경유
-const DIRECT_CERT_TYPES: DocumentType[] = ['employment_certificate']
+// 재직·경력증명서는 직원 이메일로 직접 발급, 나머지는 세무사 경유
+const DIRECT_CERT_TYPES: DocumentType[] = ['employment_certificate', 'career_certificate']
 
 /* ── 직원: 서류 신청 ─────────────────────────────────────────── */
 export async function createDocumentRequest(input: {
@@ -107,7 +109,7 @@ export async function approveDocumentRequest(
     // 재직증명서 → 직원 이메일로 직접 발급
     emailResult = await sendEmploymentCertificateEmail(emp.email, {
       docNumber:      docNum,
-      docType:        '재직증명서',
+      docType:        docLabel,
       employeeName:   emp.name,
       regNumber:      emp.registration_number,
       address:        req.address,
