@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link         from 'next/link'
-import { Bell, Wallet, CalendarDays, FileText, ArrowRight } from 'lucide-react'
+import { Bell, Wallet, CalendarDays, FileText, ArrowRight, Clock, LogIn, LogOut } from 'lucide-react'
 import { createClient }      from '@/lib/supabase/server'
 import { getEffectiveEmployeeContext } from '@/lib/impersonation/get-effective-context'
 import { getEmployeePayslips } from '@/lib/employee-payslips'
@@ -8,6 +8,15 @@ import { formatAccrualMonth }  from '@/lib/payslip-utils'
 import NoticeCard              from '@/components/common/notice-card'
 import { notices as mockNotices } from '@/lib/mock-data'
 import { DOCUMENT_TYPE_LABELS, type DocumentType } from '@/lib/document-types'
+import { kstToday } from '@/lib/utils/kst'
+import { cn } from '@/lib/utils'
+import { STATUS_LABELS, WORK_TYPE_LABELS } from '@/types/attendance'
+import type { AttendanceLog } from '@/types/attendance'
+
+function fmtTime(iso: string | null) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+}
 
 export default async function EmployeeDashboard() {
   const supabase = createClient()
@@ -28,6 +37,21 @@ export default async function EmployeeDashboard() {
       .from('companies').select('name').eq('id', empCtx.companyId).single()
     if (co?.name) companyName = co.name
   }
+
+  const today = kstToday()
+
+  // 오늘 출퇴근 기록
+  const { data: todayLog } = empCtx
+    ? await supabase
+        .from('attendance_logs')
+        .select('*')
+        .eq('employee_id', empCtx.employeeId)
+        .eq('work_date', today)
+        .maybeSingle()
+    : { data: null }
+
+  const log = todayLog as AttendanceLog | null
+  const attendanceStatus = log?.status ?? 'not_started'
 
   // 최신 급여명세서
   const payslips     = empCtx ? await getEmployeePayslips(empCtx.employeeId) : []
@@ -59,6 +83,12 @@ export default async function EmployeeDashboard() {
 
   const hasNotifications = latestPayslip || latestLeave || latestDoc
 
+  const statusColor = {
+    not_started: 'bg-slate-100 text-slate-500',
+    checked_in:  'bg-emerald-100 text-emerald-700',
+    checked_out: 'bg-blue-100 text-blue-700',
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -67,6 +97,64 @@ export default async function EmployeeDashboard() {
           안녕하세요{empCtx ? `, ${empCtx.employeeName}님` : ''}
         </h1>
       </div>
+
+      {/* 출퇴근 위젯 */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-slate-700">출퇴근</h2>
+          <Link href="/employee/attendance" className="text-xs text-slate-400 hover:text-slate-600">
+            상세보기 →
+          </Link>
+        </div>
+        <div className="card px-5 py-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock size={14} className="text-slate-400" />
+              <span className="text-xs text-slate-500">
+                {new Date(today + 'T00:00:00+09:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
+              </span>
+            </div>
+            <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full', statusColor[attendanceStatus])}>
+              {STATUS_LABELS[attendanceStatus]}
+            </span>
+          </div>
+
+          {log && attendanceStatus !== 'not_started' && (
+            <div className="flex items-center gap-6 text-xs text-slate-500 bg-slate-50 rounded-xl px-4 py-3">
+              <div>
+                <p className="text-slate-400 mb-0.5">출근</p>
+                <p className="font-mono font-medium text-slate-700">{fmtTime(log.check_in_at)}</p>
+              </div>
+              {attendanceStatus === 'checked_out' && (
+                <div>
+                  <p className="text-slate-400 mb-0.5">퇴근</p>
+                  <p className="font-mono font-medium text-slate-700">{fmtTime(log.check_out_at)}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-slate-400 mb-0.5">유형</p>
+                <p className="font-medium text-slate-700">{WORK_TYPE_LABELS[log.work_type]}</p>
+              </div>
+            </div>
+          )}
+
+          <Link
+            href="/employee/attendance"
+            className={cn(
+              'flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl font-bold text-base transition-colors',
+              attendanceStatus === 'not_started'
+                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                : attendanceStatus === 'checked_in'
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+            )}
+          >
+            {attendanceStatus === 'not_started' && <><LogIn size={18} /> 출근하기</>}
+            {attendanceStatus === 'checked_in'  && <><LogOut size={18} /> 퇴근하기</>}
+            {attendanceStatus === 'checked_out' && <>오늘 기록 확인</>}
+          </Link>
+        </div>
+      </section>
 
       {/* 알림 */}
       <section>
