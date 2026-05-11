@@ -6,11 +6,12 @@ import { saveCompanyLocation, saveAttendanceSettings } from '@/lib/actions/atten
 import type { AttendanceSettings } from '@/types/attendance'
 
 interface Props {
-  settings: AttendanceSettings | null
-  company:  { latitude: number | null; longitude: number | null; allowed_radius_m: number | null } | null
+  settings:       AttendanceSettings | null
+  company:        { latitude: number | null; longitude: number | null; allowed_radius_m: number | null } | null
+  companyAddress: string | null
 }
 
-export function AttendanceSettingsClient({ settings, company }: Props) {
+export function AttendanceSettingsClient({ settings, company, companyAddress }: Props) {
   const [lat,    setLat]    = useState(String(company?.latitude          ?? ''))
   const [lng,    setLng]    = useState(String(company?.longitude         ?? ''))
   const [radius, setRadius] = useState(String(company?.allowed_radius_m  ?? 100))
@@ -20,12 +21,32 @@ export function AttendanceSettingsClient({ settings, company }: Props) {
   const [notifError, setNotifError] = useState<string | null>(null)
   const [toast,    setToast]    = useState<string | null>(null)
   const [isGps,   setIsGps]   = useState(false)
+  const [isGeocoding,    setIsGeocoding]    = useState(false)
   const [isPendingLoc,   startLoc]   = useTransition()
   const [isPendingNotif, startNotif] = useTransition()
 
   function showToast(msg: string) {
     setToast(msg)
     setTimeout(() => setToast(null), 3000)
+  }
+
+  async function geocodeAddress() {
+    if (!companyAddress) return
+    setIsGeocoding(true); setLocError(null)
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(companyAddress)}&format=json&limit=1`,
+        { headers: { 'Accept-Language': 'ko', 'User-Agent': 'itda-payroll-app' } },
+      )
+      const data = await res.json()
+      if (!data[0]) { setLocError('주소로 좌표를 찾을 수 없습니다. 직접 입력해주세요.'); return }
+      setLat(String(parseFloat(data[0].lat).toFixed(6)))
+      setLng(String(parseFloat(data[0].lon).toFixed(6)))
+    } catch {
+      setLocError('좌표 조회에 실패했습니다. 직접 입력해주세요.')
+    } finally {
+      setIsGeocoding(false)
+    }
   }
 
   function useCurrentLocation() {
@@ -82,6 +103,23 @@ export function AttendanceSettingsClient({ settings, company }: Props) {
           <h2 className="text-sm font-semibold text-slate-800">회사 위치 설정</h2>
         </div>
         <p className="text-xs text-slate-500">사무실 출근 시 허용 반경 체크에 사용됩니다.</p>
+
+        {companyAddress && (
+          <div className="flex items-center justify-between gap-3 bg-slate-50 rounded-xl px-3 py-2.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <MapPin size={12} className="text-slate-400 flex-shrink-0" />
+              <span className="text-xs text-slate-600 truncate">{companyAddress}</span>
+            </div>
+            <button
+              onClick={geocodeAddress}
+              disabled={isGeocoding}
+              className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 disabled:opacity-50 flex-shrink-0"
+            >
+              {isGeocoding ? <Loader2 size={11} className="animate-spin" /> : null}
+              주소로 좌표 찾기
+            </button>
+          </div>
+        )}
 
         <button
           onClick={useCurrentLocation}

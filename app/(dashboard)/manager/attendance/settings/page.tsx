@@ -23,7 +23,7 @@ export default async function AttendanceSettingsPage() {
       .maybeSingle(),
     supabase
       .from('companies')
-      .select('latitude, longitude, allowed_radius_m')
+      .select('latitude, longitude, allowed_radius_m, address')
       .eq('id', ctx.companyId)
       .single(),
   ])
@@ -32,6 +32,7 @@ export default async function AttendanceSettingsPage() {
     <AttendanceSettingsClient
       settings={settings ?? null}
       company={company ?? null}
+      companyAddress={company?.address ?? null}
     />
   )
 }
