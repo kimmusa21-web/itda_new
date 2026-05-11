@@ -132,6 +132,21 @@ export function ManagerLeaveClient({
   }, [balances, allRequests, adjustments, currentYear])
 
   function yearBalances(empId: number, year: number) {
+    const emp = employees.find(e => e.id === empId)
+    const hireDate = emp?.Date_of_joining  // 'YYYY-MM-DD'
+
+    if (policy.basis === 'hire_date' && hireDate) {
+      const hireMM = hireDate.slice(5, 7)
+      // 입사일 기준 주기: (year-1)-MM < period <= year-MM
+      const cycleStart = `${year - 1}-${hireMM}`
+      const cycleEnd   = `${year}-${hireMM}`
+      return balances.filter(b => {
+        if (b.employee_id !== empId) return false
+        if (b.period_type === 'annual') return parseInt(b.period.slice(0, 4)) === year
+        return b.period > cycleStart && b.period <= cycleEnd
+      })
+    }
+
     return balances.filter(b => b.employee_id === empId && parseInt(b.period.slice(0, 4)) === year)
   }
 
