@@ -1,4 +1,5 @@
 'use client'
+import Link                       from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { LogOut }                 from 'lucide-react'
 import { createClient }           from '@/lib/supabase/client'
@@ -6,12 +7,13 @@ import type { Role }              from '@/lib/navigation'
 import { getPageTitle }           from '@/lib/navigation'
 import { cn }                     from '@/lib/utils'
 
-export default function AppHeader({ role, name }: { role: Role; name: string }) {
+export default function AppHeader({ role, name, companyName }: { role: Role; name: string; companyName?: string | null }) {
   const pathname = usePathname()
   const router   = useRouter()
   const supabase = createClient()
 
   const isEmployeeMode = role === 'manager' && pathname.startsWith('/employee')
+  const homeUrl: Record<Role, string> = { admin: '/admin', manager: '/manager', employee: '/employee' }
 
   const roleBg: Record<Role, string> = {
     admin:    'bg-indigo-100 text-indigo-700',
@@ -33,15 +35,21 @@ export default function AppHeader({ role, name }: { role: Role; name: string }) 
     <header className="lg:hidden sticky top-0 z-30 bg-white border-b border-slate-200">
       <div className="flex items-center h-14 px-4 gap-3">
         {/* 로고 */}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
+        <Link href={homeUrl[role]} className="flex items-center gap-1.5 flex-shrink-0 hover:opacity-75 transition-opacity">
+          <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <rect x="1" y="3"  width="14" height="2" rx="1" fill="white"/>
               <rect x="1" y="7"  width="10" height="2" rx="1" fill="white" opacity=".7"/>
               <rect x="1" y="11" width="12" height="2" rx="1" fill="white" opacity=".5"/>
             </svg>
           </div>
-        </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-slate-800 leading-tight">itda</p>
+            {companyName && (
+              <p className="text-[10px] text-slate-400 truncate leading-tight max-w-[80px]">{companyName}</p>
+            )}
+          </div>
+        </Link>
 
         {/* 페이지 타이틀 */}
         <p className="flex-1 text-sm font-semibold text-slate-800 truncate">

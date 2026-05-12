@@ -14,6 +14,7 @@ interface Props {
   email?:        string
   avatarColor?:  string
   impersonation?: ImpersonationContext | null
+  companyName?:  string | null
 }
 
 export default function Sidebar({
@@ -22,6 +23,7 @@ export default function Sidebar({
   email       = '',
   avatarColor = '#1d4ed8',
   impersonation = null,
+  companyName   = null,
 }: Props) {
   const pathname = usePathname()
   const router   = useRouter()
@@ -54,12 +56,14 @@ export default function Sidebar({
       : `${impersonation.employeeName ?? '직원'} · ${impersonation.companyName}`
     : null
 
+  const homeUrl: Record<Role, string> = { admin: '/admin', manager: '/manager', employee: '/employee' }
+
   return (
     <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-full w-60 bg-[#0f172a] z-40 border-r border-[#1e293b]">
 
       {/* 로고 */}
       <div className="px-5 pt-6 pb-5 border-b border-[#1e293b]">
-        <div className="flex items-center gap-2.5">
+        <Link href={homeUrl[role]} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <rect x="1" y="3"  width="14" height="2" rx="1" fill="white"/>
@@ -67,8 +71,13 @@ export default function Sidebar({
               <rect x="1" y="11" width="12" height="2" rx="1" fill="white" opacity=".5"/>
             </svg>
           </div>
-          <span className="text-lg font-bold text-white tracking-tight">itda</span>
-        </div>
+          <div className="min-w-0">
+            <p className="text-lg font-bold text-white tracking-tight leading-tight">itda</p>
+            {companyName && !impersonation && (
+              <p className="text-[11px] text-slate-400 truncate leading-tight mt-0.5">{companyName}</p>
+            )}
+          </div>
+        </Link>
 
         {/* 역할 뱃지 */}
         {impersonation ? (
