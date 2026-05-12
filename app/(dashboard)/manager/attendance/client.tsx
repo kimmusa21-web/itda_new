@@ -78,9 +78,14 @@ export function ManagerAttendanceClient({ date, rows, employees: _ }: Props) {
             ))}
           </select>
         </div>
-        <a href="/manager/attendance/settings" className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">
-          <Settings size={13} /> 출퇴근 설정
-        </a>
+        <div className="flex items-center gap-2">
+          <a href="/manager/attendance/summary" className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">
+            월별 집계
+          </a>
+          <a href="/manager/attendance/settings" className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50">
+            <Settings size={13} /> 출퇴근 설정
+          </a>
+        </div>
       </div>
 
       {/* 요약 카드 */}

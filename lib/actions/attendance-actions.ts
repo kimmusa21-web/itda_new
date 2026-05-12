@@ -11,7 +11,7 @@ import { calculateDistanceMeters } from '@/lib/utils/distance'
 import { kstToday, isAllowedWorkDate } from '@/lib/utils/kst'
 import type {
   CheckInInput, CheckOutInput, UpdateAttendanceInput,
-  AttendanceSettings, AttendanceLog, AttendanceRow,
+  AttendanceSettings, AttendanceLog, AttendanceRow, MonthlySummaryRow, WorkType,
 } from '@/types/attendance'
 
 /* ── 내부: manager들에게 누락 입력/수정 알림 ──────────────── */
@@ -435,6 +435,78 @@ export async function getAttendanceSettings(): Promise<AttendanceSettings | null
     .maybeSingle()
 
   return (data as AttendanceSettings | null)
+}
+
+/* ── 월별 근로시간 집계 ───────────────────────────────────── */
+export async function getMonthlyAttendanceSummary(month: string): Promise<MonthlySummaryRow[]> {
+  const supabase = createClient()
+  const ctx = await getEffectiveManagerContext()
+  if (!ctx) return []
+
+  const startDate = `${month}-01`
+  const [year, mon] = month.split('-').map(Number)
+  const lastDay   = new Date(year, mon, 0).getDate()
+  const endDate   = `${month}-${String(lastDay).padStart(2, '0')}`
+
+  const [{ data: emps }, { data: logs }] = await Promise.all([
+    supabase
+      .from('employees')
+      .select('id, name, employee_number, department, position')
+      .eq('company_id', ctx.companyId)
+      .eq('is_active', true)
+      .order('name'),
+    supabase
+      .from('attendance_logs')
+      .select('employee_id, status, work_type, check_in_at, check_out_at')
+      .eq('company_id', ctx.companyId)
+      .gte('work_date', startDate)
+      .lte('work_date', endDate),
+  ])
+
+  const logsByEmp = new Map<number, { status: string; work_type: string; check_in_at: string | null; check_out_at: string | null }[]>()
+  for (const log of logs ?? []) {
+    const id = log.employee_id as number
+    if (!logsByEmp.has(id)) logsByEmp.set(id, [])
+    logsByEmp.get(id)!.push(log as { status: string; work_type: string; check_in_at: string | null; check_out_at: string | null })
+  }
+
+  return (emps ?? []).map(emp => {
+    const empLogs = logsByEmp.get(emp.id) ?? []
+    let days_worked = 0
+    let days_incomplete = 0
+    let total_minutes = 0
+    let overtime_minutes = 0
+    const work_types = { office: 0, field: 0, remote: 0 }
+
+    for (const log of empLogs) {
+      const wt = (log.work_type as WorkType) in work_types ? log.work_type as WorkType : 'office'
+      if (log.status === 'checked_out' && log.check_in_at && log.check_out_at) {
+        days_worked++
+        const mins = Math.max(0, Math.floor(
+          (new Date(log.check_out_at).getTime() - new Date(log.check_in_at).getTime()) / 60000,
+        ))
+        total_minutes    += mins
+        overtime_minutes += Math.max(0, mins - 480)
+        work_types[wt]++
+      } else if (log.status === 'checked_in') {
+        days_incomplete++
+        work_types[wt]++
+      }
+    }
+
+    return {
+      employee_id:      emp.id,
+      employee_name:    emp.name,
+      employee_number:  emp.employee_number ?? null,
+      department:       emp.department      ?? null,
+      position:         emp.position        ?? null,
+      days_worked,
+      days_incomplete,
+      total_minutes,
+      overtime_minutes,
+      work_types,
+    }
+  })
 }
 
 /* ── 회사 위치 저장 ───────────────────────────────────────── */

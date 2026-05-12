@@ -79,3 +79,17 @@ export interface AttendanceRow extends AttendanceLog {
   position:        string | null
   company_name?:   string  // admin 전용
 }
+
+/** 월별 근로시간 집계 행 */
+export interface MonthlySummaryRow {
+  employee_id:      number
+  employee_name:    string
+  employee_number:  string | null
+  department:       string | null
+  position:         string | null
+  days_worked:      number   // check_in + check_out 모두 있는 날
+  days_incomplete:  number   // check_in만 있고 check_out 없는 날
+  total_minutes:    number   // 총 근무시간(분)
+  overtime_minutes: number   // 연장근무(분) — 1일 8시간 초과분
+  work_types: { office: number; field: number; remote: number }
+}
