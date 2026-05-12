@@ -15,7 +15,7 @@ import type { AttendanceLog } from '@/types/attendance'
 
 function fmtTime(iso: string | null) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul' })
 }
 
 export default async function EmployeeDashboard() {
