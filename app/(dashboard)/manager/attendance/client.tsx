@@ -20,7 +20,7 @@ function fmtTime(iso: string | null) {
 
 const STATUS_COLORS: Record<AttendanceStatus, string> = {
   not_started: 'bg-slate-100 text-slate-500',
-  checked_in:  'bg-emerald-100 text-emerald-700',
+  checked_in:  'bg-[#dde8f5] text-[#003366]',
   checked_out: 'bg-blue-100 text-blue-700',
 }
 

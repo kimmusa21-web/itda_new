@@ -85,7 +85,7 @@ export default async function EmployeeDashboard() {
 
   const statusColor = {
     not_started: 'bg-slate-100 text-slate-500',
-    checked_in:  'bg-emerald-100 text-emerald-700',
+    checked_in:  'bg-[#dde8f5] text-[#003366]',
     checked_out: 'bg-blue-100 text-blue-700',
   }
 
@@ -143,7 +143,7 @@ export default async function EmployeeDashboard() {
             className={cn(
               'flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl font-bold text-base transition-colors',
               attendanceStatus === 'not_started'
-                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                ? 'bg-[#003366] text-white hover:bg-[#002244]'
                 : attendanceStatus === 'checked_in'
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200',

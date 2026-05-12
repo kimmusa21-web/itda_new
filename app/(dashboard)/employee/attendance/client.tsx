@@ -192,7 +192,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
 
   const statusColor = {
     not_started: 'bg-slate-100 text-slate-500',
-    checked_in:  'bg-emerald-100 text-emerald-700',
+    checked_in:  'bg-[#dde8f5] text-[#003366]',
     checked_out: 'bg-blue-100 text-blue-700',
   }
 
@@ -255,7 +255,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
                   className={cn(
                     'py-3 rounded-xl text-sm font-medium border-2 transition-colors',
                     workType === t
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      ? 'border-[#003366] bg-[#f0f5ff] text-[#003366]'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
                   )}
                 >
@@ -336,7 +336,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
           <button
             onClick={handleCheckIn}
             disabled={isPending || isGps}
-            className="w-full py-4 rounded-2xl bg-emerald-600 text-white font-bold text-lg hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+            className="w-full py-4 rounded-2xl bg-[#003366] text-white font-bold text-lg hover:bg-[#002244] disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
           >
             {(isPending || isGps) ? <Loader2 size={20} className="animate-spin" /> : <LogIn size={20} />}
             {isGps ? '위치 확인 중...' : isPending ? '처리 중...' : '출근하기'}
@@ -347,14 +347,14 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
       {/* 출근 완료 UI */}
       {currentStatus === 'checked_in' && log && (
         <div className="card px-5 py-5 space-y-4">
-          <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl">
-            <CheckCircle size={20} className="text-emerald-600 flex-shrink-0" />
+          <div className="flex items-center gap-3 p-3 bg-[#f0f5ff] rounded-xl">
+            <CheckCircle size={20} className="text-[#003366] flex-shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-emerald-800">출근 완료</p>
-              <p className="text-xs text-emerald-600">{fmtTime(log.check_in_at)} · {WORK_TYPE_LABELS[log.work_type]}</p>
-              {log.work_note && <p className="text-xs text-emerald-600 mt-0.5">{log.work_note}</p>}
+              <p className="text-sm font-semibold text-[#003366]">출근 완료</p>
+              <p className="text-xs text-[#0055aa]">{fmtTime(log.check_in_at)} · {WORK_TYPE_LABELS[log.work_type]}</p>
+              {log.work_note && <p className="text-xs text-[#0055aa] mt-0.5">{log.work_note}</p>}
               {log.check_in_distance_m != null && (
-                <p className="text-xs text-emerald-500">회사로부터 {log.check_in_distance_m}m</p>
+                <p className="text-xs text-[#5588bb]">회사로부터 {log.check_in_distance_m}m</p>
               )}
               {log.is_impersonated && (
                 <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full mt-1 inline-block">관리자 입력</span>
@@ -455,7 +455,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
           </div>
           <div className="bg-slate-50 rounded-xl px-4 py-3 text-center">
             <p className="text-xs text-slate-400 mb-1">이번 달</p>
-            <p className="text-lg font-bold text-emerald-600">{fmtWorkHours(monthlyMinutes)}</p>
+            <p className="text-lg font-bold text-[#003366]">{fmtWorkHours(monthlyMinutes)}</p>
           </div>
         </div>
         <p className="text-xs text-slate-400">퇴근 완료된 날만 집계됩니다. 휴게시간 제외 기준.</p>
@@ -477,7 +477,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
               {(['office', 'field', 'remote'] as WorkType[]).map(t => (
                 <button key={t} onClick={() => setEditType(t)}
                   className={cn('py-2 rounded-lg text-xs font-medium border-2 transition-colors',
-                    editType === t ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600')}
+                    editType === t ? 'border-[#003366] bg-[#f0f5ff] text-[#003366]' : 'border-slate-200 text-slate-600')}
                 >
                   {WORK_TYPE_LABELS[t]}
                 </button>
@@ -509,7 +509,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
           )}
 
           <button onClick={handleEditSave} disabled={isPending}
-            className="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
+            className="w-full py-3 rounded-xl bg-[#003366] text-white font-semibold text-sm hover:bg-[#002244] disabled:opacity-50 flex items-center justify-center gap-2">
             {isPending ? <Loader2 size={14} className="animate-spin" /> : null}
             수정 저장
           </button>
