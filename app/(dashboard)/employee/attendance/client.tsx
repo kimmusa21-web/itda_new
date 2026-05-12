@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { MapPin, Clock, CheckCircle, LogOut, LogIn, AlertCircle, Loader2, ChevronDown, ChevronUp, Edit2 } from 'lucide-react'
+import { MapPin, Clock, CheckCircle, LogOut, LogIn, AlertCircle, Loader2, ChevronDown, ChevronUp, Edit2, Map } from 'lucide-react'
+import { KakaoMap } from '@/components/attendance/kakao-map'
 import { cn } from '@/lib/utils'
 import { checkIn, checkOut, updateAttendance, getAttendanceByDate } from '@/lib/actions/attendance-actions'
 import { kstFirstOfMonth } from '@/lib/utils/kst'
@@ -65,7 +66,9 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
   const [editOutAt,  setEditOutAt]  = useState('')
   const [editType,   setEditType]   = useState<WorkType>('office')
   const [editNote,   setEditNote]   = useState('')
-  const [toast,      setToast]      = useState<string | null>(null)
+  const [toast,       setToast]       = useState<string | null>(null)
+  const [previewPos,  setPreviewPos]  = useState<{ lat: number; lng: number } | null>(null)
+  const [isPreviewGps, setIsPreviewGps] = useState(false)
   const [isPending,  startTransition] = useTransition()
 
   const isLateEntry  = workDate < today
@@ -84,6 +87,19 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
   function showToast(msg: string) {
     setToast(msg)
     setTimeout(() => setToast(null), 3000)
+  }
+
+  async function handlePreviewLocation() {
+    setGpsErr(null); setIsPreviewGps(true)
+    try {
+      const pos = await getCurrentPosition()
+      setPreviewPos({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+    } catch (e) {
+      if (e instanceof GeolocationPositionError) setGpsErr(gpsErrorMessage(e))
+      else setGpsErr((e as Error).message)
+    } finally {
+      setIsPreviewGps(false)
+    }
   }
 
   async function reloadLog() {
@@ -279,13 +295,35 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
             </div>
           )}
 
-          {/* GPS 안내 */}
-          <div className="flex items-start gap-2 bg-slate-50 rounded-xl px-3 py-2.5">
-            <MapPin size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-slate-500">
-              출근 시 현재 위치를 확인합니다. 사무실 출근의 경우 회사 반경 내에 있어야 합니다.
-            </p>
-          </div>
+          {/* 위치 미리보기 */}
+          {previewPos ? (
+            <div className="space-y-2">
+              <KakaoMap
+                userLat={previewPos.lat}
+                userLng={previewPos.lng}
+                companyLat={company?.latitude}
+                companyLng={company?.longitude}
+                radiusM={company?.allowed_radius_m}
+                className="w-full h-48"
+              />
+              <p className="text-xs text-slate-400 text-center">파란 마커: 현재 위치 · 빨간 마커: 회사 · 빨간 원: 허용 반경</p>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2 bg-slate-50 rounded-xl px-3 py-2.5">
+              <div className="flex items-start gap-2">
+                <MapPin size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-slate-500">출근 시 현재 위치를 확인합니다.</p>
+              </div>
+              <button
+                onClick={handlePreviewLocation}
+                disabled={isPreviewGps}
+                className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-50 flex-shrink-0"
+              >
+                {isPreviewGps ? <Loader2 size={11} className="animate-spin" /> : <Map size={11} />}
+                지도 보기
+              </button>
+            </div>
+          )}
 
           {/* 에러 */}
           {(error || gpsErr) && (
@@ -323,6 +361,17 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
               )}
             </div>
           </div>
+
+          {log.check_in_latitude && log.check_in_longitude && (
+            <KakaoMap
+              userLat={log.check_in_latitude}
+              userLng={log.check_in_longitude}
+              companyLat={company?.latitude}
+              companyLng={company?.longitude}
+              radiusM={company?.allowed_radius_m}
+              className="w-full h-44"
+            />
+          )}
 
           {(error || gpsErr) && (
             <div className="flex items-start gap-2 bg-red-50 rounded-xl px-3 py-2.5">
@@ -383,6 +432,16 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
             {log.check_out_distance_m != null && <Row label="퇴근거리" value={`${log.check_out_distance_m}m`} />}
             {log.is_impersonated && <Row label="입력자" value="관리자" badge />}
           </div>
+          {log.check_in_latitude && log.check_in_longitude && (
+            <KakaoMap
+              userLat={log.check_in_latitude}
+              userLng={log.check_in_longitude}
+              companyLat={company?.latitude}
+              companyLng={company?.longitude}
+              radiusM={company?.allowed_radius_m}
+              className="w-full h-44"
+            />
+          )}
         </div>
       )}
 
