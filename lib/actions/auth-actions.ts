@@ -44,7 +44,9 @@ export async function sendPasswordResetByRealEmail(
   realEmail: string,
 ): Promise<{ success: boolean; error?: string }> {
   const service = getServiceClient()
-  const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl  =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
   const email   = realEmail.trim().toLowerCase()
 
   // 1. 활성 직원 중 해당 실제 이메일 소유자 탐색 (가장 최근 사번 기준)
