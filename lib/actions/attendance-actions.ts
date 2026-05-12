@@ -9,6 +9,7 @@ import {
 } from '@/lib/impersonation/get-effective-context'
 import { calculateDistanceMeters } from '@/lib/utils/distance'
 import { kstToday, isAllowedWorkDate } from '@/lib/utils/kst'
+import { calcWorkMinutes } from '@/lib/utils/work-hours'
 import type {
   CheckInInput, CheckOutInput, UpdateAttendanceInput,
   AttendanceSettings, AttendanceLog, AttendanceRow, MonthlySummaryRow, WorkType,
@@ -311,6 +312,26 @@ export async function getAttendanceByDate(workDate: string): Promise<AttendanceL
   return (data as AttendanceLog | null)
 }
 
+/* ── 직원 날짜 범위 출퇴근 조회 ──────────────────────────── */
+export async function getEmployeeAttendanceRange(
+  startDate: string,
+  endDate:   string,
+): Promise<AttendanceLog[]> {
+  const supabase = createClient()
+  const ctx = await getEffectiveEmployeeContext()
+  if (!ctx) return []
+
+  const { data } = await supabase
+    .from('attendance_logs')
+    .select('*')
+    .eq('employee_id', ctx.employeeId)
+    .gte('work_date', startDate)
+    .lte('work_date', endDate)
+    .order('work_date', { ascending: true })
+
+  return (data as AttendanceLog[]) ?? []
+}
+
 /* ── manager 출퇴근 현황 조회 ─────────────────────────────── */
 export async function getManagerAttendanceList(date: string): Promise<{
   rows:      AttendanceRow[]
@@ -482,9 +503,7 @@ export async function getMonthlyAttendanceSummary(month: string): Promise<Monthl
       const wt = (log.work_type as WorkType) in work_types ? log.work_type as WorkType : 'office'
       if (log.status === 'checked_out' && log.check_in_at && log.check_out_at) {
         days_worked++
-        const mins = Math.max(0, Math.floor(
-          (new Date(log.check_out_at).getTime() - new Date(log.check_in_at).getTime()) / 60000,
-        ))
+        const mins = calcWorkMinutes(log.check_in_at, log.check_out_at)
         total_minutes    += mins
         overtime_minutes += Math.max(0, mins - 480)
         work_types[wt]++

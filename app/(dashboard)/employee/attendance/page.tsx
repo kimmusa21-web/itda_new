@@ -1,7 +1,9 @@
 import { redirect }    from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getEffectiveEmployeeContext } from '@/lib/impersonation/get-effective-context'
-import { kstToday } from '@/lib/utils/kst'
+import { kstToday, kstFirstOfMonth } from '@/lib/utils/kst'
+import { getEmployeeAttendanceRange } from '@/lib/actions/attendance-actions'
+import { getWeekRange } from '@/lib/utils/work-hours'
 import { AttendanceClient } from './client'
 import type { AttendanceLog } from '@/types/attendance'
 
@@ -21,9 +23,13 @@ export default async function EmployeeAttendancePage() {
     )
   }
 
-  const today = kstToday()
+  const today      = kstToday()
+  const monthStart = kstFirstOfMonth()
+  const weekRange  = getWeekRange(today)
+  // 이번 주가 이전 달에 걸칠 경우를 위해 더 이른 날짜부터 조회
+  const fetchStart = weekRange.start < monthStart ? weekRange.start : monthStart
 
-  const [{ data: todayLog }, { data: company }] = await Promise.all([
+  const [{ data: todayLog }, { data: company }, periodLogs] = await Promise.all([
     supabase
       .from('attendance_logs')
       .select('*')
@@ -35,6 +41,7 @@ export default async function EmployeeAttendancePage() {
       .select('latitude, longitude, allowed_radius_m')
       .eq('id', ctx.companyId)
       .single(),
+    getEmployeeAttendanceRange(fetchStart, today),
   ])
 
   return (
@@ -44,6 +51,7 @@ export default async function EmployeeAttendancePage() {
       company={company ?? null}
       isImpersonating={ctx.isImpersonating}
       employeeName={ctx.employeeName}
+      periodLogs={periodLogs}
     />
   )
 }

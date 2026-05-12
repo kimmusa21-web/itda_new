@@ -5,6 +5,7 @@ import { MapPin, Clock, CheckCircle, LogOut, LogIn, AlertCircle, Loader2, Chevro
 import { cn } from '@/lib/utils'
 import { checkIn, checkOut, updateAttendance, getAttendanceByDate } from '@/lib/actions/attendance-actions'
 import { kstFirstOfMonth } from '@/lib/utils/kst'
+import { calcWorkMinutes, fmtWorkHours, breakMinutes, getWeekRange } from '@/lib/utils/work-hours'
 import { WORK_TYPE_LABELS, STATUS_LABELS } from '@/types/attendance'
 import type { AttendanceLog, WorkType } from '@/types/attendance'
 
@@ -14,6 +15,7 @@ interface Props {
   company:         { latitude: number | null; longitude: number | null; allowed_radius_m: number | null } | null
   isImpersonating: boolean
   employeeName:    string
+  periodLogs:      AttendanceLog[]
 }
 
 type GpsError = string | null
@@ -49,7 +51,7 @@ function fmtDateKo(date: string) {
   return new Date(date + 'T00:00:00+09:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
 }
 
-export function AttendanceClient({ today, todayLog: initialLog, company, isImpersonating, employeeName }: Props) {
+export function AttendanceClient({ today, todayLog: initialLog, company, isImpersonating, employeeName, periodLogs }: Props) {
   const [log,        setLog]        = useState<AttendanceLog | null>(initialLog)
   const [workType,   setWorkType]   = useState<WorkType>('office')
   const [workNote,   setWorkNote]   = useState('')
@@ -66,8 +68,18 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
   const [toast,      setToast]      = useState<string | null>(null)
   const [isPending,  startTransition] = useTransition()
 
-  const isLateEntry = workDate < today
+  const isLateEntry  = workDate < today
   const firstOfMonth = kstFirstOfMonth()
+
+  // 이번 주·이번 달 근무시간 집계
+  const weekRange      = getWeekRange(today)
+  const completedLogs  = periodLogs.filter(l => l.check_in_at && l.check_out_at)
+  const weeklyMinutes  = completedLogs
+    .filter(l => l.work_date >= weekRange.start && l.work_date <= weekRange.end)
+    .reduce((s, l) => s + calcWorkMinutes(l.check_in_at!, l.check_out_at!), 0)
+  const monthlyMinutes = completedLogs
+    .filter(l => l.work_date >= firstOfMonth)
+    .reduce((s, l) => s + calcWorkMinutes(l.check_in_at!, l.check_out_at!), 0)
 
   function showToast(msg: string) {
     setToast(msg)
@@ -351,6 +363,21 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
             <Row label="출근유형" value={WORK_TYPE_LABELS[log.work_type]} />
             <Row label="출근시간" value={fmtTime(log.check_in_at)} />
             <Row label="퇴근시간" value={fmtTime(log.check_out_at)} />
+            {log.check_in_at && log.check_out_at && (() => {
+              const total  = Math.max(0, Math.floor((new Date(log.check_out_at!).getTime() - new Date(log.check_in_at!).getTime()) / 60000))
+              const brk    = breakMinutes(total)
+              const worked = total - brk
+              const brkTxt = brk === 60 ? '휴게 1시간 제외' : brk === 30 ? '휴게 30분 제외' : ''
+              return (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">근무시간</span>
+                  <div className="text-right">
+                    <span className="text-slate-700 font-medium">{fmtWorkHours(worked)}</span>
+                    {brkTxt && <span className="text-xs text-slate-400 ml-1.5">({brkTxt})</span>}
+                  </div>
+                </div>
+              )
+            })()}
             {log.work_note && <Row label="사유" value={log.work_note} />}
             {log.check_in_distance_m  != null && <Row label="출근거리" value={`${log.check_in_distance_m}m`} />}
             {log.check_out_distance_m != null && <Row label="퇴근거리" value={`${log.check_out_distance_m}m`} />}
@@ -358,6 +385,22 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
           </div>
         </div>
       )}
+
+      {/* 이번 주 / 이번 달 근무시간 */}
+      <div className="card px-5 py-4 space-y-3">
+        <p className="text-sm font-semibold text-slate-700">근무시간 요약</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-slate-50 rounded-xl px-4 py-3 text-center">
+            <p className="text-xs text-slate-400 mb-1">이번 주</p>
+            <p className="text-lg font-bold text-slate-800">{fmtWorkHours(weeklyMinutes)}</p>
+          </div>
+          <div className="bg-slate-50 rounded-xl px-4 py-3 text-center">
+            <p className="text-xs text-slate-400 mb-1">이번 달</p>
+            <p className="text-lg font-bold text-emerald-600">{fmtWorkHours(monthlyMinutes)}</p>
+          </div>
+        </div>
+        <p className="text-xs text-slate-400">퇴근 완료된 날만 집계됩니다. 휴게시간 제외 기준.</p>
+      </div>
 
       {/* 수정 폼 */}
       {editOpen && log && (
