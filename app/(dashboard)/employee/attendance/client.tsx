@@ -91,10 +91,8 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
 
   // 주간 게이지
   const WEEKLY_TARGET  = 40 * 60                          // 2400분
-  const GAUGE_CIRC     = Math.PI * 85                     // 반원 둘레 ≈ 267
   const weekPct        = Math.round(weeklyMinutes / WEEKLY_TARGET * 100)
-  const gaugeFill      = Math.min(weeklyMinutes / WEEKLY_TARGET, 1) * GAUGE_CIRC
-  const gaugeColor     = weeklyMinutes >= WEEKLY_TARGET ? '#16a34a' : '#003366'
+  const gaugeColor     = weeklyMinutes >= WEEKLY_TARGET ? '#dc2626' : '#003366'
   const weekLabel      = weekRange.start.slice(5).replace('-', '/') + ' ~ ' + weekRange.end.slice(5).replace('-', '/')
 
   function showToast(msg: string) {
@@ -216,46 +214,42 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
     <div className="max-w-lg mx-auto space-y-4 pb-24">
 
       {/* 주간 근무 게이지 */}
-      <div className="card px-5 py-4">
-        <div className="flex items-center justify-between mb-1">
+      <div className="card px-5 py-4 space-y-3">
+        <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-slate-700">주간 근무 현황</p>
           <span className="text-xs text-slate-400">{weekLabel}</span>
         </div>
 
-        <svg viewBox="0 0 200 130" className="w-full max-w-[200px] mx-auto block">
-          {/* 배경 반원 */}
-          <path
-            d="M 15 100 A 85 85 0 0 0 185 100"
-            fill="none" stroke="#e2e8f0" strokeWidth="13" strokeLinecap="round"
-          />
-          {/* 진행 반원 */}
-          <path
-            d="M 15 100 A 85 85 0 0 0 185 100"
-            fill="none"
-            stroke={gaugeColor}
-            strokeWidth="13"
-            strokeLinecap="round"
-            strokeDasharray={`${gaugeFill} ${GAUGE_CIRC}`}
-          />
-          {/* 근무시간 */}
-          <text x="100" y="72" textAnchor="middle" fill="#0f172a" fontSize="18" fontWeight="700">
-            {fmtWorkHours(weeklyMinutes)}
-          </text>
-          {/* 목표 */}
-          <text x="100" y="90" textAnchor="middle" fill="#94a3b8" fontSize="11">
-            목표 40시간
-          </text>
-          {/* 퍼센트 */}
-          <text x="100" y="120" textAnchor="middle" fill={gaugeColor} fontSize="20" fontWeight="700">
+        {/* 시간 + 퍼센트 */}
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="text-2xl font-bold" style={{ color: gaugeColor }}>
+              {fmtWorkHours(weeklyMinutes)}
+            </p>
+            <p className="text-xs text-slate-400 mt-0.5">목표 40시간</p>
+            <p className="text-xs text-slate-400">한도 52시간</p>
+          </div>
+          <p className="text-3xl font-bold" style={{ color: gaugeColor }}>
             {weekPct}%
-          </text>
-        </svg>
+          </p>
+        </div>
 
-        <div className="flex items-center justify-between text-sm border-t border-slate-100 pt-3">
+        {/* 직선 막대 게이지 */}
+        <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+          <div
+            className="h-3 rounded-full transition-all duration-500"
+            style={{
+              width: `${Math.min(weekPct, 100)}%`,
+              backgroundColor: gaugeColor,
+            }}
+          />
+        </div>
+
+        <div className="flex items-center justify-between text-sm border-t border-slate-100 pt-2">
           <span className="text-slate-400">이번 달 누적</span>
           <span className="font-semibold text-slate-700">{fmtWorkHours(monthlyMinutes)}</span>
         </div>
-        <p className="text-xs text-slate-400 mt-1.5">퇴근 완료된 날만 집계됩니다. 휴게시간 제외.</p>
+        <p className="text-xs text-slate-400 -mt-1">퇴근 완료된 날만 집계됩니다. 휴게시간 제외.</p>
       </div>
 
       {/* 날짜 / 이름 */}
