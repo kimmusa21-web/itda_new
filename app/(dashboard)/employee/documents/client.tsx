@@ -23,8 +23,9 @@ interface DocRequest {
 }
 
 interface Props {
-  requests:     DocRequest[]
-  employeeName: string
+  requests:      DocRequest[]
+  employeeName:  string
+  hidePageTitle?: boolean
 }
 
 const STATUS_BADGE = {
@@ -38,7 +39,7 @@ const DIRECT_TYPES: DocumentType[] = ['employment_certificate', 'career_certific
 const CURRENT_YEAR = new Date().getFullYear()
 const YEAR_OPTIONS = Array.from({ length: 6 }, (_, i) => CURRENT_YEAR - i)
 
-export function DocumentsClient({ requests: initialRequests, employeeName }: Props) {
+export function DocumentsClient({ requests: initialRequests, employeeName, hidePageTitle }: Props) {
   const [requests, setRequests] = useState(initialRequests)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm]         = useState({
@@ -99,13 +100,15 @@ export function DocumentsClient({ requests: initialRequests, employeeName }: Pro
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">서류신청</h1>
+          {!hidePageTitle && (
+            <h1 className="text-xl font-semibold text-slate-900">서류신청</h1>
+          )}
           <p className="text-sm text-slate-500 mt-0.5">재직증명서, 원천징수영수증 등 서류를 신청합니다</p>
         </div>
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="btn-primary flex items-center gap-2 text-sm"
+            className="btn-primary flex items-center gap-2 text-sm flex-shrink-0"
           >
             <Plus size={15} />서류 신청
           </button>

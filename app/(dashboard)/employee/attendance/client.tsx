@@ -51,6 +51,11 @@ function fmtTime(iso: string | null) {
 function fmtDateKo(date: string) {
   return new Date(date + 'T00:00:00+09:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
 }
+// UTC ISO → KST datetime-local 값 (datetime-local은 로컬 시간 기준)
+function utcToKstLocal(iso: string): string {
+  const kstMs = new Date(iso).getTime() + 9 * 60 * 60 * 1000
+  return new Date(kstMs).toISOString().slice(0, 16)
+}
 
 export function AttendanceClient({ today, todayLog: initialLog, company, isImpersonating, employeeName, periodLogs }: Props) {
   const [log,        setLog]        = useState<AttendanceLog | null>(initialLog)
@@ -83,6 +88,14 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
   const monthlyMinutes = completedLogs
     .filter(l => l.work_date >= firstOfMonth)
     .reduce((s, l) => s + calcWorkMinutes(l.check_in_at!, l.check_out_at!), 0)
+
+  // 주간 게이지
+  const WEEKLY_TARGET  = 40 * 60                          // 2400분
+  const GAUGE_CIRC     = Math.PI * 85                     // 반원 둘레 ≈ 267
+  const weekPct        = Math.round(weeklyMinutes / WEEKLY_TARGET * 100)
+  const gaugeFill      = Math.min(weeklyMinutes / WEEKLY_TARGET, 1) * GAUGE_CIRC
+  const gaugeColor     = weeklyMinutes >= WEEKLY_TARGET ? '#16a34a' : '#003366'
+  const weekLabel      = weekRange.start.slice(5).replace('-', '/') + ' ~ ' + weekRange.end.slice(5).replace('-', '/')
 
   function showToast(msg: string) {
     setToast(msg)
@@ -165,8 +178,8 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
 
   function openEdit() {
     if (!log) return
-    setEditInAt(log.check_in_at   ? log.check_in_at.slice(0, 16)  : '')
-    setEditOutAt(log.check_out_at ? log.check_out_at.slice(0, 16) : '')
+    setEditInAt(log.check_in_at   ? utcToKstLocal(log.check_in_at)   : '')
+    setEditOutAt(log.check_out_at ? utcToKstLocal(log.check_out_at) : '')
     setEditType(log.work_type)
     setEditNote(log.work_note ?? '')
     setEditOpen(true)
@@ -180,8 +193,8 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
         log_id:       log.id,
         work_type:    editType,
         work_note:    editNote || undefined,
-        check_in_at:  editInAt  ? new Date(editInAt).toISOString()  : undefined,
-        check_out_at: editOutAt ? new Date(editOutAt).toISOString() : undefined,
+        check_in_at:  editInAt  ? new Date(editInAt  + ':00+09:00').toISOString() : undefined,
+        check_out_at: editOutAt ? new Date(editOutAt + ':00+09:00').toISOString() : undefined,
       })
       if (!res.success) { setError(res.error ?? '오류가 발생했습니다.'); return }
       showToast('수정되었습니다.')
@@ -201,6 +214,49 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
 
   return (
     <div className="max-w-lg mx-auto space-y-4 pb-24">
+
+      {/* 주간 근무 게이지 */}
+      <div className="card px-5 py-4">
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-sm font-semibold text-slate-700">주간 근무 현황</p>
+          <span className="text-xs text-slate-400">{weekLabel}</span>
+        </div>
+
+        <svg viewBox="0 0 200 130" className="w-full max-w-[200px] mx-auto block">
+          {/* 배경 반원 */}
+          <path
+            d="M 15 100 A 85 85 0 0 0 185 100"
+            fill="none" stroke="#e2e8f0" strokeWidth="13" strokeLinecap="round"
+          />
+          {/* 진행 반원 */}
+          <path
+            d="M 15 100 A 85 85 0 0 0 185 100"
+            fill="none"
+            stroke={gaugeColor}
+            strokeWidth="13"
+            strokeLinecap="round"
+            strokeDasharray={`${gaugeFill} ${GAUGE_CIRC}`}
+          />
+          {/* 근무시간 */}
+          <text x="100" y="72" textAnchor="middle" fill="#0f172a" fontSize="18" fontWeight="700">
+            {fmtWorkHours(weeklyMinutes)}
+          </text>
+          {/* 목표 */}
+          <text x="100" y="90" textAnchor="middle" fill="#94a3b8" fontSize="11">
+            목표 40시간
+          </text>
+          {/* 퍼센트 */}
+          <text x="100" y="120" textAnchor="middle" fill={gaugeColor} fontSize="20" fontWeight="700">
+            {weekPct}%
+          </text>
+        </svg>
+
+        <div className="flex items-center justify-between text-sm border-t border-slate-100 pt-3">
+          <span className="text-slate-400">이번 달 누적</span>
+          <span className="font-semibold text-slate-700">{fmtWorkHours(monthlyMinutes)}</span>
+        </div>
+        <p className="text-xs text-slate-400 mt-1.5">퇴근 완료된 날만 집계됩니다. 휴게시간 제외.</p>
+      </div>
 
       {/* 날짜 / 이름 */}
       <div className="card px-5 py-4">
@@ -444,22 +500,6 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
           )}
         </div>
       )}
-
-      {/* 이번 주 / 이번 달 근무시간 */}
-      <div className="card px-5 py-4 space-y-3">
-        <p className="text-sm font-semibold text-slate-700">근무시간 요약</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-slate-50 rounded-xl px-4 py-3 text-center">
-            <p className="text-xs text-slate-400 mb-1">이번 주</p>
-            <p className="text-lg font-bold text-slate-800">{fmtWorkHours(weeklyMinutes)}</p>
-          </div>
-          <div className="bg-slate-50 rounded-xl px-4 py-3 text-center">
-            <p className="text-xs text-slate-400 mb-1">이번 달</p>
-            <p className="text-lg font-bold text-[#003366]">{fmtWorkHours(monthlyMinutes)}</p>
-          </div>
-        </div>
-        <p className="text-xs text-slate-400">퇴근 완료된 날만 집계됩니다. 휴게시간 제외 기준.</p>
-      </div>
 
       {/* 수정 폼 */}
       {editOpen && log && (
