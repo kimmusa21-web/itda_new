@@ -11,7 +11,7 @@ export function ManagerLeaveTabs({ activeTab }: { activeTab: 'leave' | 'docs' })
         className={cn(
           'flex-1 text-center py-2 rounded-lg text-sm font-medium transition-colors',
           activeTab === 'leave'
-            ? 'bg-white text-slate-900 shadow-sm'
+            ? 'bg-[#003366] text-white shadow-sm'
             : 'text-slate-500 hover:text-slate-700',
         )}
       >
@@ -22,7 +22,7 @@ export function ManagerLeaveTabs({ activeTab }: { activeTab: 'leave' | 'docs' })
         className={cn(
           'flex-1 text-center py-2 rounded-lg text-sm font-medium transition-colors',
           activeTab === 'docs'
-            ? 'bg-white text-slate-900 shadow-sm'
+            ? 'bg-[#003366] text-white shadow-sm'
             : 'text-slate-500 hover:text-slate-700',
         )}
       >

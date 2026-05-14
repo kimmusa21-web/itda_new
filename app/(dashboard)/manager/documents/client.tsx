@@ -115,7 +115,7 @@ export function ManagerDocumentsClient({ requests: initialRequests, hasTaxAccoun
             onClick={() => setTab(t)}
             className={cn(
               'px-4 py-1.5 rounded-lg text-sm font-medium transition-colors',
-              tab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700',
+              tab === t ? 'bg-[#003366] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700',
             )}
           >
             {label}

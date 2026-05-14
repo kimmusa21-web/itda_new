@@ -99,7 +99,7 @@ export default function ManagerPayrollClient({
           <button
             onClick={() => setView('monthly')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              view === 'monthly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+              view === 'monthly' ? 'bg-[#003366] text-white shadow-sm' : 'text-slate-500'
             }`}
           >
             <Calendar size={13} />
@@ -108,7 +108,7 @@ export default function ManagerPayrollClient({
           <button
             onClick={() => setView('employee')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              view === 'employee' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+              view === 'employee' ? 'bg-[#003366] text-white shadow-sm' : 'text-slate-500'
             }`}
           >
             <Users size={13} />

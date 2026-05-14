@@ -18,7 +18,7 @@ export function ManagerViewToggle({ currentMode }: Props) {
         className={cn(
           'flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all',
           currentMode === 'manager'
-            ? 'bg-white text-slate-900 shadow-sm'
+            ? 'bg-[#003366] text-white shadow-sm'
             : 'text-slate-500 hover:text-slate-700',
         )}
       >
@@ -30,7 +30,7 @@ export function ManagerViewToggle({ currentMode }: Props) {
         className={cn(
           'flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all',
           currentMode === 'employee'
-            ? 'bg-white text-slate-900 shadow-sm'
+            ? 'bg-[#003366] text-white shadow-sm'
             : 'text-slate-500 hover:text-slate-700',
         )}
       >

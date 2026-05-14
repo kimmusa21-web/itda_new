@@ -82,7 +82,7 @@ export function ManagerEmployeesClient({ initialEmployees, companyName, managerU
           {([['active', '재직중'], ['inactive', '퇴사'], ['all', '전체']] as [Filter, string][]).map(([v, l]) => (
             <button key={v} onClick={() => setFilter(v)}
               className={cn('px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
-                filter === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                filter === v ? 'bg-[#003366] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
               {l}
             </button>
           ))}
