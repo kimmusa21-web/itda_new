@@ -495,6 +495,51 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
         </div>
       )}
 
+      {/* 출퇴근 기록 목록 */}
+      {periodLogs.length > 0 && (
+        <div className="card overflow-hidden">
+          <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+            <p className="text-sm font-semibold text-slate-700">출퇴근 기록</p>
+          </div>
+          <ul className="divide-y divide-slate-100">
+            {[...periodLogs]
+              .sort((a, b) => b.work_date.localeCompare(a.work_date))
+              .map(l => {
+                const mins = l.check_in_at && l.check_out_at
+                  ? calcWorkMinutes(l.check_in_at, l.check_out_at)
+                  : null
+                return (
+                  <li key={l.id} className="px-5 py-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium text-slate-800">{fmtDateKo(l.work_date)}</span>
+                          {l.status !== 'not_started' && (
+                            <span className="text-xs text-slate-400">{WORK_TYPE_LABELS[l.work_type]}</span>
+                          )}
+                          {l.is_late_entry && (
+                            <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">소급</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                          <span>출근 {fmtTime(l.check_in_at)}</span>
+                          <span>퇴근 {fmtTime(l.check_out_at)}</span>
+                          {mins !== null && (
+                            <span className="font-medium text-[#003366]">{fmtWorkHours(mins)}</span>
+                          )}
+                        </div>
+                      </div>
+                      <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5', statusColor[l.status])}>
+                        {STATUS_LABELS[l.status]}
+                      </span>
+                    </div>
+                  </li>
+                )
+              })}
+          </ul>
+        </div>
+      )}
+
       {/* 수정 폼 */}
       {editOpen && log && (
         <div className="card px-5 py-5 space-y-4 border-2 border-blue-200">
