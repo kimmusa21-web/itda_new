@@ -177,7 +177,7 @@ export async function getMonthlyPayrollRows(
       '*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))',
     )
     .eq('company_id', companyId)
-    .eq('accrual_month', toAccrualDate(payMonth))
+    .like('accrual_month', `${payMonth.slice(0, 7)}%`)
     .order('employee_id')
   return (data ?? []) as PayInfoV2[]
 }
@@ -198,7 +198,7 @@ export async function getEmployeePayslipForAdmin(
       '*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id,companies(name,payslip_note,payroll_start_day))',
     )
     .eq('company_id', companyId)
-    .eq('accrual_month', toAccrualDate(payMonth))
+    .like('accrual_month', `${payMonth.slice(0, 7)}%`)
     .eq('employee_id', employeeId)
     .maybeSingle()
   if (error || !data) return null

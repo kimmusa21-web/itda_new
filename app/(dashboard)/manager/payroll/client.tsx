@@ -45,7 +45,7 @@ export default function ManagerPayrollClient({
       .from('pay_info_v2')
       .select(select)
       .eq('company_id', companyId)
-      .eq('accrual_month', toAccrualDate(m))
+      .like('accrual_month', `${m.slice(0, 7)}%`)
       .order('employee_id')
     setAllRows((data ?? []) as PayInfoV2[])
     setLoading(false)

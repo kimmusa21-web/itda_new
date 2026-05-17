@@ -75,7 +75,7 @@ export async function sendPayslipEmails(params: {
       employees ( id, name, email )
     `)
     .eq('company_id', params.companyId)
-    .eq('accrual_month', toAccrualDate(params.accrualMonth))
+    .like('accrual_month', `${params.accrualMonth.slice(0, 7)}%`)
     .order('id')
 
   if (payslipError) {

@@ -156,7 +156,7 @@ export async function getAdminEmployeePayslipDetail(
       companies ( name, payslip_note, payslip_note_overrides, payroll_start_day, payroll_day, biz_number )
     `)
     .eq('company_id', companyId)
-    .eq('accrual_month', toAccrualDate(payMonth))
+    .like('accrual_month', `${payMonth.slice(0, 7)}%`)
     .eq('employee_id', employeeId)
     .maybeSingle()
 
