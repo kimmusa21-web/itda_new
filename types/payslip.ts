@@ -79,7 +79,7 @@ export interface PayslipDetail {
   // 정산기간 (pay_info 직접 저장값)
   startDate?:      string | null   // YYYY-MM-DD
   endDate?:        string | null   // YYYY-MM-DD
-  // 근로시간/연차 (분 단위)
+  // 근로시간/연차 (시간 단위, h)
   overTime?:                  number | null
   holidayWorkingHours?:       number | null
   nightWorkHours?:            number | null
