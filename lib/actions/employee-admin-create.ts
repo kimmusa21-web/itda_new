@@ -41,6 +41,11 @@ export interface CreateEmployeeAdminInput {
   nationality?: string | null
   visa_type?: string | null
   registration_number?: string | null
+  salary_type?: 'annual' | 'monthly' | 'hourly' | null
+  salary_amount?: number | null
+  salary_basis?: 'gross' | 'net' | null
+  non_taxable_items?: { name: string; amount: number }[] | null
+  taxable_total?: number | null
 }
 
 export async function createEmployeeAdmin(
@@ -107,6 +112,11 @@ export async function createEmployeeAdmin(
     nationality:         input.nationality ?? null,
     visa_type:           input.visa_type ?? null,
     registration_number: input.registration_number ?? null,
+    salary_type:         input.salary_type ?? null,
+    salary_amount:       input.salary_amount ?? null,
+    salary_basis:        input.salary_basis ?? null,
+    non_taxable_items:   input.non_taxable_items?.length ? input.non_taxable_items : null,
+    taxable_total:       input.taxable_total ?? null,
     user_id:             null,
   })
 

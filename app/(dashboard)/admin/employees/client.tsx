@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Plus, Search, Mail, Upload, X, Hash, Eye, EyeOff } from 'lucide-react'
+import { Plus, Search, Mail, Upload, X, Hash, Eye, EyeOff, Banknote } from 'lucide-react'
 import Link                                      from 'next/link'
 import { createClient }                          from '@/lib/supabase/client'
 import type { EmployeeRow }                      from '@/lib/supabase/queries/employee'
@@ -24,6 +24,9 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
   const [search, setSearch]             = useState('')
   const [company, setCompany]           = useState('')
   const [modal, setModal]               = useState<'add' | 'edit' | 'quit' | 'rehire' | 'delete' | null>(null)
+  const [salaryType, setSalaryType]     = useState<'annual' | 'monthly' | 'hourly'>('monthly')
+  const [salaryAmount, setSalaryAmount] = useState('')
+  const [salaryBasis, setSalaryBasis]   = useState<'gross' | 'net'>('gross')
   const [selected, setSelected]         = useState<EmployeeRow | null>(null)
   const [form, setForm]                 = useState<Partial<EmployeeRow>>({})
   const [saving, setSaving]             = useState(false)
@@ -149,6 +152,9 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
           nationality:         form.nationality ?? null,
           visa_type:           form.visa_type ?? null,
           registration_number: form.registration_number ?? null,
+          salary_type:    salaryType,
+          salary_amount:  salaryAmount ? Number(salaryAmount.replace(/,/g, '')) : null,
+          salary_basis:   salaryBasis,
         })
         if (!result.success) throw new Error(result.error)
       } else if (modal === 'edit' && selected) {
@@ -229,7 +235,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
             <span className="hidden sm:inline">CSV 대량 등록</span>
             <span className="sm:hidden">CSV</span>
           </Link>
-          <button onClick={() => { setForm({ is_active: true }); setModal('add') }} className="btn-primary">
+          <button onClick={() => { setForm({ is_active: true }); setSalaryType('monthly'); setSalaryAmount(''); setSalaryBasis('gross'); setModal('add') }} className="btn-primary">
             <Plus size={16} />
             <span className="hidden sm:inline">직원 등록</span>
           </button>
@@ -638,6 +644,75 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
                   onChange={e => setForm(p => ({ ...p, contract_end_date: e.target.value || null }))}
                 />
               </div>
+            )}
+
+            {/* ── 급여 정보 (등록 모달에서만 입력) ── */}
+            {modal === 'add' && (
+              <>
+                <div className="col-span-2 border-t border-slate-100 pt-3">
+                  <div className="flex items-center gap-1.5">
+                    <Banknote size={13} className="text-blue-500" />
+                    <p className="text-xs font-semibold text-slate-600">급여 정보</p>
+                  </div>
+                </div>
+                {/* 급여 유형 */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">급여 유형</label>
+                  <div className="flex gap-3 pt-1">
+                    {(['annual', 'monthly', 'hourly'] as const).map(v => (
+                      <label key={v} className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={salaryType === v}
+                          onChange={() => setSalaryType(v)}
+                          className="w-4 h-4 accent-blue-600"
+                        />
+                        <span className="text-sm text-slate-700">
+                          {v === 'annual' ? '연봉' : v === 'monthly' ? '월급' : '시급'}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                {/* 기준 */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">기준</label>
+                  <div className="flex gap-3 pt-1">
+                    {(['gross', 'net'] as const).map(v => (
+                      <label key={v} className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={salaryBasis === v}
+                          onChange={() => setSalaryBasis(v)}
+                          className="w-4 h-4 accent-blue-600"
+                        />
+                        <span className="text-sm text-slate-700">
+                          {v === 'gross' ? '세전' : '세후'}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                {/* 금액 */}
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                    {salaryType === 'annual' ? '연봉' : salaryType === 'monthly' ? '월급' : '시급'} 금액
+                  </label>
+                  <div className="relative">
+                    <input
+                      className="input pr-8"
+                      inputMode="numeric"
+                      placeholder={salaryType === 'annual' ? '40,000,000' : salaryType === 'hourly' ? '10,320' : '3,000,000'}
+                      value={salaryAmount}
+                      onChange={e => {
+                        const digits = e.target.value.replace(/[^\d]/g, '')
+                        setSalaryAmount(digits ? Number(digits).toLocaleString() : '')
+                      }}
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">원</span>
+                  </div>
+                </div>
+              </>
             )}
           </div>
           <div className="flex gap-2 mt-5 pt-4 border-t border-slate-100">
