@@ -10,7 +10,8 @@ const adminNav: NavItem[] = [
   { href: '/admin/requests', label: '기업신청', icon: <BuildingIcon /> },
   { href: '/admin/companies', label: '기업관리', icon: <OfficeBuildingIcon /> },
   { href: '/admin/employees', label: '직원관리', icon: <UsersIcon /> },
-  { href: '/admin/payroll', label: '급여업로드', icon: <UploadIcon /> },
+  { href: '/admin/payroll', label: '급여조회', icon: <DocumentIcon /> },
+  { href: '/admin/payroll/upload', label: '급여업로드', icon: <UploadIcon /> },
   { href: '/admin/settings', label: '설정', icon: <SettingsIcon /> },
 ]
 
