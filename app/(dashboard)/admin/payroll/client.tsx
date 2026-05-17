@@ -77,9 +77,10 @@ export default function AdminPayrollClient({
   async function fetchRows(cid: number | null, m: string) {
     if (!m) { setAllRows([]); return }
     const select = '*, employees(name,email,employee_number,department,position,job,birthdate,Date_of_joining,quit_date,company_id), companies(name,payslip_note,payroll_start_day,payroll_day)'
+    const monthFilter = `${m.slice(0, 7)}%`
     const { data } = cid
-      ? await supabase.from('pay_info_v2').select(select).eq('company_id', cid).eq('accrual_month', toAccrualDate(m)).order('employee_id')
-      : await supabase.from('pay_info_v2').select(select).eq('accrual_month', toAccrualDate(m)).order('employee_id')
+      ? await supabase.from('pay_info_v2').select(select).eq('company_id', cid).like('accrual_month', monthFilter).order('employee_id')
+      : await supabase.from('pay_info_v2').select(select).like('accrual_month', monthFilter).order('employee_id')
     setAllRows((data ?? []) as PayInfoV2[])
   }
 
