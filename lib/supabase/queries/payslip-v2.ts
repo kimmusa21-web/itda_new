@@ -47,7 +47,7 @@ export async function getCompanyPayrollV2(companyId: number, month: string): Pro
     .from('pay_info_v2')
     .select('*, employees(name,email,employee_number,department,position,birthdate,Date_of_joining,quit_date,company_id), companies(name,payslip_note,payroll_start_day,payroll_day)')
     .eq('company_id', companyId)
-    .eq('accrual_month', toAccrualDate(month))
+    .like('accrual_month', `${month.slice(0, 7)}%`)
     .order('employee_id')
   return (data ?? []) as PayInfoV2[]
 }
@@ -74,7 +74,7 @@ export async function getAdminPayrollListV2(opts?: {
   let q = supabase.from('pay_info_v2').select(select).order('employee_id')
 
   if (opts?.companyId)    q = q.eq('company_id', opts.companyId)
-  if (opts?.accrualMonth) q = q.eq('accrual_month', toAccrualDate(opts.accrualMonth))
+  if (opts?.accrualMonth) q = q.like('accrual_month', `${opts.accrualMonth.slice(0, 7)}%`)
 
   const { data } = await q
   return (data ?? []) as PayInfoV2[]
