@@ -63,7 +63,7 @@ function normalizeInput(input: CompanyInput) {
     'tax invoice email': input['tax invoice email']?.trim() || null,
     status:             input.status ?? 'active',
     payslip_note:            input.payslip_note?.trim() || null,
-    payslip_note_overrides:  input.payslip_note_overrides ?? null,
+    // payslip_note_overrides는 updatePayslipNoteOverrides()만 관리 — 여기서 건드리면 stale form state가 덮어씀
     payroll_day:        input.payroll_day != null
                           ? Math.min(31, Math.max(1, Math.round(input.payroll_day)))
                           : null,
