@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { MapPin, Clock, CheckCircle, LogOut, LogIn, AlertCircle, Loader2, ChevronDown, ChevronUp, Edit2, Map } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { MapPin, Clock, CheckCircle, LogOut, LogIn, AlertCircle, Loader2, ChevronDown, ChevronUp, Edit2, Map, ChevronRight } from 'lucide-react'
 import { KakaoMap } from '@/components/attendance/kakao-map'
 import { cn } from '@/lib/utils'
 import { checkIn, checkOut, updateAttendance, getAttendanceByDate } from '@/lib/actions/attendance-actions'
@@ -49,7 +50,7 @@ function fmtTime(iso: string | null) {
   return new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
 }
 function fmtDateKo(date: string) {
-  return new Date(date + 'T00:00:00+09:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
+  return new Date(date + 'T00:00:00+09:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul' })
 }
 // UTC ISO → KST datetime-local 값 (datetime-local은 로컬 시간 기준)
 function utcToKstLocal(iso: string): string {
@@ -58,6 +59,7 @@ function utcToKstLocal(iso: string): string {
 }
 
 export function AttendanceClient({ today, todayLog: initialLog, company, isImpersonating, employeeName, periodLogs }: Props) {
+  const router = useRouter()
   const [log,        setLog]        = useState<AttendanceLog | null>(initialLog)
   const [workType,   setWorkType]   = useState<WorkType>('office')
   const [workNote,   setWorkNote]   = useState('')
@@ -67,6 +69,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
   const [gpsErr,     setGpsErr]     = useState<GpsError>(null)
   const [isGps,      setIsGps]      = useState(false)
   const [editOpen,   setEditOpen]   = useState(false)
+  const [editingLog, setEditingLog] = useState<AttendanceLog | null>(null)
   const [editInAt,   setEditInAt]   = useState('')
   const [editOutAt,  setEditOutAt]  = useState('')
   const [editType,   setEditType]   = useState<WorkType>('office')
@@ -174,21 +177,27 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
     })
   }
 
-  function openEdit() {
-    if (!log) return
-    setEditInAt(log.check_in_at   ? utcToKstLocal(log.check_in_at)   : '')
-    setEditOutAt(log.check_out_at ? utcToKstLocal(log.check_out_at) : '')
-    setEditType(log.work_type)
-    setEditNote(log.work_note ?? '')
+  function openEditFor(targetLog: AttendanceLog) {
+    setEditInAt(targetLog.check_in_at   ? utcToKstLocal(targetLog.check_in_at)  : '')
+    setEditOutAt(targetLog.check_out_at ? utcToKstLocal(targetLog.check_out_at) : '')
+    setEditType(targetLog.work_type)
+    setEditNote(targetLog.work_note ?? '')
+    setEditingLog(targetLog)
+    setError(null)
     setEditOpen(true)
   }
 
-  function handleEditSave() {
+  function openEdit() {
     if (!log) return
+    openEditFor(log)
+  }
+
+  function handleEditSave() {
+    if (!editingLog) return
     setError(null)
     startTransition(async () => {
       const res = await updateAttendance({
-        log_id:       log.id,
+        log_id:       editingLog.id,
         work_type:    editType,
         work_note:    editNote || undefined,
         check_in_at:  editInAt  ? new Date(editInAt  + ':00+09:00').toISOString() : undefined,
@@ -197,7 +206,9 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
       if (!res.success) { setError(res.error ?? '오류가 발생했습니다.'); return }
       showToast('수정되었습니다.')
       setEditOpen(false)
-      await reloadLog()
+      setEditingLog(null)
+      if (editingLog.work_date === today) await reloadLog()
+      router.refresh()
     })
   }
 
@@ -509,8 +520,12 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
                   ? calcWorkMinutes(l.check_in_at, l.check_out_at)
                   : null
                 return (
-                  <li key={l.id} className="px-5 py-3">
-                    <div className="flex items-start justify-between gap-2">
+                  <li
+                    key={l.id}
+                    className="px-5 py-3 cursor-pointer hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                    onClick={() => openEditFor(l)}
+                  >
+                    <div className="flex items-center gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-medium text-slate-800">{fmtDateKo(l.work_date)}</span>
@@ -529,9 +544,12 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
                           )}
                         </div>
                       </div>
-                      <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5', statusColor[l.status])}>
-                        {STATUS_LABELS[l.status]}
-                      </span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', statusColor[l.status])}>
+                          {STATUS_LABELS[l.status]}
+                        </span>
+                        <ChevronRight size={14} className="text-slate-300" />
+                      </div>
                     </div>
                   </li>
                 )
@@ -541,13 +559,13 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
       )}
 
       {/* 수정 폼 */}
-      {editOpen && log && (
+      {editOpen && editingLog && (
         <div className="card px-5 py-5 space-y-4 border-2 border-blue-200">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-blue-700 flex items-center gap-1">
-              <Edit2 size={14} /> 출퇴근 수정
+              <Edit2 size={14} /> {fmtDateKo(editingLog.work_date)} 수정
             </p>
-            <button onClick={() => setEditOpen(false)} className="text-slate-400 text-xs hover:text-slate-600">닫기</button>
+            <button onClick={() => { setEditOpen(false); setEditingLog(null) }} className="text-slate-400 text-xs hover:text-slate-600">닫기</button>
           </div>
 
           <div>

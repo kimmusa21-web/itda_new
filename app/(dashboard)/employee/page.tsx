@@ -111,7 +111,7 @@ export default async function EmployeeDashboard() {
             <div className="flex items-center gap-2">
               <Clock size={14} className="text-slate-400" />
               <span className="text-xs text-slate-500">
-                {new Date(today + 'T00:00:00+09:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
+                {new Date(today + 'T00:00:00+09:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul' })}
               </span>
             </div>
             <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full', statusColor[attendanceStatus])}>
