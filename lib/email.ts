@@ -33,7 +33,7 @@ async function sendRawEmail(payload: EmailPayload): Promise<{ success: boolean; 
   if (process.env.RESEND_API_KEY) {
     const { Resend } = await import('resend')
     const resend = new Resend(process.env.RESEND_API_KEY)
-    const from = process.env.EMAIL_FROM ?? 'itda <noreply@itda.kr>'
+    const from = process.env.EMAIL_FROM ?? 'ModuHR <noreply@itda.kr>'
     const { error } = await resend.emails.send({
       from,
       to:          payload.to,
@@ -66,7 +66,7 @@ export async function sendVerificationEmail(
 
   return sendRawEmail({
     to,
-    subject: '[itda] 가입 인증번호 안내',
+    subject: '[ModuHR] 가입 인증번호 안내',
     text: `안녕하세요, ${name}님.\n\n인증번호: ${code}\n\n인증번호는 ${expiresInMinutes}분간 유효합니다.\n가입 페이지: ${appUrl}/auth/verify`,
     html: `
 <!DOCTYPE html>
@@ -75,7 +75,7 @@ export async function sendVerificationEmail(
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 16px">
   <div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
     <div style="background:#2563eb;padding:28px 32px">
-      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">ModuHR</h1>
       <p style="color:#bfdbfe;margin:4px 0 0;font-size:13px">급여관리 서비스</p>
     </div>
     <div style="padding:32px">
@@ -123,7 +123,7 @@ export async function sendPayslipNotificationEmail(
 
   return sendRawEmail({
     to,
-    subject: `[itda] ${companyName} ${monthLabel} 급여명세서 안내`,
+    subject: `[ModuHR] ${companyName} ${monthLabel} 급여명세서 안내`,
     text: [
       `안녕하세요, ${name}님.`,
       ``,
@@ -134,7 +134,7 @@ export async function sendPayslipNotificationEmail(
       `아래 링크에서 급여명세서를 확인하세요:`,
       payslipUrl,
       ``,
-      `본 메일은 itda 급여관리 서비스에서 자동 발송되었습니다.`,
+      `본 메일은 ModuHR에서 자동 발송되었습니다.`,
     ].join('\n'),
     html: `
 <!DOCTYPE html>
@@ -145,7 +145,7 @@ export async function sendPayslipNotificationEmail(
 
     <!-- 헤더 -->
     <div style="background:#2563eb;padding:28px 32px">
-      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">ModuHR</h1>
       <p style="color:#bfdbfe;margin:4px 0 0;font-size:13px">급여관리 서비스</p>
     </div>
 
@@ -178,14 +178,14 @@ export async function sendPayslipNotificationEmail(
 
       <p style="color:#94a3b8;font-size:12px;margin:0;line-height:1.7">
         급여 내역 상세 조회는 로그인 후 확인 가능합니다.<br>
-        본 이메일은 itda 급여관리 서비스에서 자동 발송되었습니다.
+        본 이메일은 ModuHR에서 자동 발송되었습니다.
       </p>
     </div>
 
     <!-- 푸터 -->
     <div style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0">
       <p style="color:#94a3b8;font-size:11px;margin:0">
-        © itda 급여관리 · 본 메일은 발신 전용입니다.
+        © ModuHR · 본 메일은 발신 전용입니다.
       </p>
     </div>
   </div>
@@ -206,11 +206,11 @@ export async function sendInviteEmail(
 
   return sendRawEmail({
     to,
-    subject: '[itda] 급여관리 서비스 초대 안내',
+    subject: '[ModuHR] 급여관리 서비스 초대 안내',
     text: [
       `안녕하세요, ${name}님.`,
       ``,
-      `itda 급여관리 서비스에 초대되었습니다.`,
+      `ModuHR에 초대되었습니다.`,
       `아래 링크를 클릭하여 비밀번호를 설정하고 가입을 완료해주세요.`,
       ``,
       inviteUrl,
@@ -225,13 +225,13 @@ export async function sendInviteEmail(
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 16px">
   <div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
     <div style="background:#2563eb;padding:28px 32px">
-      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">ModuHR</h1>
       <p style="color:#bfdbfe;margin:4px 0 0;font-size:13px">급여관리 서비스</p>
     </div>
     <div style="padding:32px">
       <p style="color:#0f172a;font-size:16px;margin:0 0 6px">안녕하세요, <strong>${name}</strong>님.</p>
       <p style="color:#475569;font-size:14px;margin:0 0 28px;line-height:1.6">
-        itda 급여관리 서비스에 초대되었습니다.<br>
+        ModuHR에 초대되었습니다.<br>
         아래 버튼을 클릭하여 비밀번호를 설정하고 가입을 완료해주세요.
       </p>
 
@@ -255,7 +255,7 @@ export async function sendInviteEmail(
     </div>
     <div style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0">
       <p style="color:#94a3b8;font-size:11px;margin:0">
-        © itda 급여관리 · 본 메일은 발신 전용입니다.
+        © ModuHR · 본 메일은 발신 전용입니다.
       </p>
     </div>
   </div>
@@ -334,7 +334,7 @@ export async function sendEmploymentCertificateEmail(
 
   return sendRawEmail({
     to,
-    subject: `[itda] ${docType} 발급 안내 — ${companyName}`,
+    subject: `[ModuHR] ${docType} 발급 안내 — ${companyName}`,
     attachments: pdfBuffer
       ? [{ filename: `${docType}_${employeeName}.pdf`, content: pdfBuffer }]
       : undefined,
@@ -411,7 +411,7 @@ export async function sendEmploymentCertificateEmail(
     ${companyAddress ? `<p class="sig-addr">${companyAddress}</p>` : ''}
   </div>
 </div>
-<p class="footer">본 문서는 itda 급여관리 서비스를 통해 발급되었습니다.</p>
+<p class="footer">본 문서는 ModuHR를 통해 발급되었습니다.</p>
 </body>
 </html>`.trim(),
   })
@@ -468,7 +468,7 @@ export async function sendTaxDocumentRequestEmail(
       `아래의 이메일로 발급 부탁드립니다.`,
       `  회신 이메일: ${employeeEmail}`,
       '',
-      '본 메일은 itda 급여관리 서비스에서 자동 발송되었습니다.',
+      '본 메일은 ModuHR에서 자동 발송되었습니다.',
     ].filter(Boolean).join('\n'),
     html: `
 <!DOCTYPE html>
@@ -477,7 +477,7 @@ export async function sendTaxDocumentRequestEmail(
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 16px">
   <div style="max-width:520px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
     <div style="background:#0f172a;padding:28px 32px">
-      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">ModuHR</h1>
       <p style="color:#94a3b8;margin:4px 0 0;font-size:13px">서류발급 요청</p>
     </div>
     <div style="padding:32px">
@@ -517,11 +517,11 @@ export async function sendTaxDocumentRequestEmail(
       </div>
 
       <p style="color:#94a3b8;font-size:12px;margin:0;line-height:1.7">
-        본 이메일은 itda 급여관리 서비스에서 자동 발송되었습니다.
+        본 이메일은 ModuHR에서 자동 발송되었습니다.
       </p>
     </div>
     <div style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0">
-      <p style="color:#94a3b8;font-size:11px;margin:0">© itda 급여관리 · 본 메일은 발신 전용입니다.</p>
+      <p style="color:#94a3b8;font-size:11px;margin:0">© ModuHR · 본 메일은 발신 전용입니다.</p>
     </div>
   </div>
 </body>
@@ -537,7 +537,7 @@ export async function sendPasswordResetEmail(
 ): Promise<{ success: boolean; error?: string }> {
   return sendRawEmail({
     to,
-    subject: '[itda] 비밀번호 재설정 안내',
+    subject: '[ModuHR] 비밀번호 재설정 안내',
     text: [
       `안녕하세요, ${name}님.`,
       ``,
@@ -555,7 +555,7 @@ export async function sendPasswordResetEmail(
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 16px">
   <div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
     <div style="background:#2563eb;padding:28px 32px">
-      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">ModuHR</h1>
       <p style="color:#bfdbfe;margin:4px 0 0;font-size:13px">비밀번호 재설정</p>
     </div>
     <div style="padding:32px">
@@ -580,7 +580,7 @@ export async function sendPasswordResetEmail(
       </p>
     </div>
     <div style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0">
-      <p style="color:#94a3b8;font-size:11px;margin:0">© itda 급여관리 · 본 메일은 발신 전용입니다.</p>
+      <p style="color:#94a3b8;font-size:11px;margin:0">© ModuHR · 본 메일은 발신 전용입니다.</p>
     </div>
   </div>
 </body>
@@ -595,9 +595,9 @@ export async function sendWelcomeEmail(
 ): Promise<{ success: boolean; error?: string }> {
   return sendRawEmail({
     to,
-    subject: '[itda] 가입이 완료되었습니다',
-    text: `환영합니다, ${name}님! itda 급여관리 서비스에 가입되었습니다.`,
-    html: `<p>환영합니다, <strong>${name}</strong>님! itda에 오신 것을 환영합니다.</p>`,
+    subject: '[ModuHR] 가입이 완료되었습니다',
+    text: `환영합니다, ${name}님! ModuHR에 가입되었습니다.`,
+    html: `<p>환영합니다, <strong>${name}</strong>님! ModuHR에 오신 것을 환영합니다.</p>`,
   })
 }
 
@@ -624,7 +624,7 @@ export async function sendLeaveRequestNotification(
 
   return sendRawEmail({
     to,
-    subject: `[itda] ${employeeName} 님의 연차 신청`,
+    subject: `[ModuHR] ${employeeName} 님의 연차 신청`,
     text: [
       `${managerName} 담당자님,`,
       ``,
@@ -643,7 +643,7 @@ export async function sendLeaveRequestNotification(
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 16px">
   <div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
     <div style="background:#059669;padding:28px 32px">
-      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">ModuHR</h1>
       <p style="color:#a7f3d0;margin:4px 0 0;font-size:13px">연차 신청 알림</p>
     </div>
     <div style="padding:32px">
@@ -660,7 +660,7 @@ export async function sendLeaveRequestNotification(
       <a href="${appUrl}/manager/leave" style="display:block;background:#059669;color:white;text-align:center;padding:14px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;margin-bottom:16px">
         승인 / 반려하기 →
       </a>
-      <p style="color:#94a3b8;font-size:12px;margin:0">본 메일은 itda 급여관리 서비스에서 자동 발송되었습니다.</p>
+      <p style="color:#94a3b8;font-size:12px;margin:0">본 메일은 ModuHR에서 자동 발송되었습니다.</p>
     </div>
   </div>
 </body></html>`.trim(),
@@ -687,7 +687,7 @@ export async function sendLeaveApprovalEmail(
 
   return sendRawEmail({
     to,
-    subject: '[itda] 연차 신청이 승인되었습니다',
+    subject: '[ModuHR] 연차 신청이 승인되었습니다',
     text: [
       `${employeeName} 님,`,
       ``,
@@ -701,7 +701,7 @@ export async function sendLeaveApprovalEmail(
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 16px">
   <div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
     <div style="background:#2563eb;padding:28px 32px">
-      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">ModuHR</h1>
       <p style="color:#bfdbfe;margin:4px 0 0;font-size:13px">연차 승인 완료</p>
     </div>
     <div style="padding:32px">
@@ -714,7 +714,7 @@ export async function sendLeaveApprovalEmail(
           <tr><td style="color:#64748b;font-size:13px;padding:4px 0">차감</td><td style="color:#0f172a;font-size:13px;font-weight:600;padding:4px 0">${hours}시간</td></tr>
         </table>
       </div>
-      <p style="color:#94a3b8;font-size:12px;margin:0">본 메일은 itda 급여관리 서비스에서 자동 발송되었습니다.</p>
+      <p style="color:#94a3b8;font-size:12px;margin:0">본 메일은 ModuHR에서 자동 발송되었습니다.</p>
     </div>
   </div>
 </body></html>`.trim(),
@@ -743,7 +743,7 @@ export async function sendLeaveCancellationNotification(
 
   return sendRawEmail({
     to,
-    subject: `[itda] ${employeeName} 님이 승인된 연차를 취소했습니다`,
+    subject: `[ModuHR] ${employeeName} 님이 승인된 연차를 취소했습니다`,
     text: [
       `${managerName} 담당자님,`,
       ``,
@@ -761,7 +761,7 @@ export async function sendLeaveCancellationNotification(
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 16px">
   <div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
     <div style="background:#f59e0b;padding:28px 32px">
-      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">ModuHR</h1>
       <p style="color:#fef3c7;margin:4px 0 0;font-size:13px">연차 취소 알림</p>
     </div>
     <div style="padding:32px">
@@ -780,7 +780,7 @@ export async function sendLeaveCancellationNotification(
       <a href="${appUrl}/manager/leave" style="display:block;background:#f59e0b;color:white;text-align:center;padding:14px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;margin-bottom:16px">
         연차 현황 확인하기 →
       </a>
-      <p style="color:#94a3b8;font-size:12px;margin:0">본 메일은 itda 급여관리 서비스에서 자동 발송되었습니다.</p>
+      <p style="color:#94a3b8;font-size:12px;margin:0">본 메일은 ModuHR에서 자동 발송되었습니다.</p>
     </div>
   </div>
 </body></html>`.trim(),
@@ -808,7 +808,7 @@ export async function sendLeaveRejectionEmail(
 
   return sendRawEmail({
     to,
-    subject: '[itda] 연차 신청이 반려되었습니다',
+    subject: '[ModuHR] 연차 신청이 반려되었습니다',
     text: [
       `${employeeName} 님,`,
       ``,
@@ -823,7 +823,7 @@ export async function sendLeaveRejectionEmail(
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 16px">
   <div style="max-width:480px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
     <div style="background:#dc2626;padding:28px 32px">
-      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">itda</h1>
+      <h1 style="color:white;margin:0;font-size:22px;font-weight:700">ModuHR</h1>
       <p style="color:#fecaca;margin:4px 0 0;font-size:13px">연차 반려 안내</p>
     </div>
     <div style="padding:32px">
