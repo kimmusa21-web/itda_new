@@ -203,18 +203,26 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
                 value={d.workDays != null ? `${d.workDays}일` : '-'}
               />
             </div>
-            {/* 정산기간: 전체 너비 */}
-            <PayInfoCell
-              label="정산기간"
-              value={
-                (d.startDate && d.endDate)
-                  ? `${d.startDate} ~ ${d.endDate}`
-                  : (d.payrollPeriodStart && d.payrollPeriodEnd)
-                    ? `${d.payrollPeriodStart} ~ ${d.payrollPeriodEnd}`
-                    : '-'
-              }
-              wide
-            />
+            {/* 정산기간 + 통상시급(있을 때) */}
+            <div className={d.hourlyRate != null ? 'grid grid-cols-2 gap-3' : ''}>
+              <PayInfoCell
+                label="정산기간"
+                value={
+                  (d.startDate && d.endDate)
+                    ? `${d.startDate} ~ ${d.endDate}`
+                    : (d.payrollPeriodStart && d.payrollPeriodEnd)
+                      ? `${d.payrollPeriodStart} ~ ${d.payrollPeriodEnd}`
+                      : '-'
+                }
+                wide={d.hourlyRate == null}
+              />
+              {d.hourlyRate != null && (
+                <PayInfoCell
+                  label="통상시급"
+                  value={`${d.hourlyRate.toLocaleString('ko-KR')}원`}
+                />
+              )}
+            </div>
           </div>
         </div>
 
@@ -229,14 +237,7 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
           return (
             <InfoSection icon={<Timer size={14} className="text-blue-500" />} title="근로시간 / 연차">
               <div className="grid grid-cols-2 gap-3 py-2">
-                {d.hourlyRate != null ? (
-                  <>
-                    <WorkTimeRow label="기본근로시간(h)" value={baseHours} />
-                    <WorkTimeRow label="통상시급" value={d.hourlyRate} unit="원" />
-                  </>
-                ) : (
-                  <WorkTimeRow label="기본근로시간(h)" value={baseHours} wide />
-                )}
+                <WorkTimeRow label="기본근로시간(h)" value={baseHours} wide />
                 <WorkTimeRow label="연장근로시간(h)" value={d.overtimeHours ?? d.overTime} />
                 <WorkTimeRow label="휴일근로시간(h)" value={d.holidayWorkingHours} />
                 <WorkTimeRow label="야간근로시간(h)" value={d.nightWorkHours} />
