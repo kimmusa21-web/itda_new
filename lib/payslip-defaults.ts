@@ -12,6 +12,7 @@
 
 /* ── 항목 키 목록 ─────────────────────────────────────────── */
 export const PAYSLIP_RULE_KEYS = [
+  'hourly_pay',
   'prorated_salary',
   'overtime_pay',
   'night_pay',
@@ -29,6 +30,7 @@ export type PayslipRuleKey = (typeof PAYSLIP_RULE_KEYS)[number]
 
 /* ── 항목 한글 라벨 ───────────────────────────────────────── */
 export const PAYSLIP_RULE_LABELS: Record<PayslipRuleKey, string> = {
+  hourly_pay:           '시급제 기본급',
   prorated_salary:      '일할계산',
   overtime_pay:         '연장근로수당',
   night_pay:            '야간근로수당',
@@ -44,6 +46,7 @@ export const PAYSLIP_RULE_LABELS: Record<PayslipRuleKey, string> = {
 
 /* ── 시스템 기본 산출근거 (항목별) ─────────────────────────── */
 export const DEFAULT_PAYSLIP_RULES: Record<PayslipRuleKey, string> = {
+  hourly_pay:           '',   // 기본값 없음 — 회사 override로만 표시
   prorated_salary:      '일할계산: (기본급+고정연장수당+식대)/당월일수×근무일수',
   overtime_pay:         '연장근로수당: (기본급+식대)/209h × 연장근로시간 × 1.5',
   night_pay:            '야간근로수당: (기본급+식대)/209h × 야간근로시간 × 0.5',
@@ -60,7 +63,7 @@ export const DEFAULT_PAYSLIP_RULES: Record<PayslipRuleKey, string> = {
 /* ── 하위호환: string[] 형태 기본값 ─────────────────────────── */
 export const DEFAULT_PAYSLIP_NOTES: string[] = PAYSLIP_RULE_KEYS.map(
   k => DEFAULT_PAYSLIP_RULES[k],
-)
+).filter(Boolean)
 
 /** textarea placeholder용 기본 텍스트 */
 export const DEFAULT_PAYSLIP_NOTE_PLACEHOLDER = DEFAULT_PAYSLIP_NOTES.join('\n')
@@ -75,7 +78,7 @@ export function mergePayslipRules(
   if (!overrides) return [...DEFAULT_PAYSLIP_NOTES]
   return PAYSLIP_RULE_KEYS.map(key =>
     overrides[key]?.trim() || DEFAULT_PAYSLIP_RULES[key],
-  )
+  ).filter(Boolean)
 }
 
 /* ── getEffectivePayslipRules ──────────────────────────────

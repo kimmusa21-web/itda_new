@@ -134,7 +134,7 @@ export function PayslipNoteEditor({ initialOverrides, companyId }: Props) {
                   )}>
                     {label}
                   </span>
-                  {!isExpanded && (
+                  {!isExpanded && (isOverridden || defaultText) && (
                     <span className="text-xs text-slate-400 truncate hidden sm:block">
                       — {isOverridden ? override : defaultText}
                     </span>
@@ -155,7 +155,7 @@ export function PayslipNoteEditor({ initialOverrides, companyId }: Props) {
                       시스템 기본값
                     </p>
                     <p className="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 leading-relaxed">
-                      {defaultText}
+                      {defaultText || '기본값 없음 — 회사별로 직접 입력'}
                     </p>
                   </div>
 
@@ -172,7 +172,7 @@ export function PayslipNoteEditor({ initialOverrides, companyId }: Props) {
                     <textarea
                       rows={2}
                       className="input text-xs leading-relaxed resize-none w-full"
-                      placeholder={`비워두면 기본값 사용:\n${defaultText}`}
+                      placeholder={defaultText ? `비워두면 기본값 사용:\n${defaultText}` : '이 항목의 산출근거를 입력하세요'}
                       value={override}
                       onChange={e => handleChange(key, e.target.value)}
                     />
