@@ -46,6 +46,7 @@ interface Props {
   resignedEmployees:     EmployeeRow[]
   withdrawalRequests:    WithdrawalRequest[]
   otherNotifications:    Notification[]
+  hideTitle?:            boolean
 }
 
 type Tab = 'company' | 'employee' | 'resignation' | 'withdrawal'
@@ -467,6 +468,7 @@ export default function AdminRequestsClient({
   resignedEmployees,
   withdrawalRequests,
   otherNotifications,
+  hideTitle = false,
 }: Props) {
   const [tab, setTab] = useState<Tab>('company')
   const [requests,    setRequests]    = useState(companyRequests)
@@ -515,10 +517,12 @@ export default function AdminRequestsClient({
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">기업신청</h1>
-        <p className="text-sm text-slate-500 mt-0.5">기업 가입, 직원 등록, 탈퇴 요청을 처리하세요</p>
-      </div>
+      {!hideTitle && (
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">기업신청</h1>
+          <p className="text-sm text-slate-500 mt-0.5">기업 가입, 직원 등록, 탈퇴 요청을 처리하세요</p>
+        </div>
+      )}
 
       {/* 탭 */}
       <div className="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">

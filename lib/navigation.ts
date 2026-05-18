@@ -9,17 +9,15 @@ export type RoleNavMap = Record<Role, NavItem[]>
 /** 데스크톱 사이드바 전체 메뉴 */
 export const roleNavMap: RoleNavMap = {
   admin: [
-    { label: '대시보드',   href: '/admin',                   icon: Home            },
-    { label: '기업신청',   href: '/admin/requests',          icon: Bell            },
-    { label: '기업관리',   href: '/admin/companies',         icon: Building2       },
-    { label: '직원관리',   href: '/admin/employees',          icon: Users           },
-    { label: '급여조회',   href: '/admin/payroll',            icon: BarChart3       },
-    { label: '급여업로드', href: '/admin/payroll/upload',    icon: Upload          },
-    { label: '퇴직금 산정', href: '/admin/severance',        icon: BadgeDollarSign },
-    { label: '이직확인서', href: '/admin/separation',        icon: FileText        },
-    { label: '점검 모드',  href: '/admin/impersonation',     icon: Eye             },
-    { label: '근태관리',   href: '/admin/attendance',        icon: Clock           },
-    { label: '내 정보',    href: '/admin/profile',           icon: Settings        },
+    { label: '대시보드/알림', href: '/admin',                 icon: Home            },
+    { label: '기업관리',      href: '/admin/companies',       icon: Building2       },
+    { label: '직원관리',      href: '/admin/employees',        icon: Users           },
+    { label: '급여조회',      href: '/admin/payroll',          icon: BarChart3       },
+    { label: '근태관리',      href: '/admin/attendance',       icon: Clock           },
+    { label: '퇴직금 산정',   href: '/admin/severance',       icon: BadgeDollarSign },
+    { label: '이직확인서',    href: '/admin/separation',      icon: FileText        },
+    { label: '점검 모드',     href: '/admin/impersonation',   icon: Eye             },
+    { label: '내 정보',       href: '/admin/profile',          icon: Settings        },
   ],
   manager: [
     { label: '홈',       href: '/manager',                    icon: Home           },
@@ -79,8 +77,7 @@ export function getRoleFromPath(pathname: string): Role {
 
 export function getPageTitle(pathname: string): string {
   const map: Record<string, string> = {
-    '/admin':                        '대시보드',
-    '/admin/requests':               '기업신청',
+    '/admin':                        '대시보드/알림',
     '/admin/companies':              '기업관리',
     '/admin/employees':              '직원관리',
     '/admin/employees/resigned':     '퇴사자 관리',

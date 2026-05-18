@@ -1,7 +1,8 @@
 'use client'
 
 import { useState }                      from 'react'
-import { Search, BarChart3, X, Users, Calendar, Loader2 } from 'lucide-react'
+import Link                              from 'next/link'
+import { Search, BarChart3, X, Users, Calendar, Loader2, Upload } from 'lucide-react'
 import { createClient }                  from '@/lib/supabase/client'
 import type { PayInfoV2 }                from '@/types'
 import { getAdminEmployeePayslipDetail } from '@/lib/employee-payslips'
@@ -131,26 +132,37 @@ export default function AdminPayrollClient({
           <p className="text-sm text-slate-500 mt-0.5">전체 회사 급여 데이터를 조회합니다</p>
         </div>
 
-        {/* 조회 모드 탭 */}
-        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl flex-shrink-0">
-          <button
-            onClick={() => setView('monthly')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              view === 'monthly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
-            }`}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* 급여업로드 버튼 */}
+          <Link
+            href="/admin/payroll/upload"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
           >
-            <Calendar size={13} />
-            월별 조회
-          </button>
-          <button
-            onClick={() => setView('employee')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              view === 'employee' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
-            }`}
-          >
-            <Users size={13} />
-            직원별 조회
-          </button>
+            <Upload size={13} />
+            급여업로드
+          </Link>
+
+          {/* 조회 모드 탭 */}
+          <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+            <button
+              onClick={() => setView('monthly')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                view === 'monthly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+              }`}
+            >
+              <Calendar size={13} />
+              월별 조회
+            </button>
+            <button
+              onClick={() => setView('employee')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                view === 'employee' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+              }`}
+            >
+              <Users size={13} />
+              직원별 조회
+            </button>
+          </div>
         </div>
       </div>
 
