@@ -28,6 +28,7 @@ export interface CompanyDetail {
   payslip_note: string | null
   payslip_note_overrides: Record<string, string> | null
   biz_doc_url: string | null
+  features: Record<string, boolean> | null
 }
 
 export interface PayrollLedgerSummary {
@@ -90,7 +91,7 @@ export async function getCompanyDetail(id: number): Promise<CompanyDetail | null
   const supabase = createClient()
   const { data, error } = await supabase
     .from('companies')
-    .select('id, name, biz_number, representative, status, contact_name, contact_email, payroll_day, payslip_note, payslip_note_overrides, biz_doc_url')
+    .select('id, name, biz_number, representative, status, contact_name, contact_email, payroll_day, payslip_note, payslip_note_overrides, biz_doc_url, features')
     .eq('id', id)
     .is('deleted_at', null)
     .single()

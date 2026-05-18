@@ -6,6 +6,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { type CompanyFeatures, DEFAULT_FEATURES } from '@/lib/features'
 
 /* ── 권한 확인 헬퍼 ─────────────────────────────────────────── */
 async function requireAdmin() {
@@ -316,6 +317,38 @@ export async function updateCompanyByManager(
     revalidatePath('/manager/payroll', 'layout')
     revalidatePath(`/admin/companies/${profile.company_id}/payroll`, 'layout')
     revalidatePath('/employee/payslips', 'layout')
+    return { success: true }
+  } catch (e: any) {
+    return { success: false, error: e.message }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   기능 활성화 설정 (어드민 전용)
+   직원관리(employees)는 required — 항상 true 강제
+═══════════════════════════════════════════════════════════════ */
+export async function updateCompanyFeatures(
+  companyId: number,
+  features: Partial<CompanyFeatures>,
+): Promise<ActionResult> {
+  try {
+    const { supabase } = await requireAdmin()
+
+    const toSave: CompanyFeatures = {
+      ...DEFAULT_FEATURES,
+      ...features,
+      employees: true, // 기본 기능 — 변경 불가
+    }
+
+    const { error } = await supabase
+      .from('companies')
+      .update({ features: toSave })
+      .eq('id', companyId)
+
+    if (error) return { success: false, error: error.message }
+
+    revalidatePath(`/admin/companies/${companyId}`)
+    revalidatePath(`/admin/companies/${companyId}/edit`)
     return { success: true }
   } catch (e: any) {
     return { success: false, error: e.message }

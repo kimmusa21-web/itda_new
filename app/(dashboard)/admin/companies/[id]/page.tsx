@@ -1,6 +1,6 @@
 import { redirect, notFound }     from 'next/navigation'
 import Link                        from 'next/link'
-import { Building2, Users, Edit2, ArrowLeft, CreditCard, FileText, Paperclip } from 'lucide-react'
+import { Building2, Users, Edit2, ArrowLeft, CreditCard, FileText, Paperclip, LayoutGrid } from 'lucide-react'
 import { createClient }            from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { StartCompanyImpersonationButton } from '@/components/impersonation/start-impersonation-button'
@@ -13,6 +13,7 @@ import { CompanyPayrollLedgerTable } from '@/components/company/company-payroll-
 import { CompanyEmployeeList }       from '@/components/company/company-employee-list'
 import { PayslipNoteEditor }         from '@/components/company/payslip-note-editor'
 import { ManagerSection }            from '@/components/company/manager-section'
+import { CompanyFeaturesEditor }     from '@/components/company/company-features-editor'
 import { cn }                        from '@/lib/utils'
 
 export async function generateMetadata({ params }: Props) {
@@ -201,6 +202,21 @@ export default async function AdminCompanyDetailPage({ params }: Props) {
           </div>
         </section>
       )}
+
+      {/* ── 기능 관리 ── */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <LayoutGrid size={15} className="text-slate-400" />
+          <h2 className="text-sm font-semibold text-slate-700">기능 관리</h2>
+          <span className="text-xs text-slate-400">· 회사에서 사용할 기능을 활성화하세요</span>
+        </div>
+        <div className="card p-5">
+          <CompanyFeaturesEditor
+            companyId={id}
+            initialFeatures={company.features}
+          />
+        </div>
+      </section>
 
       {/* ── 급여명세서 산출 근거 ── */}
       <section className="space-y-3">
