@@ -72,7 +72,7 @@ export default function Sidebar({
             </svg>
           </div>
           <div className="min-w-0">
-            <p className="text-lg font-bold text-white tracking-tight leading-tight">itda</p>
+            <p className="text-lg font-bold text-white tracking-tight leading-tight">ModuHR</p>
             {companyName && !impersonation && (
               <p className="text-[11px] text-slate-400 truncate leading-tight mt-0.5">{companyName}</p>
             )}

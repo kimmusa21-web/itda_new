@@ -10,8 +10,8 @@ const montserrat = Montserrat({
 })
 
 export const metadata: Metadata = {
-  title: { default: 'itda — 급여관리 서비스', template: '%s | itda' },
-  description: '급여명세서를 언제 어디서나 확인하는 스마트 급여관리 서비스',
+  title: { default: 'ModuHR — 딱 필요한 HR 모듈만', template: '%s | ModuHR' },
+  description: '딱 필요한 HR 모듈만. 급여·근태·연차·서류를 골라쓰는 모듈형 HR 서비스',
 }
 
 export const viewport: Viewport = {

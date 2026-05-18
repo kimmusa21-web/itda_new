@@ -78,8 +78,8 @@ function LoginPageInner() {
             <rect x="3" y="18" width="19" height="3" rx="1.5" fill="white" fillOpacity=".5"/>
           </svg>
         </div>
-        <h1 className="text-3xl font-bold text-white tracking-tight">itda</h1>
-        <p className="text-slate-400 text-sm mt-1.5">급여명세서를 언제 어디서나</p>
+        <h1 className="text-3xl font-bold text-white tracking-tight">ModuHR</h1>
+        <p className="text-slate-400 text-sm mt-1.5">딱 필요한 HR 모듈만.</p>
       </div>
 
       {/* Card */}
@@ -151,16 +151,6 @@ function LoginPageInner() {
           <RegisterForm setMessage={setMessage} message={message} />
         )}
       </div>
-
-      {/* Initial pw hint */}
-      {tab === 'login' && (
-        <p className="text-center text-xs text-slate-600 mt-5">
-          초기 비밀번호:{' '}
-          <span className="font-mono bg-[#1e293b] text-slate-400 px-2 py-0.5 rounded">
-            이메일앞부분 + 생년월일6자리
-          </span>
-        </p>
-      )}
 
       <p className="text-slate-700 text-xs mt-6">
         운영 문의: admin@itda.kr

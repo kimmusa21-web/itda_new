@@ -113,5 +113,5 @@ export function getPageTitle(pathname: string): string {
     '/manager/attendance/settings':  '출퇴근 설정',
     '/admin/attendance':             '근태관리',
   }
-  return map[pathname] ?? 'itda'
+  return map[pathname] ?? 'ModuHR'
 }

@@ -16,7 +16,7 @@ export default function Logo({ className, dark = false }: LogoProps) {
         </svg>
       </div>
       <span className={cn('text-lg font-semibold tracking-tight', dark ? 'text-slate-100' : 'text-slate-900')}>
-        itda
+        ModuHR
       </span>
     </div>
   )
