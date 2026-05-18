@@ -197,6 +197,7 @@ export async function getAdminEmployeePayslipDetail(
     numberOfDays:   (row as any).Number_of_days != null ? Number((row as any).Number_of_days) : null,
     totalTaxSalary: (row as any).Total_tax_salary != null ? Number((row as any).Total_tax_salary) : null,
     basicWorkTime:  (row as any).basic_work_time != null ? Number((row as any).basic_work_time) : null,
+    hourlyRate:     (row as any).hourly_rate     != null ? Number((row as any).hourly_rate)     : null,
     earnings:     mapEarnings(row.earnings ?? {}),
     deductions:   mapDeductions(row.deductions ?? {}),
     totalEarnings,
@@ -295,6 +296,7 @@ export async function getEmployeePayslipById(
     numberOfDays:   (row as any).Number_of_days != null ? Number((row as any).Number_of_days) : null,
     totalTaxSalary: (row as any).Total_tax_salary != null ? Number((row as any).Total_tax_salary) : null,
     basicWorkTime:  (row as any).basic_work_time != null ? Number((row as any).basic_work_time) : null,
+    hourlyRate:     (row as any).hourly_rate     != null ? Number((row as any).hourly_rate)     : null,
 
     earnings:     mapEarnings(row.earnings ?? {}),
     deductions:   mapDeductions(row.deductions ?? {}),

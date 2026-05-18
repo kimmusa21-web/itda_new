@@ -229,7 +229,14 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
           return (
             <InfoSection icon={<Timer size={14} className="text-blue-500" />} title="근로시간 / 연차">
               <div className="grid grid-cols-2 gap-3 py-2">
-                <WorkTimeRow label="기본근로시간(h)" value={baseHours} wide />
+                {d.hourlyRate != null ? (
+                  <>
+                    <WorkTimeRow label="기본근로시간(h)" value={baseHours} />
+                    <WorkTimeRow label="통상시급" value={d.hourlyRate} unit="원" />
+                  </>
+                ) : (
+                  <WorkTimeRow label="기본근로시간(h)" value={baseHours} wide />
+                )}
                 <WorkTimeRow label="연장근로시간(h)" value={d.overtimeHours ?? d.overTime} />
                 <WorkTimeRow label="휴일근로시간(h)" value={d.holidayWorkingHours} />
                 <WorkTimeRow label="야간근로시간(h)" value={d.nightWorkHours} />
@@ -248,12 +255,13 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
             ))}
           </div>
           <TotalRow label="지급합계" value={d.totalEarnings} color="blue" revealed={revealed} />
-          {d.totalTaxSalary != null && (
-            <div className="px-5 py-2.5 border-t border-slate-100 bg-slate-50/40 flex justify-between items-center">
-              <span className="text-xs font-semibold text-slate-500">과세금액합계</span>
-              <AmountText value={d.totalTaxSalary} revealed={revealed} className="text-sm font-semibold text-slate-600" />
-            </div>
-          )}
+          <div className="px-5 py-2.5 border-t border-slate-100 bg-slate-50/40 flex justify-between items-center">
+            <span className="text-xs font-semibold text-slate-500">과세금액합계</span>
+            {d.totalTaxSalary != null
+              ? <AmountText value={d.totalTaxSalary} revealed={revealed} className="text-sm font-semibold text-slate-600" />
+              : <span className="text-sm font-semibold text-slate-400">—</span>
+            }
+          </div>
         </div>
 
         {/* ── 공제 내역 ── */}
@@ -334,8 +342,10 @@ function PayInfoCell({ label, value, wide }: { label: string; value: string; wid
   )
 }
 
-function WorkTimeRow({ label, value, wide }: { label: string; value: number | null | undefined; wide?: boolean }) {
-  const display = value != null ? String(value) : '0'
+function WorkTimeRow({ label, value, wide, unit }: { label: string; value: number | null | undefined; wide?: boolean; unit?: string }) {
+  const display = value != null
+    ? (unit === '원' ? formatKRW(value) : String(value))
+    : '0'
   return (
     <div className={cn(
       'flex flex-col items-center justify-center bg-slate-50 rounded-xl py-3 px-2 text-center',
