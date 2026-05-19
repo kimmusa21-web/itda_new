@@ -103,7 +103,6 @@ export async function POST(req: Request) {
   let managerInvited = false
   if (request.admin_email) {
     try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
       const { data: inviteData, error: inviteErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(
         request.admin_email,
         {
@@ -112,7 +111,7 @@ export async function POST(req: Request) {
             role:       'manager',
             company_id: String(companyId),
           },
-          redirectTo: `${appUrl}/reset-password`,
+          redirectTo: `${new URL(req.url).origin}/reset-password`,
         }
       )
 

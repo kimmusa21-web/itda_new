@@ -6,6 +6,7 @@
 ================================================================ */
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { headers } from 'next/headers'
 import { sendPasswordResetEmail } from '@/lib/email'
 
 function getServiceClient() {
@@ -44,9 +45,13 @@ export async function sendPasswordResetByRealEmail(
   realEmail: string,
 ): Promise<{ success: boolean; error?: string }> {
   const service = getServiceClient()
-  const appUrl  =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+  // headers()로 실제 요청 호스트를 감지 — 로컬/프로덕션 모두 정확히 동작
+  const h       = headers()
+  const host    = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
+  const proto   = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
+  const appUrl  = process.env.NEXT_PUBLIC_APP_URL?.startsWith('http') && !process.env.NEXT_PUBLIC_APP_URL.includes('localhost')
+    ? process.env.NEXT_PUBLIC_APP_URL
+    : `${proto}://${host}`
   const email   = realEmail.trim().toLowerCase()
 
   // 1. 활성 직원 중 해당 실제 이메일 소유자 탐색 (가장 최근 사번 기준)

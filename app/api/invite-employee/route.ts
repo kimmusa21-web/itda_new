@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     // 6. 초대 이메일 발송 시도
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       data: { name, employee_id: employeeId },
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/reset-password`,
+      redirectTo: `${new URL(req.url).origin}/reset-password`,
     })
 
     // 재입사 케이스: 이미 Auth 계정이 있는 경우
