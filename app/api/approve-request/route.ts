@@ -111,7 +111,7 @@ export async function POST(req: Request) {
             role:       'manager',
             company_id: String(companyId),
           },
-          redirectTo: `${new URL(req.url).origin}/reset-password`,
+          redirectTo: `${new URL(req.url).origin}/auth/callback?next=/reset-password`,
         }
       )
 

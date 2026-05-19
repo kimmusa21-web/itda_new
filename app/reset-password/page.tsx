@@ -14,34 +14,14 @@ export default function ResetPasswordPage() {
   const [msg,      setMsg]      = useState('')
 
   useEffect(() => {
-    // 1) URL 해시에 복구 토큰이 있으면 직접 setSession으로 처리 (타이밍 문제 우회)
-    const hash   = window.location.hash.substring(1)
-    const params = new URLSearchParams(hash)
-    const accessToken  = params.get('access_token')
-    const refreshToken = params.get('refresh_token') ?? ''
-    const type         = params.get('type')
-
-    if (accessToken && type === 'recovery') {
-      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-        .then(({ data, error }) => {
-          if (data.session && !error) setReady(true)
-          else setMsg('인증 링크가 만료되었거나 유효하지 않습니다. 다시 요청해주세요.')
-        })
-      return
-    }
-
-    // 2) 해시가 없는 경우 — onAuthStateChange 대기 (기존 세션 재방문 등)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+    // /auth/callback에서 code 교환 완료 후 세션 쿠키가 설정된 상태로 도착
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
         setReady(true)
+      } else {
+        setMsg('인증 링크가 만료되었거나 유효하지 않습니다. 다시 요청해주세요.')
       }
     })
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true)
-    })
-
-    return () => subscription.unsubscribe()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
