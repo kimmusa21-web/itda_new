@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { stopImpersonation } from '@/lib/impersonation/actions'
 import { cn } from '@/lib/utils'
 import type { ImpersonationContext } from '@/lib/impersonation/types'
+import type { CompanyFeatures } from '@/lib/features'
 
 interface Props {
   role:          Role
@@ -15,6 +16,7 @@ interface Props {
   avatarColor?:  string
   impersonation?: ImpersonationContext | null
   companyName?:  string | null
+  features?:     CompanyFeatures | null
 }
 
 export default function Sidebar({
@@ -24,6 +26,7 @@ export default function Sidebar({
   avatarColor = '#1d4ed8',
   impersonation = null,
   companyName   = null,
+  features      = null,
 }: Props) {
   const pathname = usePathname()
   const router   = useRouter()
@@ -32,7 +35,11 @@ export default function Sidebar({
   // manager가 /employee/* 경로에 있으면 직원 모드
   const isEmployeeMode = role === 'manager' && pathname.startsWith('/employee')
   const effectiveNavRole: Role = isEmployeeMode ? 'employee' : role
-  const navItems = roleNavMap[effectiveNavRole]
+  const navItems = roleNavMap[effectiveNavRole].filter(item => {
+    if (!item.featureKeys?.length) return true
+    if (!features) return true
+    return item.featureKeys.some(key => features[key])
+  })
 
   const roleBg: Record<Role, string> = {
     admin:    'bg-indigo-900 text-indigo-200',

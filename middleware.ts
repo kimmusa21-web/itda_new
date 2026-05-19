@@ -13,7 +13,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { getImpersonationFromRequest } from '@/lib/impersonation/cookie'
 
 /** 인증 없이 접근 가능한 공개 경로 prefix */
-const PUBLIC_PATHS = ['/login', '/register', '/auth', '/no-access']
+const PUBLIC_PATHS = ['/login', '/register', '/auth', '/no-access', '/reset-password']
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })

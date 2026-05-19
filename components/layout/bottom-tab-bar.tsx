@@ -3,14 +3,19 @@ import Link        from 'next/link'
 import { usePathname } from 'next/navigation'
 import { mobileNavMap, type Role } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
+import type { CompanyFeatures } from '@/lib/features'
 
-export default function BottomTabBar({ role }: { role: Role }) {
+export default function BottomTabBar({ role, features = null }: { role: Role; features?: CompanyFeatures | null }) {
   const pathname = usePathname()
 
   // manager가 /employee/* 경로에 있으면 직원 모드
   const isEmployeeMode = role === 'manager' && pathname.startsWith('/employee')
   const effectiveNavRole: Role = isEmployeeMode ? 'employee' : role
-  const navItems = mobileNavMap[effectiveNavRole]
+  const navItems = mobileNavMap[effectiveNavRole].filter(item => {
+    if (!item.featureKeys?.length) return true
+    if (!features) return true
+    return item.featureKeys.some(key => features[key])
+  })
 
   return (
     <nav

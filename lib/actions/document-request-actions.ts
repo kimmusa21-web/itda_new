@@ -67,7 +67,7 @@ export async function approveDocumentRequest(
     .select(`
       id, document_type, purpose, address, note, status, requested_at,
       employees(id, name, email, registration_number, department, position, Date_of_joining, quit_date),
-      companies(id, name, representative, address, tax_accountant_company, tax_accountant_name, tax_accountant_email)
+      companies(id, name, representative, address, tax_accountant_company, tax_accountant_name, tax_accountant_email, seal_image_url)
     `)
     .eq('id', requestId)
     .single()
@@ -76,7 +76,7 @@ export async function approveDocumentRequest(
   if (req.status !== 'pending') return { success: false, error: '이미 처리된 신청입니다' }
 
   type EmpRow = { id: number; name: string; email: string; registration_number: string | null; department: string | null; position: string | null; Date_of_joining: string | null; quit_date: string | null }
-  type CompanyRow = { id: number; name: string; representative: string | null; address: string | null; tax_accountant_company: string | null; tax_accountant_name: string | null; tax_accountant_email: string | null }
+  type CompanyRow = { id: number; name: string; representative: string | null; address: string | null; tax_accountant_company: string | null; tax_accountant_name: string | null; tax_accountant_email: string | null; seal_image_url: string | null }
   const empRaw = req.employees as unknown as EmpRow | EmpRow[]
   const emp    = Array.isArray(empRaw) ? empRaw[0] : empRaw
   const company = req.companies as unknown as CompanyRow
@@ -110,6 +110,7 @@ export async function approveDocumentRequest(
       representative: company.representative,
       companyAddress: company.address,
       issuedDate:     today,
+      sealImageUrl:   company.seal_image_url,
     })
   } else {
     // 세무 관련 서류 → 세무사 이메일로 발급 요청

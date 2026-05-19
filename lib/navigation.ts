@@ -1,9 +1,10 @@
 import { Bell, Building2, Users, Upload, Home, BarChart3, Wallet, User, UserPlus, ClipboardList, Eye, BadgeDollarSign, Settings, FileText, FolderOpen, CalendarDays, Clock, type LucideIcon } from 'lucide-react'
 import type { Role } from '@/types'
+import type { FeatureKey } from '@/lib/features'
 
 export type { Role }
 
-export type NavItem = { label: string; href: string; icon: LucideIcon }
+export type NavItem = { label: string; href: string; icon: LucideIcon; featureKeys?: FeatureKey[] }
 export type RoleNavMap = Record<Role, NavItem[]>
 
 /** 데스크톱 사이드바 전체 메뉴 */
@@ -23,19 +24,19 @@ export const roleNavMap: RoleNavMap = {
     { label: '홈',       href: '/manager',                    icon: Home           },
     { label: '기업관리', href: '/manager/company',            icon: Building2      },
     { label: '직원관리', href: '/manager/employees',          icon: Users          },
-    { label: '급여조회', href: '/manager/payroll',            icon: BarChart3      },
-    { label: '서류관리', href: '/manager/documents',          icon: FolderOpen     },
-    { label: '연차관리', href: '/manager/leave',              icon: CalendarDays   },
-    { label: '근태현황', href: '/manager/attendance',         icon: Clock          },
+    { label: '급여조회', href: '/manager/payroll',            icon: BarChart3,     featureKeys: ['payroll']    },
+    { label: '서류관리', href: '/manager/documents',          icon: FolderOpen,    featureKeys: ['documents']  },
+    { label: '연차관리', href: '/manager/leave',              icon: CalendarDays,  featureKeys: ['leave']      },
+    { label: '근태현황', href: '/manager/attendance',         icon: Clock,         featureKeys: ['attendance'] },
     { label: '내 정보',  href: '/manager/profile',            icon: Settings       },
   ],
   employee: [
-    { label: '홈',      href: '/employee',            icon: Home       },
-    { label: '급여',    href: '/employee/payslips',   icon: Wallet     },
-    { label: '서류신청', href: '/employee/documents',  icon: FolderOpen  },
-    { label: '연차',     href: '/employee/leave',     icon: CalendarDays },
-    { label: '출퇴근',  href: '/employee/attendance', icon: Clock       },
-    { label: '내 정보', href: '/employee/profile',    icon: User        },
+    { label: '홈',       href: '/employee',            icon: Home                                            },
+    { label: '급여',     href: '/employee/payslips',   icon: Wallet,       featureKeys: ['payroll']          },
+    { label: '서류신청', href: '/employee/documents',  icon: FolderOpen,   featureKeys: ['documents']        },
+    { label: '연차',     href: '/employee/leave',      icon: CalendarDays, featureKeys: ['leave']            },
+    { label: '출퇴근',   href: '/employee/attendance', icon: Clock,        featureKeys: ['attendance']       },
+    { label: '내 정보',  href: '/employee/profile',    icon: User                                            },
   ],
 }
 
@@ -49,18 +50,18 @@ export const mobileNavMap: RoleNavMap = {
     { label: '기업',     href: '/admin/companies',      icon: Building2 },
   ],
   manager: [
-    { label: '홈',       href: '/manager',              icon: Home         },
-    { label: '직원관리', href: '/manager/employees',    icon: Users        },
-    { label: '급여조회', href: '/manager/payroll',      icon: BarChart3    },
-    { label: '근태현황', href: '/manager/attendance',   icon: Clock        },
-    { label: '연차/서류', href: '/manager/leave',       icon: CalendarDays },
+    { label: '홈',       href: '/manager',              icon: Home                                                   },
+    { label: '직원관리', href: '/manager/employees',    icon: Users                                                  },
+    { label: '급여조회', href: '/manager/payroll',      icon: BarChart3,    featureKeys: ['payroll']                 },
+    { label: '근태현황', href: '/manager/attendance',   icon: Clock,        featureKeys: ['attendance']              },
+    { label: '연차/서류', href: '/manager/leave',       icon: CalendarDays, featureKeys: ['leave', 'documents']      },
   ],
   employee: [
-    { label: '홈',       href: '/employee',            icon: Home         },
-    { label: '급여',     href: '/employee/payslips',   icon: Wallet       },
-    { label: '출퇴근',   href: '/employee/attendance', icon: Clock        },
-    { label: '연차/서류', href: '/employee/leave',     icon: CalendarDays },
-    { label: '내 정보',  href: '/employee/profile',    icon: User         },
+    { label: '홈',       href: '/employee',            icon: Home                                                    },
+    { label: '급여',     href: '/employee/payslips',   icon: Wallet,       featureKeys: ['payroll']                  },
+    { label: '출퇴근',   href: '/employee/attendance', icon: Clock,        featureKeys: ['attendance']               },
+    { label: '연차/서류', href: '/employee/leave',     icon: CalendarDays, featureKeys: ['leave', 'documents']       },
+    { label: '내 정보',  href: '/employee/profile',    icon: User                                                    },
   ],
 }
 

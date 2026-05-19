@@ -14,6 +14,7 @@ import { CompanyEmployeeList }       from '@/components/company/company-employee
 import { PayslipNoteEditor }         from '@/components/company/payslip-note-editor'
 import { ManagerSection }            from '@/components/company/manager-section'
 import { CompanyFeaturesEditor }     from '@/components/company/company-features-editor'
+import { CompanySealEditor }         from '@/components/company/company-seal-editor'
 import { cn }                        from '@/lib/utils'
 
 export async function generateMetadata({ params }: Props) {
@@ -108,20 +109,30 @@ export default async function AdminCompanyDetailPage({ params }: Props) {
 
       {/* ── 회사 요약 카드 ── */}
       <div className="card p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-            <Building2 size={22} className="text-slate-500" />
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+              <Building2 size={22} className="text-slate-500" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">{company.name}</h2>
+              <span className={cn(
+                'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-0.5',
+                company.status === 'active'
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : 'bg-slate-100 text-slate-500',
+              )}>
+                {company.status === 'active' ? '운영중' : '비활성'}
+              </span>
+            </div>
           </div>
-          <div>
-            <h2 className="text-base font-semibold text-slate-900">{company.name}</h2>
-            <span className={cn(
-              'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-0.5',
-              company.status === 'active'
-                ? 'bg-emerald-50 text-emerald-700'
-                : 'bg-slate-100 text-slate-500',
-            )}>
-              {company.status === 'active' ? '운영중' : '비활성'}
-            </span>
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="text-xs text-slate-400 mb-1">회사 직인</span>
+            <CompanySealEditor
+              companyId={id}
+              companyName={company.name}
+              initialSealUrl={company.seal_image_url}
+            />
           </div>
         </div>
 

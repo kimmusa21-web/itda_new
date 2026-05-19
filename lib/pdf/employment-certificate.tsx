@@ -1,6 +1,7 @@
 import React from 'react'
-import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer'
 import path from 'path'
+import { CompanySealPdf } from './company-seal-pdf'
 
 Font.register({
   family: 'NanumGothic',
@@ -49,13 +50,17 @@ const S = StyleSheet.create({
   },
   issuedDate: { textAlign: 'center', color: '#444', marginBottom: 36 },
   sigWrap: {
+    flexDirection:  'row',
+    justifyContent: 'flex-end',
     alignItems:     'flex-end',
     borderTopWidth: 0.5,
     borderTopColor: '#ccc',
     borderTopStyle: 'solid',
     paddingTop:     20,
     marginTop:      12,
+    gap:            12,
   },
+  sigText: { alignItems: 'flex-end' },
   sigName:  { fontSize: 14, fontWeight: 700 },
   sigTitle: { fontSize: 9, color: '#666', marginTop: 4 },
   sigAddr:  { fontSize: 8, color: '#999', marginTop: 5 },
@@ -85,6 +90,7 @@ export interface CertParams {
   representative: string | null
   companyAddress: string | null
   issuedDate:     string
+  sealImageUrl?:  string | null
 }
 
 function maskReg(r: string | null): string {
@@ -143,9 +149,15 @@ export function EmploymentCertificateDoc(p: CertParams) {
         <Text style={S.issuedDate}>{issuedStr}</Text>
 
         <View style={S.sigWrap}>
-          <Text style={S.sigName}>{p.companyName}</Text>
-          <Text style={S.sigTitle}>대표이사  {p.representative ?? ''}</Text>
-          {p.companyAddress ? <Text style={S.sigAddr}>{p.companyAddress}</Text> : null}
+          <View style={S.sigText}>
+            <Text style={S.sigName}>{p.companyName}</Text>
+            <Text style={S.sigTitle}>대표이사  {p.representative ?? ''}</Text>
+            {p.companyAddress ? <Text style={S.sigAddr}>{p.companyAddress}</Text> : null}
+          </View>
+          {p.sealImageUrl
+            ? <Image src={p.sealImageUrl} style={{ width: 60, height: 60 }} />
+            : <CompanySealPdf companyName={p.companyName} size={60} />
+          }
         </View>
 
         <Text style={S.footer}>

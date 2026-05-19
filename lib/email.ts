@@ -298,12 +298,14 @@ export async function sendEmploymentCertificateEmail(
     representative: string | null
     companyAddress: string | null
     issuedDate:     string          // YYYY-MM-DD
+    sealImageUrl?:  string | null
   },
 ): Promise<{ success: boolean; error?: string }> {
   const {
     docNumber, docType, employeeName, regNumber, address,
     startDate, endDate, purpose, department, position,
     companyName, representative, companyAddress, issuedDate,
+    sealImageUrl,
   } = params
 
   const maskReg = (r: string | null) => {
@@ -330,6 +332,7 @@ export async function sendEmploymentCertificateEmail(
     docNumber, docType, employeeName, regNumber, address,
     startDate, endDate, purpose, department, position,
     companyName, representative, companyAddress, issuedDate,
+    sealImageUrl: sealImageUrl ?? null,
   })
 
   return sendRawEmail({
@@ -374,10 +377,15 @@ export async function sendEmploymentCertificateEmail(
   .field-table td:last-child{color:#1a1a2e;font-weight:600}
   .stmt{text-align:center;font-size:15px;color:#1a1a2e;line-height:1.8;margin:36px 0}
   .issued-date{text-align:center;font-size:14px;color:#444;margin-bottom:32px}
-  .sig-wrap{text-align:right;border-top:1px solid #ccc;padding-top:24px;margin-top:16px}
+  .sig-wrap{display:flex;align-items:flex-end;justify-content:flex-end;gap:12px;border-top:1px solid #ccc;padding-top:24px;margin-top:16px}
+  .sig-text{text-align:right}
   .sig-name{font-size:18px;font-weight:700;color:#1a1a2e}
   .sig-title{font-size:12px;color:#666;margin-top:4px}
   .sig-addr{font-size:11px;color:#999;margin-top:6px}
+  .sig-seal{display:inline-block;border:2px solid #C00000;padding:3px;color:#C00000;vertical-align:bottom;flex-shrink:0}
+  .sig-seal-inner{border:1px solid #C00000;text-align:center;min-width:58px}
+  .sig-seal-name{font-size:11px;font-weight:bold;padding:6px 4px 3px;line-height:1.3;white-space:pre-line}
+  .sig-seal-label{font-size:9px;border-top:1px solid #C00000;padding:2px 4px}
   .footer{text-align:center;margin-top:32px;font-size:10px;color:#aaa;font-family:sans-serif}
 </style>
 </head>
@@ -406,9 +414,15 @@ export async function sendEmploymentCertificateEmail(
   <p class="issued-date">${issuedStr}</p>
 
   <div class="sig-wrap">
-    <p class="sig-name">${companyName}</p>
-    <p class="sig-title">대표이사&nbsp;&nbsp;${representative ?? ''}</p>
-    ${companyAddress ? `<p class="sig-addr">${companyAddress}</p>` : ''}
+    <div class="sig-text">
+      <p class="sig-name">${companyName}</p>
+      <p class="sig-title">대표이사&nbsp;&nbsp;${representative ?? ''}</p>
+      ${companyAddress ? `<p class="sig-addr">${companyAddress}</p>` : ''}
+    </div>
+    ${sealImageUrl
+      ? `<img src="${sealImageUrl}" alt="직인" style="width:68px;height:68px;object-fit:contain;vertical-align:bottom;flex-shrink:0" />`
+      : `<div class="sig-seal"><div class="sig-seal-inner"><div class="sig-seal-name">${companyName.replace(/(.{4})/g, '$1\n').trimEnd()}</div><div class="sig-seal-label">직인</div></div></div>`
+    }
   </div>
 </div>
 <p class="footer">본 문서는 ModuHR를 통해 발급되었습니다.</p>

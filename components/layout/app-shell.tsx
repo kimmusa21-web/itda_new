@@ -5,6 +5,7 @@ import AppHeader              from './app-header'
 import { ImpersonationBanner } from '@/components/impersonation/impersonation-banner'
 import type { Role }          from '@/types'
 import type { ImpersonationContext } from '@/lib/impersonation/types'
+import type { CompanyFeatures } from '@/lib/features'
 
 interface Props {
   children:        React.ReactNode
@@ -14,6 +15,7 @@ interface Props {
   avatarColor?:    string
   impersonation?:  ImpersonationContext | null
   companyName?:    string | null
+  features?:       CompanyFeatures | null
 }
 
 export default function AppShell({
@@ -24,6 +26,7 @@ export default function AppShell({
   avatarColor = '#1d4ed8',
   impersonation = null,
   companyName   = null,
+  features      = null,
 }: Props) {
   return (
     <div className="flex min-h-dvh bg-slate-50">
@@ -34,6 +37,7 @@ export default function AppShell({
         avatarColor={avatarColor}
         impersonation={impersonation}
         companyName={companyName}
+        features={features}
       />
       <div className="flex-1 flex flex-col min-h-dvh lg:ml-60">
         <AppHeader role={role} name={name} companyName={companyName} />
@@ -47,7 +51,7 @@ export default function AppShell({
             {children}
           </div>
         </main>
-        <BottomTabBar role={role} />
+        <BottomTabBar role={role} features={features} />
       </div>
     </div>
   )
