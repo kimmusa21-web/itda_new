@@ -13,21 +13,37 @@ export default function ResetPasswordPage() {
   const [loading,  setLoading]  = useState(false)
   const [msg,      setMsg]      = useState('')
 
-  // 이메일 링크에 포함된 복구 토큰을 Supabase 클라이언트가 처리할 때까지 대기
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+    // 1) URL 해시에 복구 토큰이 있으면 직접 setSession으로 처리 (타이밍 문제 우회)
+    const hash   = window.location.hash.substring(1)
+    const params = new URLSearchParams(hash)
+    const accessToken  = params.get('access_token')
+    const refreshToken = params.get('refresh_token') ?? ''
+    const type         = params.get('type')
+
+    if (accessToken && type === 'recovery') {
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .then(({ data, error }) => {
+          if (data.session && !error) setReady(true)
+          else setMsg('인증 링크가 만료되었거나 유효하지 않습니다. 다시 요청해주세요.')
+        })
+      return
+    }
+
+    // 2) 해시가 없는 경우 — onAuthStateChange 대기 (기존 세션 재방문 등)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
         setReady(true)
       }
     })
 
-    // 이미 세션이 있는 경우(재방문 등) 즉시 활성화
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setReady(true)
     })
 
     return () => subscription.unsubscribe()
-  }, [supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleReset(e: React.FormEvent) {
     e.preventDefault()
@@ -53,7 +69,9 @@ export default function ResetPasswordPage() {
         </div>
         <div className="card p-6">
           {!ready ? (
-            <p className="text-sm text-center text-slate-500 py-4">인증 정보 확인 중...</p>
+            <p className="text-sm text-center text-slate-500 py-4">
+              {msg || '인증 정보 확인 중...'}
+            </p>
           ) : (
             <form onSubmit={handleReset} className="space-y-4">
               <div>
