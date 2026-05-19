@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>회사 직인 미리보기</title>
+  <style>
+    body { font-family: 'Malgun Gothic', sans-serif; background: #f0ede6; padding: 40px 32px; color: #1a1a2e; }
+    h2   { font-size: 16px; margin: 32px 0 16px; border-bottom: 1px solid #ccc; padding-bottom: 8px; }
+    .grid { display: flex; flex-wrap: wrap; gap: 28px; margin-bottom: 12px; }
+    .item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .label { font-size: 12px; color: #888; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1 style="font-size:22px;margin-bottom:4px">회사 직인 미리보기</h1>
+  <p style="color:#666;font-size:13px;margin-bottom:8px">글자가 격자로 꽉 차는 전통 직인 스타일</p>
+
+  <h2>핏에이치알 예시 (글자 수·크기별)</h2>
+  <div class="grid" id="fithr-row"></div>
+
+  <h2>다양한 회사명 예시</h2>
+  <div class="grid" id="examples-row"></div>
+
+  <h2>크기 비교</h2>
+  <div class="grid" id="size-row"></div>
+
+  <script>
+    const RED = '#C00000';
+
+    /* ── 그리드 레이아웃 ── */
+    function getRows(name) {
+      const n = name.length;
+      if (n <= 2)  return name.split('');
+      if (n <= 6) {
+        const h = Math.ceil(n / 2);
+        return [name.slice(0, h), name.slice(h)];
+      }
+      if (n <= 9) {
+        const t = Math.ceil(n / 3);
+        return [name.slice(0, t), name.slice(t, t*2), name.slice(t*2)];
+      }
+      const q = Math.ceil(n / 4);
+      return [name.slice(0,q), name.slice(q,q*2), name.slice(q*2,q*3), name.slice(q*3)];
+    }
+
+    /* ── 직인 SVG 생성 ── */
+    function makeSeal(name, displaySize = 128) {
+      const VB      = 80;
+      const outerBW = 2.8;   // 외부 테두리 두께
+      const gap     = 3.0;   // 두 테두리 사이 간격 (줄임)
+      const innerBW = 1.4;   // 내부 테두리 두께
+      const inset   = outerBW + gap + innerBW;
+      const inner   = VB - inset * 2;   // 실제 글자 영역 크기
+
+      const rows    = getRows(name);
+      const maxCols = Math.max(...rows.map(r => r.length));
+      const cellW   = inner / maxCols;
+      const cellH   = inner / rows.length;
+      const fs      = Math.min(cellW, cellH) * 0.90;  // 90%로 꽉 채움
+
+      const texts = rows.flatMap((row, ri) => {
+        const chars   = [...row];
+        const padLeft = (maxCols - chars.length) / 2;
+        return chars.map((ch, ci) => {
+          const cx = inset + (ci + padLeft + 0.5) * cellW;
+          const cy = inset + (ri + 0.5) * cellH;
+          return `<text x="${cx.toFixed(2)}" y="${cy.toFixed(2)}"
+            text-anchor="middle" dominant-baseline="central"
+            fill="${RED}" font-size="${fs.toFixed(2)}" font-weight="bold"
+            font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif"
+          >${ch}</text>`;
+        });
+      }).join('');
+
+      // 외부·내부 테두리 rect 좌표
+      const o = outerBW / 2;
+      const ow = VB - outerBW;
+      const ii = outerBW + gap + innerBW / 2;
+      const iw = VB - (outerBW + gap) * 2;
+
+      return `<svg width="${displaySize}" height="${displaySize}" viewBox="0 0 ${VB} ${VB}" style="display:block">
+        <rect x="${o}" y="${o}" width="${ow}" height="${ow}" fill="none" stroke="${RED}" stroke-width="${outerBW}"/>
+        <rect x="${ii}" y="${ii}" width="${iw}" height="${iw}" fill="none" stroke="${RED}" stroke-width="${innerBW}"/>
+        ${texts}
+      </svg>`;
+    }
+
+    function addItems(containerId, items) {
+      const el = document.getElementById(containerId);
+      items.forEach(({ name, size, desc }) => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `${makeSeal(name, size || 128)}<div class="label">${name}<br><span style="color:#bbb">${desc || ''}</span></div>`;
+        el.appendChild(div);
+      });
+    }
+
+    // 핏에이치알 예시
+    addItems('fithr-row', [
+      { name: '핏에이치알', size: 96,  desc: '96px' },
+      { name: '핏에이치알', size: 112, desc: '112px' },
+      { name: '핏에이치알', size: 128, desc: '128px' },
+      { name: '핏에이치알', size: 160, desc: '160px' },
+    ]);
+
+    // 다양한 회사명
+    addItems('examples-row', [
+      { name: '삼성',           desc: '2자 (1열)' },
+      { name: '카카오',         desc: '3자 (2행)' },
+      { name: '삼성전자',       desc: '4자 (2×2)' },
+      { name: '의정부을지',     desc: '5자 (2행)' },
+      { name: '한국전력공사',   desc: '6자 (2×3)' },
+      { name: '브이에이성형외과', desc: '8자 (3행)' },
+    ]);
+
+    // 크기 비교
+    addItems('size-row', [
+      { name: '한국전력공사', size: 56,  desc: '56px' },
+      { name: '한국전력공사', size: 72,  desc: '72px' },
+      { name: '한국전력공사', size: 96,  desc: '96px' },
+      { name: '한국전력공사', size: 128, desc: '128px' },
+    ]);
+  </script>
+</body>
+</html>

@@ -27,6 +27,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
   const [salaryType, setSalaryType]     = useState<'annual' | 'monthly' | 'hourly'>('monthly')
   const [salaryAmount, setSalaryAmount] = useState('')
   const [salaryBasis, setSalaryBasis]   = useState<'gross' | 'net'>('gross')
+  const [nonTaxableItems, setNonTaxableItems] = useState<{ name: string; amount: string }[]>([])
   const [selected, setSelected]         = useState<EmployeeRow | null>(null)
   const [form, setForm]                 = useState<Partial<EmployeeRow>>({})
   const [saving, setSaving]             = useState(false)
@@ -73,10 +74,10 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
       const curr = records.filter(r => r.accrual_month?.startsWith(String(quitYear)))
       setQuitSummary({
         prevYear,
-        prevYearTaxable: prev.reduce((s, r) => s + Number(r.Total_tax_salary ?? r.total_earnings ?? 0), 0),
+        prevYearTaxable: prev.reduce((s, r) => s + Number(r.Total_tax_salary ?? 0), 0),
         prevYearTotal:   prev.reduce((s, r) => s + Number(r.total_earnings ?? 0), 0),
         currentYear:     quitYear,
-        currentYearTaxable: curr.reduce((s, r) => s + Number(r.Total_tax_salary ?? r.total_earnings ?? 0), 0),
+        currentYearTaxable: curr.reduce((s, r) => s + Number(r.Total_tax_salary ?? 0), 0),
         currentYearTotal:   curr.reduce((s, r) => s + Number(r.total_earnings ?? 0), 0),
         hasData: records.length > 0,
       })
@@ -129,6 +130,13 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
     try {
       if (modal === 'add') {
         // 사번은 서버 액션에서 자동 생성
+        const parsedSalary = salaryAmount ? Number(salaryAmount.replace(/,/g, '')) : null
+        const parsedNonTaxable = nonTaxableItems
+          .filter(i => i.name.trim() && i.amount)
+          .map(i => ({ name: i.name.trim(), amount: Number(i.amount.replace(/,/g, '')) }))
+        const taxableTotal = parsedSalary != null
+          ? parsedSalary - parsedNonTaxable.reduce((s, i) => s + i.amount, 0)
+          : null
         const result = await createEmployeeAdmin({
           company_id:      Number(form.company_id),
           name:            form.name ?? '',
@@ -153,8 +161,10 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
           visa_type:           form.visa_type ?? null,
           registration_number: form.registration_number ?? null,
           salary_type:    salaryType,
-          salary_amount:  salaryAmount ? Number(salaryAmount.replace(/,/g, '')) : null,
+          salary_amount:  parsedSalary,
           salary_basis:   salaryBasis,
+          non_taxable_items: parsedNonTaxable.length > 0 ? parsedNonTaxable : null,
+          taxable_total:  taxableTotal,
         })
         if (!result.success) throw new Error(result.error)
       } else if (modal === 'edit' && selected) {
@@ -235,7 +245,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
             <span className="hidden sm:inline">CSV 대량 등록</span>
             <span className="sm:hidden">CSV</span>
           </Link>
-          <button onClick={() => { setForm({ is_active: true }); setSalaryType('monthly'); setSalaryAmount(''); setSalaryBasis('gross'); setModal('add') }} className="btn-primary">
+          <button onClick={() => { setForm({ is_active: true }); setSalaryType('monthly'); setSalaryAmount(''); setSalaryBasis('gross'); setNonTaxableItems([]); setModal('add') }} className="btn-primary">
             <Plus size={16} />
             <span className="hidden sm:inline">직원 등록</span>
           </button>
@@ -712,6 +722,79 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
                     <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">원</span>
                   </div>
                 </div>
+
+                {/* 비과세 항목 */}
+                <div className="col-span-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-medium text-slate-600">비과세 항목</label>
+                    <button
+                      type="button"
+                      onClick={() => setNonTaxableItems(p => [...p, { name: '', amount: '' }])}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      + 항목 추가
+                    </button>
+                  </div>
+                  {nonTaxableItems.map((item, idx) => (
+                    <div key={idx} className="flex gap-2 mb-2">
+                      <input
+                        className="input flex-1"
+                        placeholder="항목명 (예: 식대)"
+                        value={item.name}
+                        onChange={e => setNonTaxableItems(p => p.map((x, i) => i === idx ? { ...x, name: e.target.value } : x))}
+                      />
+                      <div className="relative flex-1">
+                        <input
+                          className="input pr-8"
+                          inputMode="numeric"
+                          placeholder="200,000"
+                          value={item.amount}
+                          onChange={e => {
+                            const digits = e.target.value.replace(/[^\d]/g, '')
+                            setNonTaxableItems(p => p.map((x, i) => i === idx ? { ...x, amount: digits ? Number(digits).toLocaleString() : '' } : x))
+                          }}
+                        />
+                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">원</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setNonTaxableItems(p => p.filter((_, i) => i !== idx))}
+                        className="text-slate-400 hover:text-red-500 px-1 text-lg leading-none"
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 과세총액 계산 미리보기 */}
+                {salaryAmount && (
+                  <div className="col-span-2 bg-blue-50 rounded-xl px-4 py-3 space-y-1.5">
+                    {(() => {
+                      const salary = Number(salaryAmount.replace(/,/g, ''))
+                      const nonTaxTotal = nonTaxableItems
+                        .filter(i => i.name && i.amount)
+                        .reduce((s, i) => s + Number(i.amount.replace(/,/g, '')), 0)
+                      const taxable = salary - nonTaxTotal
+                      return (
+                        <>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-slate-500">지급합계</span>
+                            <span className="font-medium text-slate-700">{formatKRW(salary)}</span>
+                          </div>
+                          {nonTaxTotal > 0 && (
+                            <div className="flex justify-between text-xs">
+                              <span className="text-slate-500">비과세 합계</span>
+                              <span className="font-medium text-slate-500">- {formatKRW(nonTaxTotal)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between text-xs border-t border-blue-100 pt-1.5">
+                            <span className="font-semibold text-blue-700">과세총액</span>
+                            <span className="font-bold text-blue-700">{formatKRW(taxable)}</span>
+                          </div>
+                        </>
+                      )
+                    })()}
+                  </div>
+                )}
               </>
             )}
           </div>
