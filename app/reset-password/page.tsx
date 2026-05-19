@@ -13,8 +13,14 @@ export default function ResetPasswordPage() {
   const [loading,  setLoading]  = useState(false)
   const [msg,      setMsg]      = useState('')
 
+  const [debugInfo, setDebugInfo] = useState('')
+
   useEffect(() => {
-    // /auth/callback에서 code 교환 완료 후 세션 쿠키가 설정된 상태로 도착
+    // 디버그: 현재 URL 파라미터 표시
+    const search = window.location.search
+    const hash   = window.location.hash
+    setDebugInfo(`search: ${search || '(없음)'} | hash: ${hash || '(없음)'}`)
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setReady(true)
@@ -48,6 +54,9 @@ export default function ResetPasswordPage() {
           <p className="text-sm text-gray-500 mt-1">새 비밀번호를 입력하세요</p>
         </div>
         <div className="card p-6">
+          {debugInfo && (
+            <p className="text-xs text-slate-400 bg-slate-50 rounded p-2 mb-2 break-all">{debugInfo}</p>
+          )}
           {!ready ? (
             <p className="text-sm text-center text-slate-500 py-4">
               {msg || '인증 정보 확인 중...'}
