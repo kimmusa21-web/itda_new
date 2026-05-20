@@ -12,59 +12,88 @@ export default function ResetPasswordPage() {
   const [confirm,  setConfirm]  = useState('')
   const [loading,  setLoading]  = useState(false)
   const [msg,      setMsg]      = useState('')
+  const [debugMsg, setDebugMsg] = useState('')
 
   useEffect(() => {
     let resolved = false
 
     const init = async () => {
-      // admin.generateLink()는 implicit flow → 해시에 토큰 포함
-      // createBrowserClient가 flowType:'pkce'로 초기화되므로 직접 파싱해서 setSession 호출
-      const hash = window.location.hash.substring(1)
-      if (hash) {
-        const params       = new URLSearchParams(hash)
-        const accessToken  = params.get('access_token')
-        const refreshToken = params.get('refresh_token')
-        const type         = params.get('type')
+      const search = window.location.search
+      const hash   = window.location.hash
+      setDebugMsg(`search: ${search || '(없음)'} | hash: ${hash ? hash.substring(0, 60) + '…' : '(없음)'}`)
+      console.log('[reset-password] search:', search)
+      console.log('[reset-password] hash:', hash)
 
-        if (accessToken && refreshToken && type === 'recovery') {
-          const { error } = await supabase.auth.setSession({
+      // 1. PKCE: ?code=xxx (PKCE 프로젝트에서 admin.generateLink도 이 방식으로 올 수 있음)
+      const searchParams = new URLSearchParams(search)
+      const code = searchParams.get('code')
+      if (code) {
+        console.log('[reset-password] PKCE code 발견, 교환 시도...')
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+        console.log('[reset-password] exchangeCodeForSession:', { user: data?.session?.user?.email, error })
+        if (!error && data.session) {
+          resolved = true
+          setReady(true)
+          window.history.replaceState(null, '', window.location.pathname)
+          return
+        }
+      }
+
+      // 2. Implicit: #access_token=xxx (implicit flow)
+      if (hash) {
+        const hashParams   = new URLSearchParams(hash.substring(1))
+        const accessToken  = hashParams.get('access_token')
+        const refreshToken = hashParams.get('refresh_token')
+        const type         = hashParams.get('type')
+        console.log('[reset-password] hash type:', type, '| has tokens:', !!(accessToken && refreshToken))
+
+        if (accessToken && refreshToken) {
+          const { data, error } = await supabase.auth.setSession({
             access_token:  accessToken,
             refresh_token: refreshToken,
           })
-          if (!error) {
+          console.log('[reset-password] setSession:', { user: data?.session?.user?.email, error })
+          if (!error && data.session) {
             resolved = true
             setReady(true)
-            // 토큰이 URL에 남지 않도록 해시 제거
             window.history.replaceState(null, '', window.location.pathname)
             return
           }
         }
       }
 
-      // 이미 세션이 있는 경우(PKCE 콜백 등)
+      // 3. 기존 세션 확인
       const { data: { session } } = await supabase.auth.getSession()
+      console.log('[reset-password] getSession:', session?.user?.email ?? '없음')
       if (session) {
         resolved = true
         setReady(true)
+        return
+      }
+
+      // search도 hash도 없으면 즉시 에러
+      if (!search && !hash) {
+        setMsg('인증 링크가 만료되었거나 유효하지 않습니다. 다시 요청해주세요.')
+        return
       }
     }
 
     init()
 
-    // 이벤트 기반 폴백
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[reset-password] authStateChange:', event, session?.user?.email)
       if (session && (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN')) {
         resolved = true
         setReady(true)
       }
     })
 
-    // 5초 안에 인증이 확인되지 않으면 에러 표시
     const timer = setTimeout(() => {
       if (!resolved) {
+        console.log('[reset-password] 타임아웃 — 세션 없음')
         setMsg('인증 링크가 만료되었거나 유효하지 않습니다. 다시 요청해주세요.')
       }
-    }, 5000)
+    }, 8000)
 
     return () => {
       subscription.unsubscribe()
@@ -96,6 +125,9 @@ export default function ResetPasswordPage() {
           <p className="text-sm text-gray-500 mt-1">새 비밀번호를 입력하세요</p>
         </div>
         <div className="card p-6">
+          {debugMsg && (
+            <p className="text-xs text-slate-400 bg-slate-50 rounded p-2 mb-2 break-all">{debugMsg}</p>
+          )}
           {!ready ? (
             <p className="text-sm text-center text-slate-500 py-4">
               {msg || '인증 정보 확인 중...'}
