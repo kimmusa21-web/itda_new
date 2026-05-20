@@ -13,21 +13,37 @@ export default function ResetPasswordPage() {
   const [loading,  setLoading]  = useState(false)
   const [msg,      setMsg]      = useState('')
 
-  const [debugInfo, setDebugInfo] = useState('')
-
   useEffect(() => {
-    // 디버그: 현재 URL 파라미터 표시
-    const search = window.location.search
-    const hash   = window.location.hash
-    setDebugInfo(`search: ${search || '(없음)'} | hash: ${hash || '(없음)'}`)
+    let resolved = false
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+    // admin.generateLink()는 항상 implicit flow → 해시 토큰으로 전달됨
+    // onAuthStateChange의 PASSWORD_RECOVERY 이벤트로 감지
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        resolved = true
         setReady(true)
-      } else {
-        setMsg('인증 링크가 만료되었거나 유효하지 않습니다. 다시 요청해주세요.')
       }
     })
+
+    // 이미 세션이 있는 경우(PKCE 콜백 후 리다이렉트 등) 즉시 처리
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        resolved = true
+        setReady(true)
+      }
+    })
+
+    // 3초 안에 인증이 확인되지 않으면 에러 표시
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        setMsg('인증 링크가 만료되었거나 유효하지 않습니다. 다시 요청해주세요.')
+      }
+    }, 3000)
+
+    return () => {
+      subscription.unsubscribe()
+      clearTimeout(timer)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -54,9 +70,6 @@ export default function ResetPasswordPage() {
           <p className="text-sm text-gray-500 mt-1">새 비밀번호를 입력하세요</p>
         </div>
         <div className="card p-6">
-          {debugInfo && (
-            <p className="text-xs text-slate-400 bg-slate-50 rounded p-2 mb-2 break-all">{debugInfo}</p>
-          )}
           {!ready ? (
             <p className="text-sm text-center text-slate-500 py-4">
               {msg || '인증 정보 확인 중...'}

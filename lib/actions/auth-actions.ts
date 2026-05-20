@@ -71,7 +71,7 @@ export async function sendPasswordResetByRealEmail(
     const { data: linkData, error: linkErr } = await service.auth.admin.generateLink({
       type:    'recovery',
       email:   syntheticEmail,
-      options: { redirectTo: `${appUrl}/auth/callback?next=/reset-password` },
+      options: { redirectTo: `${appUrl}/reset-password` },
     })
 
     if (!linkErr && linkData?.properties?.action_link) {
@@ -83,7 +83,7 @@ export async function sendPasswordResetByRealEmail(
   const { data: linkData, error: linkErr } = await service.auth.admin.generateLink({
     type:    'recovery',
     email,
-    options: { redirectTo: `${appUrl}/auth/callback?next=/reset-password` },
+    options: { redirectTo: `${appUrl}/reset-password` },
   })
 
   if (!linkErr && linkData?.properties?.action_link) {
