@@ -16,29 +16,55 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     let resolved = false
 
-    // admin.generateLink()는 항상 implicit flow → 해시 토큰으로 전달됨
-    // onAuthStateChange의 PASSWORD_RECOVERY 이벤트로 감지
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' && session) {
-        resolved = true
-        setReady(true)
-      }
-    })
+    const init = async () => {
+      // admin.generateLink()는 implicit flow → 해시에 토큰 포함
+      // createBrowserClient가 flowType:'pkce'로 초기화되므로 직접 파싱해서 setSession 호출
+      const hash = window.location.hash.substring(1)
+      if (hash) {
+        const params       = new URLSearchParams(hash)
+        const accessToken  = params.get('access_token')
+        const refreshToken = params.get('refresh_token')
+        const type         = params.get('type')
 
-    // 이미 세션이 있는 경우(PKCE 콜백 후 리다이렉트 등) 즉시 처리
-    supabase.auth.getSession().then(({ data: { session } }) => {
+        if (accessToken && refreshToken && type === 'recovery') {
+          const { error } = await supabase.auth.setSession({
+            access_token:  accessToken,
+            refresh_token: refreshToken,
+          })
+          if (!error) {
+            resolved = true
+            setReady(true)
+            // 토큰이 URL에 남지 않도록 해시 제거
+            window.history.replaceState(null, '', window.location.pathname)
+            return
+          }
+        }
+      }
+
+      // 이미 세션이 있는 경우(PKCE 콜백 등)
+      const { data: { session } } = await supabase.auth.getSession()
       if (session) {
         resolved = true
         setReady(true)
       }
+    }
+
+    init()
+
+    // 이벤트 기반 폴백
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN')) {
+        resolved = true
+        setReady(true)
+      }
     })
 
-    // 3초 안에 인증이 확인되지 않으면 에러 표시
+    // 5초 안에 인증이 확인되지 않으면 에러 표시
     const timer = setTimeout(() => {
       if (!resolved) {
         setMsg('인증 링크가 만료되었거나 유효하지 않습니다. 다시 요청해주세요.')
       }
-    }, 3000)
+    }, 5000)
 
     return () => {
       subscription.unsubscribe()
