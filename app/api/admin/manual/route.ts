@@ -4,6 +4,8 @@ import React                       from 'react'
 import { renderToBuffer }          from '@react-pdf/renderer'
 import { UserManualPdf }           from '@/lib/pdf/user-manual'
 
+export const maxDuration = 60
+
 export async function GET() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
