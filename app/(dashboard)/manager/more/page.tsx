@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { Building2, Phone, Mail, FileText } from 'lucide-react'
+import { Building2, Phone, Mail, FileText, BookOpen } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { PayslipNoteEditor } from './payslip-note-editor'
@@ -37,6 +37,23 @@ export default async function ManagerMorePage() {
             {company.contact_email && <Row icon={Mail}      label="담당자 이메일" value={company.contact_email} />}
           </Section>
         )}
+      </div>
+
+      <div className="card p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <BookOpen size={17} className="text-blue-600 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-slate-800">서비스 사용 설명서</p>
+            <p className="text-xs text-slate-400 mt-0.5">매니저·직원 기능 안내 (PDF)</p>
+          </div>
+        </div>
+        <a
+          href="/api/admin/manual"
+          download="ModuHR_사용설명서.pdf"
+          className="btn-primary text-xs px-3 py-1.5"
+        >
+          다운로드
+        </a>
       </div>
 
       <div className="card p-5 space-y-3">
