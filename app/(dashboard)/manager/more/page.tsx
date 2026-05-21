@@ -48,7 +48,7 @@ export default async function ManagerMorePage() {
           </div>
         </div>
         <a
-          href="/api/admin/manual"
+          href="/ModuHR_사용설명서.pdf"
           download="ModuHR_사용설명서.pdf"
           className="btn-primary text-xs px-3 py-1.5"
         >

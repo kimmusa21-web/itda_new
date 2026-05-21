@@ -304,7 +304,7 @@ export default async function ManagerDashboard() {
 
       {/* 사용 설명서 */}
       <a
-        href="/api/admin/manual"
+        href="/ModuHR_사용설명서.pdf"
         download="ModuHR_사용설명서.pdf"
         className="flex items-center gap-3 card px-4 py-3.5 hover:bg-slate-50 transition-colors"
       >

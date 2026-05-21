@@ -199,7 +199,7 @@ export default function Sidebar({
         )}
 
         <a
-          href="/api/admin/manual"
+          href="/ModuHR_사용설명서.pdf"
           download="ModuHR_사용설명서.pdf"
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-slate-500 hover:bg-[#1e293b] hover:text-slate-200 transition-all"
         >
