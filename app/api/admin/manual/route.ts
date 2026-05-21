@@ -11,7 +11,7 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from('profiles').select('role').eq('id', user.id).single()
-  if (!profile || !['admin', 'manager'].includes(profile.role)) {
+  if (!profile || !['admin', 'manager', 'employee'].includes(profile.role)) {
     return NextResponse.json({ error: '권한 없음' }, { status: 403 })
   }
 
