@@ -1,6 +1,6 @@
 import { redirect }   from 'next/navigation'
 import Link           from 'next/link'
-import { Plus, BarChart3, Upload, Users, CalendarDays, FolderOpen, UserPlus, ChevronRight, CalendarX, BookOpen } from 'lucide-react'
+import { Plus, Users, CalendarDays, FolderOpen, UserPlus, ChevronRight, CalendarX, BookOpen } from 'lucide-react'
 import { ManagerViewToggle } from '@/components/layout/ManagerViewToggle'
 import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
@@ -100,33 +100,6 @@ export default async function ManagerDashboard() {
         </Link>
       </div>
 
-      {/* 빠른 이동 */}
-      <div className="grid grid-cols-2 gap-3">
-        <Link
-          href="/manager/payroll"
-          className="flex items-center gap-3 bg-[#0f172a] rounded-2xl px-4 py-4 hover:bg-[#1e293b] transition-colors"
-        >
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
-            <BarChart3 size={17} className="text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-white">급여 조회</p>
-            <p className="text-xs text-slate-500 mt-0.5">월별 확인 →</p>
-          </div>
-        </Link>
-        <Link
-          href="/manager/payroll/upload"
-          className="flex items-center gap-3 card rounded-2xl px-4 py-4 hover:bg-slate-50 transition-colors"
-        >
-          <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-            <Upload size={17} className="text-slate-600" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-800">급여업로드</p>
-            <p className="text-xs text-slate-400 mt-0.5">CSV 등록 →</p>
-          </div>
-        </Link>
-      </div>
 
       {/* ── 신청 현황 (통합) ───────────────────────────────────── */}
       <section>
