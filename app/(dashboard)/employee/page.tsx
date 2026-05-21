@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link         from 'next/link'
-import { Bell, Wallet, CalendarDays, FileText, ArrowRight, Clock, LogIn, LogOut } from 'lucide-react'
+import { Bell, Wallet, CalendarDays, FileText, ArrowRight, Clock, LogIn, LogOut, BookOpen, ChevronRight } from 'lucide-react'
 import { createClient }      from '@/lib/supabase/server'
 import { getEffectiveEmployeeContext } from '@/lib/impersonation/get-effective-context'
 import { getEmployeePayslips } from '@/lib/employee-payslips'
@@ -224,6 +224,22 @@ export default async function EmployeeDashboard() {
           )}
         </div>
       </section>
+
+      {/* 사용 설명서 */}
+      <a
+        href="/api/admin/manual"
+        download="ModuHR_사용설명서.pdf"
+        className="flex items-center gap-3 card px-4 py-3.5 hover:bg-slate-50 transition-colors"
+      >
+        <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+          <BookOpen size={17} className="text-blue-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-slate-800">서비스 사용 설명서</p>
+          <p className="text-xs text-slate-400 mt-0.5">직원 기능 안내 PDF 다운로드</p>
+        </div>
+        <ChevronRight size={16} className="text-slate-300 flex-shrink-0" />
+      </a>
 
       {/* 공지사항 */}
       <section>
