@@ -7,6 +7,7 @@ import { KakaoMap } from '@/components/attendance/kakao-map'
 import { cn } from '@/lib/utils'
 import { checkIn, checkOut, updateAttendance, getAttendanceByDate } from '@/lib/actions/attendance-actions'
 import { kstFirstOfMonth } from '@/lib/utils/kst'
+import { isKoreanHoliday } from '@/lib/utils/korean-holidays'
 import { calcWorkMinutes, fmtWorkHours, breakMinutes, getWeekRange } from '@/lib/utils/work-hours'
 import { WORK_TYPE_LABELS, STATUS_LABELS } from '@/types/attendance'
 import type { AttendanceLog, WorkType } from '@/types/attendance'
@@ -85,6 +86,8 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
   const isLateEntry  = workDate < today
   const firstOfMonth = kstFirstOfMonth()
   const isWeekend    = (() => { const d = new Date(workDate + 'T00:00:00+09:00').getDay(); return d === 0 || d === 6 })()
+  const isHoliday    = !isWeekend && isKoreanHoliday(workDate)
+  const isNonWorkday = isWeekend || isHoliday
 
   function handleSelectMissingDay(day: string) {
     setWorkDate(day)
@@ -313,13 +316,13 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
               onChange={e => { setWorkDate(e.target.value); setLog(null) }}
               className="input w-full text-sm"
             />
-            {isWeekend && (
+            {isNonWorkday && (
               <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
                 <AlertCircle size={12} />
-                주말은 근태 입력 대상이 아닙니다.
+                {isHoliday ? '공휴일은 근태 입력 대상이 아닙니다.' : '주말은 근태 입력 대상이 아닙니다.'}
               </p>
             )}
-            {!isWeekend && isLateEntry && (
+            {!isNonWorkday && isLateEntry && (
               <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                 <AlertCircle size={12} />
                 소급 입력입니다. 담당자에게 알림이 전송됩니다.
@@ -418,11 +421,11 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
 
           <button
             onClick={handleCheckIn}
-            disabled={isPending || isGps || isWeekend}
+            disabled={isPending || isGps || isNonWorkday}
             className="w-full py-4 rounded-2xl bg-[#003366] text-white font-bold text-lg hover:bg-[#002244] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
           >
             {(isPending || isGps) ? <Loader2 size={20} className="animate-spin" /> : <LogIn size={20} />}
-            {isGps ? '위치 확인 중...' : isPending ? '처리 중...' : isWeekend ? '주말은 입력 불가' : '출근하기'}
+            {isGps ? '위치 확인 중...' : isPending ? '처리 중...' : isNonWorkday ? (isHoliday ? '공휴일은 입력 불가' : '주말은 입력 불가') : '출근하기'}
           </button>
         </div>
       )}
