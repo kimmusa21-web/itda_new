@@ -10,7 +10,7 @@ import {
 import { calculateDistanceMeters } from '@/lib/utils/distance'
 import { kstToday, kstFirstOfMonth, isAllowedWorkDate } from '@/lib/utils/kst'
 import { calcWorkMinutes } from '@/lib/utils/work-hours'
-import { isWorkday } from '@/lib/utils/korean-holidays'
+import { isWorkday, prefetchHolidaysForYear } from '@/lib/utils/korean-holidays'
 import type {
   CheckInInput, CheckOutInput, UpdateAttendanceInput,
   AttendanceSettings, AttendanceLog, AttendanceRow, MonthlySummaryRow, WorkType,
@@ -543,6 +543,9 @@ export async function getMissingAttendanceDays(): Promise<string[]> {
   const yesterday = yDate.toISOString().slice(0, 10)
 
   if (yesterday < monthStart) return []
+
+  // API 공휴일 데이터 프리페치 (실패 시 하드코딩 폴백)
+  await prefetchHolidaysForYear(parseInt(today.slice(0, 4)))
 
   const workdays: string[] = []
   const cur = new Date(monthStart + 'T00:00:00+09:00')
