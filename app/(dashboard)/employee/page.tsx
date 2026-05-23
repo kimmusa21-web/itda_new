@@ -250,9 +250,8 @@ export default async function EmployeeDashboard() {
       </section>
 
       {/* 사용 설명서 */}
-      <a
-        href="/ModuHR_사용설명서.pdf"
-        download="ModuHR_사용설명서.pdf"
+      <Link
+        href="/guide"
         className="flex items-center gap-3 card px-4 py-3.5 hover:bg-slate-50 transition-colors"
       >
         <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
@@ -260,10 +259,10 @@ export default async function EmployeeDashboard() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-slate-800">서비스 사용 설명서</p>
-          <p className="text-xs text-slate-400 mt-0.5">직원 기능 안내 PDF 다운로드</p>
+          <p className="text-xs text-slate-400 mt-0.5">매니저·직원 기능 안내 보기</p>
         </div>
         <ChevronRight size={16} className="text-slate-300 flex-shrink-0" />
-      </a>
+      </Link>
 
       {/* 공지사항 */}
       <section>

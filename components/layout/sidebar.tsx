@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LogOut, Eye, ArrowLeft, BookOpen } from 'lucide-react'
+import { LogOut, Eye, ArrowLeft } from 'lucide-react'
 import { roleNavMap, type Role } from '@/lib/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { stopImpersonation } from '@/lib/impersonation/actions'
@@ -198,14 +198,6 @@ export default function Sidebar({
           </form>
         )}
 
-        <a
-          href="/ModuHR_사용설명서.pdf"
-          download="ModuHR_사용설명서.pdf"
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-slate-500 hover:bg-[#1e293b] hover:text-slate-200 transition-all"
-        >
-          <BookOpen size={17} />
-          사용 설명서
-        </a>
 
         <button
           onClick={logout}

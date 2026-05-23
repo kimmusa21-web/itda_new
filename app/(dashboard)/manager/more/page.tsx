@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { Building2, Phone, Mail, FileText, BookOpen } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
@@ -44,16 +45,21 @@ export default async function ManagerMorePage() {
           <BookOpen size={17} className="text-blue-600 flex-shrink-0" />
           <div>
             <p className="text-sm font-semibold text-slate-800">서비스 사용 설명서</p>
-            <p className="text-xs text-slate-400 mt-0.5">매니저·직원 기능 안내 (PDF)</p>
+            <p className="text-xs text-slate-400 mt-0.5">매니저·직원 기능 안내</p>
           </div>
         </div>
-        <a
-          href="/ModuHR_사용설명서.pdf"
-          download="ModuHR_사용설명서.pdf"
-          className="btn-primary text-xs px-3 py-1.5"
-        >
-          다운로드
-        </a>
+        <div className="flex items-center gap-2">
+          <a
+            href="/ModuHR_사용설명서.pdf"
+            download="ModuHR_사용설명서.pdf"
+            className="text-xs text-slate-500 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition-colors"
+          >
+            PDF
+          </a>
+          <Link href="/guide" className="btn-primary text-xs px-3 py-1.5">
+            보기
+          </Link>
+        </div>
       </div>
 
       <div className="card p-5 space-y-3">
