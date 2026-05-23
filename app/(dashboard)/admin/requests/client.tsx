@@ -10,6 +10,13 @@ import type { EmployeeRow } from '@/lib/supabase/queries/employee'
 
 type RequestStatus = 'pending' | 'approved' | 'rejected'
 
+const FEATURE_LABELS: Record<string, string> = {
+  attendance: '근태',
+  payroll:    '급여',
+  leave:      '연차',
+  documents:  '서류',
+}
+
 interface CompanyRequest {
   id: number
   created_at: string
@@ -24,6 +31,7 @@ interface CompanyRequest {
   admin_email: string | null
   admin_phone: string | null
   biz_doc_url: string | null
+  requested_features: Record<string, boolean> | null
   status: RequestStatus
   reviewed_at: string | null
   reject_reason: string | null
@@ -142,6 +150,20 @@ function CompanyRequestItem({ req, onStatusChange }: {
             <InfoRow label="담당자 이메일" value={req.admin_email} />
             <InfoRow label="담당자 연락처" value={req.admin_phone} />
           </div>
+
+          {/* 신청 기능 */}
+          {req.requested_features && Object.keys(req.requested_features).length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-slate-400">신청 기능</span>
+              {Object.entries(req.requested_features)
+                .filter(([, v]) => v)
+                .map(([k]) => (
+                  <span key={k} className="badge badge-blue text-[10px]">
+                    {FEATURE_LABELS[k] ?? k}
+                  </span>
+                ))}
+            </div>
+          )}
 
           {req.biz_doc_url && (
             <a

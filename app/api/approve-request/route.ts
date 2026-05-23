@@ -48,6 +48,16 @@ export async function POST(req: Request) {
 
   let companyId: number
 
+  // 신청 시 선택한 features → companies.features JSONB 구성
+  const requestedFeatures = request.requested_features as Record<string, boolean> | null
+  const companyFeatures = {
+    employees:  true,
+    attendance: requestedFeatures?.attendance ?? false,
+    leave:      requestedFeatures?.leave      ?? false,
+    documents:  requestedFeatures?.documents  ?? false,
+    payroll:    requestedFeatures?.payroll    ?? false,
+  }
+
   if (existingCompany) {
     // 기존 회사 재활성화 및 정보 업데이트
     const { error: updateErr } = await supabaseAdmin
@@ -61,6 +71,7 @@ export async function POST(req: Request) {
         address:        request.address          ?? null,
         status:         'active',
         deleted_at:     null,
+        features:       companyFeatures,
         ...(request.biz_doc_url ? { biz_doc_url: request.biz_doc_url } : {}),
       })
       .eq('id', existingCompany.id)
@@ -83,6 +94,7 @@ export async function POST(req: Request) {
         address:        request.address          ?? null,
         status:         'active',
         biz_doc_url:    request.biz_doc_url      ?? null,
+        features:       companyFeatures,
       })
       .select('id')
       .single()

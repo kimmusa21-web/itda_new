@@ -160,6 +160,13 @@ function LoginPageInner() {
 }
 
 /* ── 회사 가입신청 폼 ── */
+const FEATURE_OPTIONS = [
+  { key: 'attendance', label: '근태 관리', desc: '출퇴근 기록·조회' },
+  { key: 'payroll',    label: '급여 관리', desc: '급여명세서 발행' },
+  { key: 'leave',      label: '연차 관리', desc: '연차 신청·승인' },
+  { key: 'documents',  label: '서류 관리', desc: '재직증명서 발급' },
+] as const
+
 function RegisterForm({
   setMessage,
   message,
@@ -172,10 +179,17 @@ function RegisterForm({
     admin_name: '', admin_email: '', admin_phone: '',
     business_type: '', industry: '', telephone: '', address: '',
   })
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([])
   const [bizDocUrl,    setBizDocUrl]    = useState<string | null>(null)
   const [extracting,   setExtracting]   = useState(false)
   const [extractMsg,   setExtractMsg]   = useState<string | null>(null)
   const [loading,      setLoading]      = useState(false)
+
+  function toggleFeature(key: string) {
+    setSelectedFeatures(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    )
+  }
 
   const f = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }))
@@ -223,10 +237,13 @@ function RegisterForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    const requestedFeatures = selectedFeatures.length > 0
+      ? Object.fromEntries(selectedFeatures.map(k => [k, true]))
+      : null
     const res = await fetch('/api/company-request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, biz_doc_url: bizDocUrl }),
+      body: JSON.stringify({ ...form, biz_doc_url: bizDocUrl, requested_features: requestedFeatures }),
     })
     const data = await res.json().catch(() => ({}))
     setLoading(false)
@@ -293,6 +310,43 @@ function RegisterForm({
           />
         </div>
       ))}
+
+      {/* 필요한 기능 선택 */}
+      <div>
+        <label className="block text-xs font-medium text-slate-400 mb-2">필요한 기능 선택 (복수 선택 가능)</label>
+        <div className="grid grid-cols-2 gap-2">
+          {FEATURE_OPTIONS.map(({ key, label, desc }) => {
+            const checked = selectedFeatures.includes(key)
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => toggleFeature(key)}
+                className={`flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all ${
+                  checked
+                    ? 'border-blue-500 bg-blue-900/30 text-blue-300'
+                    : 'border-[#334155] bg-[#0f172a] text-slate-400 hover:border-slate-500'
+                }`}
+              >
+                <span className={`mt-0.5 w-3.5 h-3.5 flex-shrink-0 rounded border flex items-center justify-center transition-colors ${
+                  checked ? 'bg-blue-500 border-blue-500' : 'border-slate-600'
+                }`}>
+                  {checked && (
+                    <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                      <path d="M1 3l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </span>
+                <div>
+                  <p className="text-xs font-medium leading-tight">{label}</p>
+                  <p className="text-[10px] mt-0.5 opacity-70">{desc}</p>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-xs text-slate-600 mt-1.5">선택하지 않으면 직원 관리 기능만 기본 제공됩니다</p>
+      </div>
 
       {message && (
         <div className={`text-xs px-3 py-2.5 rounded-xl ${
