@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link         from 'next/link'
-import { Bell, Wallet, CalendarDays, FileText, ArrowRight, Clock, LogIn, LogOut, BookOpen, ChevronRight } from 'lucide-react'
+import { Bell, Wallet, CalendarDays, FileText, ArrowRight, Clock, LogIn, LogOut, BookOpen, ChevronRight, TriangleAlert } from 'lucide-react'
 import { createClient }      from '@/lib/supabase/server'
 import { getEffectiveEmployeeContext } from '@/lib/impersonation/get-effective-context'
 import { getEmployeePayslips } from '@/lib/employee-payslips'
@@ -12,6 +12,7 @@ import { kstToday } from '@/lib/utils/kst'
 import { cn } from '@/lib/utils'
 import { STATUS_LABELS, WORK_TYPE_LABELS } from '@/types/attendance'
 import type { AttendanceLog } from '@/types/attendance'
+import { getMissingAttendanceDays } from '@/lib/actions/attendance-actions'
 
 function fmtTime(iso: string | null) {
   if (!iso) return '—'
@@ -81,7 +82,10 @@ export default async function EmployeeDashboard() {
         .maybeSingle()
     : { data: null }
 
-  const hasNotifications = latestPayslip || latestLeave || latestDoc
+  // 근태 미입력일
+  const missingDays = empCtx ? await getMissingAttendanceDays() : []
+
+  const hasNotifications = latestPayslip || latestLeave || latestDoc || missingDays.length > 0
 
   const statusColor = {
     not_started: 'bg-slate-100 text-slate-500',
@@ -160,6 +164,26 @@ export default async function EmployeeDashboard() {
       <section>
         <h2 className="text-sm font-semibold text-slate-700 mb-3">알림</h2>
         <div className="space-y-2.5">
+          {missingDays.length > 0 && (
+            <Link
+              href="/employee/attendance"
+              className="flex items-center gap-3 p-4 rounded-xl border-2 border-red-200 bg-red-50 hover:bg-red-100 transition-all"
+            >
+              <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                <TriangleAlert size={16} className="text-red-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-red-700">근태 미입력 {missingDays.length}일</p>
+                <p className="text-xs text-red-500 mt-0.5">
+                  {missingDays[0]}
+                  {missingDays.length > 1 && ` 외 ${missingDays.length - 1}일`}
+                  {' '}출퇴근 기록을 입력해주세요
+                </p>
+              </div>
+              <ArrowRight size={15} className="text-red-400 flex-shrink-0" />
+            </Link>
+          )}
+
           {latestPayslip && (
             <Link
               href={`/employee/payslips/${latestPayslip.id}`}

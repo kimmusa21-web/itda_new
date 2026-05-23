@@ -8,8 +8,9 @@ import {
   getEffectiveEmployeeContext,
 } from '@/lib/impersonation/get-effective-context'
 import { calculateDistanceMeters } from '@/lib/utils/distance'
-import { kstToday, isAllowedWorkDate } from '@/lib/utils/kst'
+import { kstToday, kstFirstOfMonth, isAllowedWorkDate } from '@/lib/utils/kst'
 import { calcWorkMinutes } from '@/lib/utils/work-hours'
+import { isWorkday } from '@/lib/utils/korean-holidays'
 import type {
   CheckInInput, CheckOutInput, UpdateAttendanceInput,
   AttendanceSettings, AttendanceLog, AttendanceRow, MonthlySummaryRow, WorkType,
@@ -526,6 +527,44 @@ export async function getMonthlyAttendanceSummary(month: string): Promise<Monthl
       work_types,
     }
   })
+}
+
+/* ── 근태 미입력일 조회 (이번달 1일~어제, 근무일 기준) ──────── */
+export async function getMissingAttendanceDays(): Promise<string[]> {
+  const supabase = createClient()
+  const ctx = await getEffectiveEmployeeContext()
+  if (!ctx) return []
+
+  const today      = kstToday()
+  const monthStart = kstFirstOfMonth()
+
+  const yDate = new Date(today + 'T00:00:00+09:00')
+  yDate.setDate(yDate.getDate() - 1)
+  const yesterday = yDate.toISOString().slice(0, 10)
+
+  if (yesterday < monthStart) return []
+
+  const workdays: string[] = []
+  const cur = new Date(monthStart + 'T00:00:00+09:00')
+  const end = new Date(yesterday + 'T00:00:00+09:00')
+  while (cur <= end) {
+    const d = cur.toISOString().slice(0, 10)
+    if (isWorkday(d)) workdays.push(d)
+    cur.setDate(cur.getDate() + 1)
+  }
+
+  if (workdays.length === 0) return []
+
+  const { data: logs } = await supabase
+    .from('attendance_logs')
+    .select('work_date')
+    .eq('employee_id', ctx.employeeId)
+    .gte('work_date', monthStart)
+    .lte('work_date', yesterday)
+
+  const recorded = new Set((logs ?? []).map((l: { work_date: string }) => l.work_date))
+
+  return workdays.filter(d => !recorded.has(d))
 }
 
 /* ── 회사 위치 저장 ───────────────────────────────────────── */

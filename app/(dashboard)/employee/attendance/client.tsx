@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { MapPin, Clock, CheckCircle, LogOut, LogIn, AlertCircle, Loader2, ChevronDown, ChevronUp, Edit2, Map, ChevronRight } from 'lucide-react'
+import { MapPin, Clock, CheckCircle, LogOut, LogIn, AlertCircle, Loader2, ChevronDown, ChevronUp, Edit2, Map, ChevronRight, TriangleAlert } from 'lucide-react'
 import { KakaoMap } from '@/components/attendance/kakao-map'
 import { cn } from '@/lib/utils'
 import { checkIn, checkOut, updateAttendance, getAttendanceByDate } from '@/lib/actions/attendance-actions'
@@ -18,6 +18,7 @@ interface Props {
   isImpersonating: boolean
   employeeName:    string
   periodLogs:      AttendanceLog[]
+  missingDays:     string[]
 }
 
 type GpsError = string | null
@@ -58,29 +59,41 @@ function utcToKstLocal(iso: string): string {
   return new Date(kstMs).toISOString().slice(0, 16)
 }
 
-export function AttendanceClient({ today, todayLog: initialLog, company, isImpersonating, employeeName, periodLogs }: Props) {
+export function AttendanceClient({ today, todayLog: initialLog, company, isImpersonating, employeeName, periodLogs, missingDays: initialMissingDays }: Props) {
   const router = useRouter()
-  const [log,        setLog]        = useState<AttendanceLog | null>(initialLog)
-  const [workType,   setWorkType]   = useState<WorkType>('office')
-  const [workNote,   setWorkNote]   = useState('')
-  const [lateNote,   setLateNote]   = useState('')
-  const [workDate,   setWorkDate]   = useState(today)
-  const [error,      setError]      = useState<string | null>(null)
-  const [gpsErr,     setGpsErr]     = useState<GpsError>(null)
-  const [isGps,      setIsGps]      = useState(false)
-  const [editOpen,   setEditOpen]   = useState(false)
-  const [editingLog, setEditingLog] = useState<AttendanceLog | null>(null)
-  const [editInAt,   setEditInAt]   = useState('')
-  const [editOutAt,  setEditOutAt]  = useState('')
-  const [editType,   setEditType]   = useState<WorkType>('office')
-  const [editNote,   setEditNote]   = useState('')
-  const [toast,       setToast]       = useState<string | null>(null)
-  const [previewPos,  setPreviewPos]  = useState<{ lat: number; lng: number } | null>(null)
+  const formRef = useRef<HTMLDivElement>(null)
+  const [log,          setLog]          = useState<AttendanceLog | null>(initialLog)
+  const [workType,     setWorkType]     = useState<WorkType>('office')
+  const [workNote,     setWorkNote]     = useState('')
+  const [lateNote,     setLateNote]     = useState('')
+  const [workDate,     setWorkDate]     = useState(today)
+  const [error,        setError]        = useState<string | null>(null)
+  const [gpsErr,       setGpsErr]       = useState<GpsError>(null)
+  const [isGps,        setIsGps]        = useState(false)
+  const [editOpen,     setEditOpen]     = useState(false)
+  const [editingLog,   setEditingLog]   = useState<AttendanceLog | null>(null)
+  const [editInAt,     setEditInAt]     = useState('')
+  const [editOutAt,    setEditOutAt]    = useState('')
+  const [editType,     setEditType]     = useState<WorkType>('office')
+  const [editNote,     setEditNote]     = useState('')
+  const [toast,        setToast]        = useState<string | null>(null)
+  const [previewPos,   setPreviewPos]   = useState<{ lat: number; lng: number } | null>(null)
   const [isPreviewGps, setIsPreviewGps] = useState(false)
-  const [isPending,  startTransition] = useTransition()
+  const [isPending,    startTransition] = useTransition()
+  const [missingDays,  setMissingDays]  = useState<string[]>(initialMissingDays)
 
   const isLateEntry  = workDate < today
   const firstOfMonth = kstFirstOfMonth()
+
+  function handleSelectMissingDay(day: string) {
+    setWorkDate(day)
+    setLog(null)
+    setError(null)
+    setGpsErr(null)
+    setEditOpen(false)
+    // 입력 폼으로 스크롤
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  }
 
   // 이번 주·이번 달 근무시간 집계
   const weekRange      = getWeekRange(today)
@@ -147,6 +160,8 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
       if (!res.success) { setError(res.error ?? '오류가 발생했습니다.'); return }
       showToast('출근이 기록되었습니다.')
       setWorkNote(''); setLateNote('')
+      // 소급 입력 성공 시 미입력 목록에서 제거
+      if (workDate < today) setMissingDays(prev => prev.filter(d => d !== workDate))
       await reloadLog()
     })
   }
@@ -222,7 +237,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
   const canEdit = !!log && log.id > 0
 
   return (
-    <div className="max-w-lg mx-auto space-y-4 pb-24">
+    <div ref={formRef} className="max-w-lg mx-auto space-y-4 pb-24">
 
       {/* 주간 근무 게이지 */}
       <div className="card px-5 py-4 space-y-3">
@@ -610,6 +625,43 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
             {isPending ? <Loader2 size={14} className="animate-spin" /> : null}
             수정 저장
           </button>
+        </div>
+      )}
+
+      {/* 근태 미입력 배너 */}
+      {missingDays.length > 0 && (
+        <div className="rounded-2xl border-2 border-red-200 bg-red-50 overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-3 bg-red-100 border-b border-red-200">
+            <TriangleAlert size={15} className="text-red-600 flex-shrink-0" />
+            <p className="text-sm font-semibold text-red-700">
+              근태 미입력 {missingDays.length}일
+            </p>
+            <p className="text-xs text-red-500 ml-auto">날짜를 눌러 입력하세요</p>
+          </div>
+          <div className="px-5 py-3 flex flex-wrap gap-2">
+            {missingDays.map(day => {
+              const isSelected = workDate === day
+              const d = new Date(day + 'T00:00:00+09:00')
+              const label = d.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul' })
+              return (
+                <button
+                  key={day}
+                  onClick={() => handleSelectMissingDay(day)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors',
+                    isSelected
+                      ? 'bg-red-600 text-white border-red-600'
+                      : 'bg-white text-red-700 border-red-300 hover:bg-red-100',
+                  )}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+          <p className="px-5 pb-3 text-xs text-red-400">
+            입력 후 담당자에게 알림이 전송됩니다.
+          </p>
         </div>
       )}
 
