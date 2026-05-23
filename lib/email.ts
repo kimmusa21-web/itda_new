@@ -33,7 +33,7 @@ async function sendRawEmail(payload: EmailPayload): Promise<{ success: boolean; 
   if (process.env.RESEND_API_KEY) {
     const { Resend } = await import('resend')
     const resend = new Resend(process.env.RESEND_API_KEY)
-    const from = process.env.EMAIL_FROM ?? 'ModuHR <noreply@itda.kr>'
+    const from = process.env.EMAIL_FROM ?? 'ModuHR <swkim@fithr.co.kr>'
     const { error } = await resend.emails.send({
       from,
       to:          payload.to,
