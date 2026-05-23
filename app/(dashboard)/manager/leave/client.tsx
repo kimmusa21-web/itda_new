@@ -10,10 +10,11 @@ import { cn }         from '@/lib/utils'
 import {
   approveLeaveRequest, rejectLeaveRequest,
   adjustLeaveBalance, allocateLeaveForAllEmployees,
+  grantSpecialLeave, deleteSpecialLeave,
 } from '@/lib/actions/leave-actions'
 import { dailyHours } from '@/lib/leave-calculator'
-import { LEAVE_TYPE_LABELS } from '@/types/leave'
-import type { LeaveType } from '@/types/leave'
+import { LEAVE_TYPE_LABELS, SPECIAL_LEAVE_KINDS } from '@/types/leave'
+import type { LeaveType, SpecialLeaveGrant } from '@/types/leave'
 
 /* ── 타입 ──────────────────────────────────────────────────── */
 interface Employee   { id: number; name: string; department: string | null; position: string | null; Date_of_joining: string | null; weekly_work_hours: number | null }
@@ -30,10 +31,11 @@ interface Props {
   pendingRequests: Request[]
   allRequests:     AllRequest[]
   adjustments:     Adjustment[]
+  specialGrants:   SpecialLeaveGrant[]
   currentYear:     number
 }
 
-type Tab = 'overview' | 'requests' | 'adjust'
+type Tab = 'overview' | 'requests' | 'adjust' | 'special'
 
 interface DetailEvent {
   sortDate:  string
@@ -56,7 +58,7 @@ function empBalanceSummary(empId: number, balances: Balance[], weeklyHours: numb
 
 /* ── 메인 컴포넌트 ─────────────────────────────────────────── */
 export function ManagerLeaveClient({
-  policy, employees, balances, pendingRequests, allRequests, adjustments, currentYear,
+  policy, employees, balances, pendingRequests, allRequests, adjustments, specialGrants: initSpecialGrants, currentYear,
 }: Props) {
   const [tab,          setTab]          = useState<Tab>('requests')
   const [processing,   setProcessing]   = useState<number | null>(null)
@@ -70,6 +72,19 @@ export function ManagerLeaveClient({
   const [allocating,   setAllocating]   = useState(false)
   const [toast,        setToast]        = useState<{ msg: string; ok: boolean } | null>(null)
   const [reqs,         setReqs]         = useState(pendingRequests)
+
+  // 특별휴가 상태
+  const [specialGrants,  setSpecialGrants]  = useState(initSpecialGrants)
+  const [spEmpId,        setSpEmpId]        = useState<number | ''>('')
+  const [spKind,         setSpKind]         = useState<string>(SPECIAL_LEAVE_KINDS[0])
+  const [spCustomKind,   setSpCustomKind]   = useState('')
+  const [spDays,         setSpDays]         = useState('')
+  const [spNote,         setSpNote]         = useState('')
+  const [spGrantDate,    setSpGrantDate]    = useState(new Date().toISOString().slice(0, 10))
+  const [spExpiresAt,    setSpExpiresAt]    = useState('')
+  const [spSubmitting,   setSpSubmitting]   = useState(false)
+  const [spDeleting,     setSpDeleting]     = useState<number | null>(null)
+  const [spFilterEmpId,  setSpFilterEmpId]  = useState<number | 'all'>('all')
 
   // 직원별 현황 탭 상태
   const [ovYear,  setOvYear]  = useState(currentYear)
@@ -110,6 +125,41 @@ export function ManagerLeaveClient({
     if (!res.success) { showToast(res.error ?? '오류', false); return }
     setAdjOpen(null); setAdjHours(''); setAdjReason(''); setAdjBalId(null)
     showToast('조정 완료')
+  }
+
+  async function handleGrantSpecial() {
+    const days = parseFloat(spDays)
+    const kind = spKind === '기타' ? spCustomKind.trim() : spKind
+    if (!spEmpId)       { showToast('직원을 선택해주세요', false); return }
+    if (!kind)          { showToast('휴가 종류를 입력해주세요', false); return }
+    if (!days || days <= 0) { showToast('일수를 입력해주세요', false); return }
+    if (!spGrantDate)   { showToast('부여 일자를 선택해주세요', false); return }
+    setSpSubmitting(true)
+    const res = await grantSpecialLeave({
+      employee_id: spEmpId as number,
+      leave_kind:  kind,
+      days,
+      note:        spNote.trim() || null,
+      grant_date:  spGrantDate,
+      expires_at:  spExpiresAt || null,
+    })
+    setSpSubmitting(false)
+    if (!res.success) { showToast(res.error ?? '오류', false); return }
+    showToast('특별휴가 부여 완료')
+    setSpEmpId(''); setSpKind(SPECIAL_LEAVE_KINDS[0]); setSpCustomKind('')
+    setSpDays(''); setSpNote(''); setSpExpiresAt('')
+    setSpGrantDate(new Date().toISOString().slice(0, 10))
+    // 낙관적 업데이트 대신 페이지 리로드
+    window.location.reload()
+  }
+
+  async function handleDeleteSpecial(id: number) {
+    setSpDeleting(id)
+    const res = await deleteSpecialLeave(id)
+    setSpDeleting(null)
+    if (!res.success) { showToast(res.error ?? '오류', false); return }
+    setSpecialGrants(prev => prev.filter(g => g.id !== id))
+    showToast('삭제 완료')
   }
 
   async function handleAllocate() {
@@ -304,11 +354,12 @@ export function ManagerLeaveClient({
       </div>
 
       {/* 탭 */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit flex-wrap">
         {([
           ['requests', `승인 대기 ${reqs.length}`],
           ['overview', `직원별 현황 ${employees.length}`],
           ['adjust',   '수동 조정'],
+          ['special',  '특별휴가'],
         ] as [Tab, string][]).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
             className={cn('px-4 py-1.5 rounded-lg text-sm font-medium transition-colors',
@@ -648,6 +699,173 @@ export function ManagerLeaveClient({
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* ─ 특별휴가 탭 ─ */}
+      {tab === 'special' && (
+        <div className="space-y-4">
+          <p className="text-xs text-slate-400">연차와 별도로 보상휴가·대체휴일·생일휴가 등을 직원에게 부여합니다. 직원은 연차 페이지에서 확인할 수 있습니다.</p>
+
+          {/* 부여 폼 */}
+          <div className="card p-5 space-y-4">
+            <p className="text-sm font-semibold text-slate-700">특별휴가 부여</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* 직원 선택 */}
+              <div>
+                <label className="text-xs font-medium text-slate-500 block mb-1">직원 *</label>
+                <select
+                  value={spEmpId}
+                  onChange={e => setSpEmpId(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="input w-full text-sm"
+                >
+                  <option value="">직원 선택</option>
+                  {employees.map(e => (
+                    <option key={e.id} value={e.id}>
+                      {e.name}{e.department ? ` · ${e.department}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 부여 일자 */}
+              <div>
+                <label className="text-xs font-medium text-slate-500 block mb-1">부여 일자 *</label>
+                <input type="date" value={spGrantDate}
+                  onChange={e => setSpGrantDate(e.target.value)}
+                  className="input w-full text-sm" />
+              </div>
+            </div>
+
+            {/* 휴가 종류 */}
+            <div>
+              <label className="text-xs font-medium text-slate-500 block mb-1.5">휴가 종류 *</label>
+              <div className="flex gap-2 flex-wrap">
+                {SPECIAL_LEAVE_KINDS.map(k => (
+                  <button key={k} type="button"
+                    onClick={() => { setSpKind(k); if (k !== '기타') setSpCustomKind('') }}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
+                      spKind === k
+                        ? 'bg-[#003366] text-white border-[#003366]'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300',
+                    )}
+                  >{k}</button>
+                ))}
+              </div>
+              {spKind === '기타' && (
+                <input
+                  type="text"
+                  placeholder="휴가 종류 직접 입력"
+                  value={spCustomKind}
+                  onChange={e => setSpCustomKind(e.target.value)}
+                  className="input w-full text-sm mt-2"
+                />
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* 일수 */}
+              <div>
+                <label className="text-xs font-medium text-slate-500 block mb-1">일수 *</label>
+                <div className="flex items-center gap-2">
+                  <input type="number" min="0.5" step="0.5" placeholder="예: 1"
+                    value={spDays}
+                    onChange={e => setSpDays(e.target.value)}
+                    className="input w-28 text-sm" />
+                  <span className="text-xs text-slate-400">일</span>
+                </div>
+              </div>
+
+              {/* 만료일 */}
+              <div>
+                <label className="text-xs font-medium text-slate-500 block mb-1">만료일 (선택)</label>
+                <input type="date" value={spExpiresAt}
+                  onChange={e => setSpExpiresAt(e.target.value)}
+                  className="input w-full text-sm" />
+              </div>
+            </div>
+
+            {/* 비고 */}
+            <div>
+              <label className="text-xs font-medium text-slate-500 block mb-1">비고 / 사유</label>
+              <input type="text" placeholder="예: 2025년 노동절 대체휴일"
+                value={spNote}
+                onChange={e => setSpNote(e.target.value)}
+                className="input w-full text-sm" />
+            </div>
+
+            <button
+              onClick={handleGrantSpecial}
+              disabled={spSubmitting}
+              className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-xl bg-[#003366] text-white hover:bg-[#002244] disabled:opacity-50 transition-colors"
+            >
+              {spSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+              특별휴가 부여
+            </button>
+          </div>
+
+          {/* 부여 내역 목록 */}
+          <div className="card overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-700">부여 내역</p>
+              <select
+                value={spFilterEmpId === 'all' ? 'all' : String(spFilterEmpId)}
+                onChange={e => setSpFilterEmpId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                className="input text-xs h-7 w-32"
+              >
+                <option value="all">전체 직원</option>
+                {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+            </div>
+
+            {specialGrants.filter(g => spFilterEmpId === 'all' || g.employee_id === spFilterEmpId).length === 0 ? (
+              <div className="py-12 text-center text-slate-400 text-sm">부여된 특별휴가가 없습니다</div>
+            ) : (
+              <ul className="divide-y divide-slate-50">
+                {specialGrants
+                  .filter(g => spFilterEmpId === 'all' || g.employee_id === spFilterEmpId)
+                  .map(g => {
+                    const emp = employees.find(e => e.id === g.employee_id)
+                    const isExpired = g.expires_at ? g.expires_at < new Date().toISOString().slice(0, 10) : false
+                    return (
+                      <li key={g.id} className="flex items-center gap-3 px-4 py-3.5">
+                        <div className={cn(
+                          'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold',
+                          isExpired ? 'bg-slate-100 text-slate-400' : 'bg-indigo-50 text-indigo-600',
+                        )}>
+                          {g.days}일
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-slate-800">{emp?.name ?? '—'}</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              {g.leave_kind}
+                            </span>
+                            {isExpired && (
+                              <span className="text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400">만료</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            부여일: {g.grant_date}
+                            {g.expires_at ? ` · 만료: ${g.expires_at}` : ''}
+                          </p>
+                          {g.note && <p className="text-xs text-slate-500 mt-0.5 truncate">{g.note}</p>}
+                        </div>
+                        <button
+                          onClick={() => handleDeleteSpecial(g.id)}
+                          disabled={spDeleting === g.id}
+                          className="text-xs text-red-400 hover:text-red-600 flex-shrink-0 px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                        >
+                          {spDeleting === g.id ? <Loader2 size={12} className="animate-spin" /> : '삭제'}
+                        </button>
+                      </li>
+                    )
+                  })}
+              </ul>
+            )}
+          </div>
         </div>
       )}
 

@@ -12,7 +12,7 @@ import { dailyHours, countWeekdays }        from '@/lib/leave-calculator'
 import { LEAVE_TYPE_LABELS }               from '@/types/leave'
 import type {
   LeaveType, LeaveRequest, LeaveAdjustment,
-  LeaveBalance, LeavePolicy,
+  LeaveBalance, LeavePolicy, SpecialLeaveGrant,
 } from '@/types/leave'
 
 interface Employee {
@@ -22,11 +22,12 @@ interface Employee {
 }
 
 interface Props {
-  employee:    Employee
-  policy:      LeavePolicy | null
-  balances:    LeaveBalance[]
-  requests:    LeaveRequest[]
-  adjustments: LeaveAdjustment[]
+  employee:      Employee
+  policy:        LeavePolicy | null
+  balances:      LeaveBalance[]
+  requests:      LeaveRequest[]
+  adjustments:   LeaveAdjustment[]
+  specialGrants: SpecialLeaveGrant[]
 }
 
 const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
@@ -37,7 +38,7 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
 }
 
 export function EmployeeLeaveClient({
-  employee, policy, balances, requests: initReqs, adjustments,
+  employee, policy, balances, requests: initReqs, adjustments, specialGrants,
 }: Props) {
   const dh = dailyHours(employee.weekly_work_hours)
 
@@ -259,6 +260,48 @@ export function EmployeeLeaveClient({
           </div>
         )}
       </div>
+
+      {/* ── 특별휴가 ── */}
+      {specialGrants.length > 0 && (
+        <div className="card overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-100 bg-indigo-50 flex items-center gap-2">
+            <Calendar size={14} className="text-indigo-500" />
+            <p className="text-sm font-semibold text-indigo-700">특별휴가</p>
+          </div>
+          <ul className="divide-y divide-slate-50">
+            {specialGrants.map(g => {
+              const today = new Date().toISOString().slice(0, 10)
+              const isExpired = g.expires_at ? g.expires_at < today : false
+              return (
+                <li key={g.id} className="flex items-center gap-3 px-5 py-3.5">
+                  <div className={cn(
+                    'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold',
+                    isExpired ? 'bg-slate-100 text-slate-400' : 'bg-indigo-50 text-indigo-600',
+                  )}>
+                    {g.days}일
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-slate-800">{g.leave_kind}</span>
+                      {isExpired && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400">만료</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      부여일: {fmtDate(g.grant_date)}
+                      {g.expires_at ? ` · 만료: ${fmtDate(g.expires_at)}` : ''}
+                    </p>
+                    {g.note && <p className="text-xs text-slate-500 mt-0.5">{g.note}</p>}
+                  </div>
+                  <p className={cn('text-sm font-bold flex-shrink-0', isExpired ? 'text-slate-400' : 'text-indigo-700')}>
+                    +{g.days}일
+                  </p>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
 
       {/* ── 부여 내역 ── */}
       <div className="card overflow-hidden">

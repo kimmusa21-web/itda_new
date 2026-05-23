@@ -82,3 +82,19 @@ export const LEAVE_STATUS_LABELS: Record<LeaveStatus, string> = {
   rejected:  '반려됨',
   cancelled: '취소됨',
 }
+
+export const SPECIAL_LEAVE_KINDS = ['보상휴가', '대체휴일', '생일휴가', '경조휴가', '기타'] as const
+export type SpecialLeaveKind = typeof SPECIAL_LEAVE_KINDS[number]
+
+export interface SpecialLeaveGrant {
+  id:          number
+  company_id:  number
+  employee_id: number
+  leave_kind:  string
+  days:        number
+  note:        string | null
+  grant_date:  string
+  expires_at:  string | null
+  granted_by:  string
+  created_at:  string
+}

@@ -71,6 +71,7 @@ export default async function ManagerLeavePage({
     { data: pendingRequests },
     { data: allRequests },
     { data: adjustments },
+    { data: specialGrants },
   ] = await Promise.all([
     supabase
       .from('employees')
@@ -102,6 +103,11 @@ export default async function ManagerLeavePage({
       .eq('company_id', ctx.companyId)
       .order('created_at', { ascending: false })
       .limit(500),
+    supabase
+      .from('special_leave_grants')
+      .select('*')
+      .eq('company_id', ctx.companyId)
+      .order('grant_date', { ascending: false }),
   ])
 
   return (
@@ -114,6 +120,7 @@ export default async function ManagerLeavePage({
         pendingRequests={pendingRequests ?? []}
         allRequests={allRequests ?? []}
         adjustments={adjustments ?? []}
+        specialGrants={specialGrants ?? []}
         currentYear={year}
       />
     </div>

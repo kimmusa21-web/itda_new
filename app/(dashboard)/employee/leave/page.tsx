@@ -63,11 +63,13 @@ export default async function EmployeeLeavePage({
     { data: balances },
     { data: requests },
     { data: adjustments },
+    { data: specialGrants },
   ] = await Promise.all([
     supabase.from('leave_policies').select('*').eq('company_id', emp.company_id).maybeSingle(),
     supabase.from('leave_balances').select('*').eq('employee_id', emp.id).order('period'),
     supabase.from('leave_requests').select('*').eq('employee_id', emp.id).order('start_date', { ascending: false }),
     supabase.from('leave_adjustments').select('*').eq('employee_id', emp.id).order('created_at', { ascending: false }),
+    supabase.from('special_leave_grants').select('*').eq('employee_id', emp.id).order('grant_date', { ascending: false }),
   ])
 
   return (
@@ -79,6 +81,7 @@ export default async function EmployeeLeavePage({
         balances={balances ?? []}
         requests={requests ?? []}
         adjustments={adjustments ?? []}
+        specialGrants={specialGrants ?? []}
       />
     </div>
   )

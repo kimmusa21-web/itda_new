@@ -653,3 +653,56 @@ export async function getMyLeaveAdjustments() {
 
   return data ?? []
 }
+
+/* ── 특별휴가 부여 (매니저) ─────────────────────────────────── */
+export async function grantSpecialLeave(input: {
+  employee_id: number
+  leave_kind:  string
+  days:        number
+  note:        string | null
+  grant_date:  string
+  expires_at?: string | null
+}): Promise<{ success: boolean; error?: string }> {
+  const supabase = createClient()
+  const ctx = await getEffectiveManagerContext()
+  if (!ctx?.companyId) return { success: false, error: '회사 정보가 없습니다' }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: '인증이 필요합니다' }
+
+  const { error } = await supabase
+    .from('special_leave_grants')
+    .insert({
+      company_id:  ctx.companyId,
+      employee_id: input.employee_id,
+      leave_kind:  input.leave_kind.trim(),
+      days:        input.days,
+      note:        input.note?.trim() || null,
+      grant_date:  input.grant_date,
+      expires_at:  input.expires_at || null,
+      granted_by:  user.id,
+    })
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/manager/leave')
+  revalidatePath('/employee/leave')
+  return { success: true }
+}
+
+/* ── 특별휴가 삭제 (매니저) ─────────────────────────────────── */
+export async function deleteSpecialLeave(id: number): Promise<{ success: boolean; error?: string }> {
+  const supabase = createClient()
+  const ctx = await getEffectiveManagerContext()
+  if (!ctx?.companyId) return { success: false, error: '회사 정보가 없습니다' }
+
+  const { error } = await supabase
+    .from('special_leave_grants')
+    .delete()
+    .eq('id', id)
+    .eq('company_id', ctx.companyId)
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/manager/leave')
+  revalidatePath('/employee/leave')
+  return { success: true }
+}
