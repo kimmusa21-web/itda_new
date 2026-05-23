@@ -153,7 +153,7 @@ function LoginPageInner() {
       </div>
 
       <p className="text-slate-700 text-xs mt-6">
-        운영 문의: admin@itda.kr
+        운영 문의: swkim@fithr.co.kr
       </p>
     </div>
   )
