@@ -84,6 +84,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
 
   const isLateEntry  = workDate < today
   const firstOfMonth = kstFirstOfMonth()
+  const isWeekend    = (() => { const d = new Date(workDate + 'T00:00:00+09:00').getDay(); return d === 0 || d === 6 })()
 
   function handleSelectMissingDay(day: string) {
     setWorkDate(day)
@@ -312,7 +313,13 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
               onChange={e => { setWorkDate(e.target.value); setLog(null) }}
               className="input w-full text-sm"
             />
-            {isLateEntry && (
+            {isWeekend && (
+              <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                <AlertCircle size={12} />
+                주말은 근태 입력 대상이 아닙니다.
+              </p>
+            )}
+            {!isWeekend && isLateEntry && (
               <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                 <AlertCircle size={12} />
                 소급 입력입니다. 담당자에게 알림이 전송됩니다.
@@ -411,11 +418,11 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
 
           <button
             onClick={handleCheckIn}
-            disabled={isPending || isGps}
-            className="w-full py-4 rounded-2xl bg-[#003366] text-white font-bold text-lg hover:bg-[#002244] disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+            disabled={isPending || isGps || isWeekend}
+            className="w-full py-4 rounded-2xl bg-[#003366] text-white font-bold text-lg hover:bg-[#002244] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
           >
             {(isPending || isGps) ? <Loader2 size={20} className="animate-spin" /> : <LogIn size={20} />}
-            {isGps ? '위치 확인 중...' : isPending ? '처리 중...' : '출근하기'}
+            {isGps ? '위치 확인 중...' : isPending ? '처리 중...' : isWeekend ? '주말은 입력 불가' : '출근하기'}
           </button>
         </div>
       )}
