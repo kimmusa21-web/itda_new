@@ -136,14 +136,10 @@ export function ManagerLeaveClient({
     const hireDate = emp?.Date_of_joining  // 'YYYY-MM-DD'
 
     if (policy.basis === 'hire_date' && hireDate) {
-      const hireMM = hireDate.slice(5, 7)
-      // 입사일 기준 주기: (year-1)-MM < period <= year-MM
-      const cycleStart = `${year - 1}-${hireMM}`
-      const cycleEnd   = `${year}-${hireMM}`
       return balances.filter(b => {
         if (b.employee_id !== empId) return false
-        if (b.period_type === 'annual') return parseInt(b.period.slice(0, 4)) === year
-        return b.period > cycleStart && b.period <= cycleEnd
+        // annual/monthly 모두 실제 period의 연도 기준으로 표시
+        return parseInt(b.period.slice(0, 4)) === year
       })
     }
 
