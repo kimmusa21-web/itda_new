@@ -31,7 +31,7 @@ interface CompanyRequest {
   admin_email: string | null
   admin_phone: string | null
   biz_doc_url: string | null
-  requested_features: Record<string, boolean> | null
+  requested_features?: Record<string, boolean> | null
   status: RequestStatus
   reviewed_at: string | null
   reject_reason: string | null
