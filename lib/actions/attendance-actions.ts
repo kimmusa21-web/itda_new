@@ -12,7 +12,7 @@ import { kstToday, kstFirstOfMonth, isAllowedWorkDate } from '@/lib/utils/kst'
 import { calcWorkMinutes } from '@/lib/utils/work-hours'
 import { isWorkday, prefetchHolidaysForYear } from '@/lib/utils/korean-holidays'
 import type {
-  CheckInInput, CheckOutInput, UpdateAttendanceInput,
+  CheckInInput, CheckOutInput, UpdateAttendanceInput, ManualAttendanceInput,
   AttendanceSettings, AttendanceLog, AttendanceRow, MonthlySummaryRow, WorkType,
 } from '@/types/attendance'
 
@@ -291,6 +291,76 @@ export async function updateAttendance(
     if (settings.notify_late_modified) {
       await sendLateEntryNotification(ctx.companyId, ctx.employeeName, log.work_date, log.id, true)
     }
+  }
+
+  revalidatePath('/employee/attendance')
+  return { success: true }
+}
+
+/* ── 누락 근태 수동 입력 (GPS 없이 시간 직접 입력) ────────── */
+export async function submitManualAttendance(
+  input: ManualAttendanceInput,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: '로그인이 필요합니다.' }
+
+  const ctx = await getEffectiveEmployeeContext()
+  if (!ctx) return { success: false, error: '직원 정보를 찾을 수 없습니다.' }
+
+  const today = kstToday()
+  if (input.work_date >= today) {
+    return { success: false, error: '오늘 또는 미래 날짜는 직접 입력할 수 없습니다.' }
+  }
+  if (!isAllowedWorkDate(input.work_date)) {
+    return { success: false, error: '이번 달 범위 내 날짜만 입력할 수 있습니다.' }
+  }
+
+  if (input.check_out_at && input.check_in_at >= input.check_out_at) {
+    return { success: false, error: '퇴근 시간은 출근 시간보다 늦어야 합니다.' }
+  }
+
+  if (input.work_type === 'field' && !input.work_note?.trim()) {
+    return { success: false, error: '외근 시 방문지 또는 사유를 입력해주세요.' }
+  }
+
+  const { data: existing } = await supabase
+    .from('attendance_logs')
+    .select('id')
+    .eq('employee_id', ctx.employeeId)
+    .eq('work_date', input.work_date)
+    .maybeSingle()
+
+  if (existing) {
+    return { success: false, error: '해당 날짜에 이미 출퇴근 기록이 있습니다. 수정 버튼을 사용해주세요.' }
+  }
+
+  const status = input.check_out_at ? 'checked_out' : 'checked_in'
+
+  const { data: log, error } = await supabase
+    .from('attendance_logs')
+    .insert({
+      company_id:        ctx.companyId,
+      employee_id:       ctx.employeeId,
+      work_date:         input.work_date,
+      work_type:         input.work_type,
+      work_note:         input.work_note ?? null,
+      check_in_at:       input.check_in_at,
+      check_out_at:      input.check_out_at ?? null,
+      status,
+      is_late_entry:     true,
+      late_entry_note:   input.late_entry_note ?? null,
+      is_impersonated:   ctx.isImpersonating,
+      entered_by_user_id: user.id,
+    })
+    .select('id')
+    .single()
+
+  if (error) return { success: false, error: error.message }
+
+  const settings = await fetchSettings(ctx.companyId)
+  if (settings.notify_late_entry) {
+    await sendLateEntryNotification(ctx.companyId, ctx.employeeName, input.work_date, log.id, false)
   }
 
   revalidatePath('/employee/attendance')

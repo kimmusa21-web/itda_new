@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { MapPin, Clock, CheckCircle, LogOut, LogIn, AlertCircle, Loader2, ChevronDown, ChevronUp, Edit2, Map, ChevronRight, TriangleAlert } from 'lucide-react'
 import { KakaoMap } from '@/components/attendance/kakao-map'
 import { cn } from '@/lib/utils'
-import { checkIn, checkOut, updateAttendance, getAttendanceByDate } from '@/lib/actions/attendance-actions'
+import { checkIn, checkOut, updateAttendance, getAttendanceByDate, submitManualAttendance } from '@/lib/actions/attendance-actions'
 import { kstFirstOfMonth } from '@/lib/utils/kst'
 import { calcWorkMinutes, fmtWorkHours, breakMinutes, getWeekRange } from '@/lib/utils/work-hours'
 import { WORK_TYPE_LABELS, STATUS_LABELS } from '@/types/attendance'
@@ -81,6 +81,8 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
   const [isPreviewGps, setIsPreviewGps] = useState(false)
   const [isPending,    startTransition] = useTransition()
   const [missingDays,  setMissingDays]  = useState<string[]>(initialMissingDays)
+  const [manualInAt,   setManualInAt]   = useState('')
+  const [manualOutAt,  setManualOutAt]  = useState('')
 
   const isLateEntry  = workDate < today
   const firstOfMonth = kstFirstOfMonth()
@@ -91,7 +93,8 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
     setError(null)
     setGpsErr(null)
     setEditOpen(false)
-    // 입력 폼으로 스크롤
+    setManualInAt(`${day}T09:00`)
+    setManualOutAt(`${day}T18:00`)
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
   }
 
@@ -132,6 +135,29 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
   async function reloadLog() {
     const fresh = await getAttendanceByDate(workDate)
     setLog(fresh)
+  }
+
+  async function handleManualSubmit() {
+    setError(null)
+    if (!manualInAt) { setError('출근 시간을 입력해주세요.'); return }
+    const checkInIso  = new Date(manualInAt  + ':00+09:00').toISOString()
+    const checkOutIso = manualOutAt ? new Date(manualOutAt + ':00+09:00').toISOString() : undefined
+
+    startTransition(async () => {
+      const res = await submitManualAttendance({
+        work_date:       workDate,
+        work_type:       workType,
+        work_note:       workNote || undefined,
+        check_in_at:     checkInIso,
+        check_out_at:    checkOutIso,
+        late_entry_note: lateNote || undefined,
+      })
+      if (!res.success) { setError(res.error ?? '오류가 발생했습니다.'); return }
+      showToast('근태가 기록되었습니다.')
+      setWorkNote(''); setLateNote(''); setManualInAt(''); setManualOutAt('')
+      setMissingDays(prev => prev.filter(d => d !== workDate))
+      await reloadLog()
+    })
   }
 
   async function handleCheckIn() {
@@ -301,7 +327,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
       {currentStatus === 'not_started' && (
         <div className="card px-5 py-5 space-y-4">
 
-          {/* 소급 입력 날짜 선택 */}
+          {/* 날짜 선택 */}
           <div>
             <label className="text-xs text-slate-500 font-medium mb-1 block">출근 날짜</label>
             <input
@@ -309,15 +335,14 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
               value={workDate}
               min={firstOfMonth}
               max={today}
-              onChange={e => { setWorkDate(e.target.value); setLog(null) }}
+              onChange={e => {
+                const d = e.target.value
+                setWorkDate(d); setLog(null)
+                if (d < today) { setManualInAt(`${d}T09:00`); setManualOutAt(`${d}T18:00`) }
+                else { setManualInAt(''); setManualOutAt('') }
+              }}
               className="input w-full text-sm"
             />
-            {isLateEntry && (
-              <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
-                소급 입력입니다. 담당자에게 알림이 전송됩니다.
-              </p>
-            )}
           </div>
 
           {/* 출근 유형 */}
@@ -357,66 +382,115 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
             </div>
           )}
 
-          {/* 소급 사유 */}
-          {isLateEntry && (
-            <div>
-              <label className="text-xs text-slate-500 font-medium mb-1 block">누락 사유</label>
-              <input
-                type="text"
-                value={lateNote}
-                onChange={e => setLateNote(e.target.value)}
-                placeholder="예) 출퇴근 기록 누락"
-                className="input w-full text-sm"
-              />
-            </div>
-          )}
-
-          {/* 위치 미리보기 */}
-          {previewPos ? (
-            <div className="space-y-2">
-              <KakaoMap
-                userLat={previewPos.lat}
-                userLng={previewPos.lng}
-                companyLat={company?.latitude}
-                companyLng={company?.longitude}
-                radiusM={company?.allowed_radius_m}
-                className="w-full h-48"
-              />
-              <p className="text-xs text-slate-400 text-center">파란 마커: 현재 위치 · 빨간 마커: 회사 · 빨간 원: 허용 반경</p>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-2 bg-slate-50 rounded-xl px-3 py-2.5">
-              <div className="flex items-start gap-2">
-                <MapPin size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-slate-500">출근 시 현재 위치를 확인합니다.</p>
+          {isLateEntry ? (
+            /* ── 소급 입력: 시간 직접 입력 (GPS 불필요) ── */
+            <>
+              <div className="bg-amber-50 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                <AlertCircle size={13} className="text-amber-500 flex-shrink-0" />
+                <p className="text-xs text-amber-700">누락된 날짜입니다. 출퇴근 시간을 직접 입력해주세요.</p>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-500 font-medium mb-1 block">출근 시간 *</label>
+                  <input
+                    type="datetime-local"
+                    value={manualInAt}
+                    min={`${workDate}T00:00`}
+                    max={`${workDate}T23:59`}
+                    onChange={e => setManualInAt(e.target.value)}
+                    className="input w-full text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 font-medium mb-1 block">퇴근 시간</label>
+                  <input
+                    type="datetime-local"
+                    value={manualOutAt}
+                    min={`${workDate}T00:00`}
+                    max={`${workDate}T23:59`}
+                    onChange={e => setManualOutAt(e.target.value)}
+                    className="input w-full text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-500 font-medium mb-1 block">누락 사유</label>
+                <input
+                  type="text"
+                  value={lateNote}
+                  onChange={e => setLateNote(e.target.value)}
+                  placeholder="예) 출퇴근 기록 누락"
+                  className="input w-full text-sm"
+                />
+              </div>
+
+              {error && (
+                <div className="flex items-start gap-2 bg-red-50 rounded-xl px-3 py-2.5">
+                  <AlertCircle size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-red-600">{error}</p>
+                </div>
+              )}
+
               <button
-                onClick={handlePreviewLocation}
-                disabled={isPreviewGps}
-                className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-50 flex-shrink-0"
+                onClick={handleManualSubmit}
+                disabled={isPending || !manualInAt}
+                className="w-full py-4 rounded-2xl bg-[#003366] text-white font-bold text-lg hover:bg-[#002244] disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
               >
-                {isPreviewGps ? <Loader2 size={11} className="animate-spin" /> : <Map size={11} />}
-                지도 보기
+                {isPending ? <Loader2 size={20} className="animate-spin" /> : <LogIn size={20} />}
+                {isPending ? '처리 중...' : '기록 저장'}
               </button>
-            </div>
-          )}
+            </>
+          ) : (
+            /* ── 오늘: GPS 출근 ── */
+            <>
+              {previewPos ? (
+                <div className="space-y-2">
+                  <KakaoMap
+                    userLat={previewPos.lat}
+                    userLng={previewPos.lng}
+                    companyLat={company?.latitude}
+                    companyLng={company?.longitude}
+                    radiusM={company?.allowed_radius_m}
+                    className="w-full h-48"
+                  />
+                  <p className="text-xs text-slate-400 text-center">파란 마커: 현재 위치 · 빨간 마커: 회사 · 빨간 원: 허용 반경</p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-2 bg-slate-50 rounded-xl px-3 py-2.5">
+                  <div className="flex items-start gap-2">
+                    <MapPin size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-slate-500">출근 시 현재 위치를 확인합니다.</p>
+                  </div>
+                  <button
+                    onClick={handlePreviewLocation}
+                    disabled={isPreviewGps}
+                    className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-50 flex-shrink-0"
+                  >
+                    {isPreviewGps ? <Loader2 size={11} className="animate-spin" /> : <Map size={11} />}
+                    지도 보기
+                  </button>
+                </div>
+              )}
 
-          {/* 에러 */}
-          {(error || gpsErr) && (
-            <div className="flex items-start gap-2 bg-red-50 rounded-xl px-3 py-2.5">
-              <AlertCircle size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-red-600">{error ?? gpsErr}</p>
-            </div>
-          )}
+              {(error || gpsErr) && (
+                <div className="flex items-start gap-2 bg-red-50 rounded-xl px-3 py-2.5">
+                  <AlertCircle size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-red-600">{error ?? gpsErr}</p>
+                </div>
+              )}
 
-          <button
-            onClick={handleCheckIn}
-            disabled={isPending || isGps}
-            className="w-full py-4 rounded-2xl bg-[#003366] text-white font-bold text-lg hover:bg-[#002244] disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
-          >
-            {(isPending || isGps) ? <Loader2 size={20} className="animate-spin" /> : <LogIn size={20} />}
-            {isGps ? '위치 확인 중...' : isPending ? '처리 중...' : '출근하기'}
-          </button>
+              <button
+                onClick={handleCheckIn}
+                disabled={isPending || isGps}
+                className="w-full py-4 rounded-2xl bg-[#003366] text-white font-bold text-lg hover:bg-[#002244] disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+              >
+                {(isPending || isGps) ? <Loader2 size={20} className="animate-spin" /> : <LogIn size={20} />}
+                {isGps ? '위치 확인 중...' : isPending ? '처리 중...' : '출근하기'}
+              </button>
+            </>
+          )}
         </div>
       )}
 

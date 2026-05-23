@@ -62,6 +62,15 @@ export interface CheckOutInput {
   accuracy_m: number
 }
 
+export interface ManualAttendanceInput {
+  work_date:        string
+  work_type:        WorkType
+  work_note?:       string
+  check_in_at:      string   // ISO datetime (KST)
+  check_out_at?:    string   // ISO datetime (KST), optional
+  late_entry_note?: string
+}
+
 export interface UpdateAttendanceInput {
   log_id:            number
   work_type?:        WorkType
