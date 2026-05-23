@@ -50,7 +50,7 @@ export function GuideClient() {
       </div>
 
       {/* PDF 뷰어 */}
-      <div className="card flex-1 overflow-hidden min-h-0" style={{ height: 'calc(100dvh - 240px)' }}>
+      <div className="card overflow-hidden" style={{ height: 'calc(500dvh - 1200px)' }}>
         <iframe
           key={tab}
           src={`/ModuHR_사용설명서.pdf#toolbar=1&view=FitH`}
