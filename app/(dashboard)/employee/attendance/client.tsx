@@ -3,7 +3,8 @@
 import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { MapPin, Clock, CheckCircle, LogOut, LogIn, AlertCircle, Loader2, ChevronDown, ChevronUp, Edit2, Map, ChevronRight, TriangleAlert } from 'lucide-react'
-import { KakaoMap } from '@/components/attendance/kakao-map'
+import { KakaoMap }                from '@/components/attendance/kakao-map'
+import { PushNotificationButton } from '@/components/attendance/push-notification-button'
 import { cn } from '@/lib/utils'
 import { checkIn, checkOut, updateAttendance, getAttendanceByDate, submitManualAttendance } from '@/lib/actions/attendance-actions'
 import { kstFirstOfMonth } from '@/lib/utils/kst'
@@ -264,6 +265,11 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
 
   return (
     <div ref={formRef} className="max-w-lg mx-auto space-y-4 pb-24">
+
+      {/* 출퇴근 알림 구독 버튼 */}
+      <div className="flex justify-end">
+        <PushNotificationButton />
+      </div>
 
       {/* 주간 근무 게이지 */}
       <div className="card px-5 py-4 space-y-3">
