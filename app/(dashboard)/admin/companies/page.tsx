@@ -4,7 +4,7 @@ import { Plus, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { CompanyListClient } from './client'
 
-export const metadata = { title: '기업관리 | itda' }
+export const metadata = { title: '기업관리' }
 
 export default async function AdminCompaniesPage() {
   const supabase = createClient()

@@ -10,7 +10,7 @@ import { CompanyEmployeePayrollTable } from '@/components/company/company-employ
 import { formatKRW, formatAccrualMonth, formatDateDot } from '@/lib/payslip-utils'
 
 export async function generateMetadata({ params }: Props) {
-  return { title: `${params.payMonth} 급여대장 | itda` }
+  return { title: `${params.payMonth} 급여대장` }
 }
 
 interface Props {

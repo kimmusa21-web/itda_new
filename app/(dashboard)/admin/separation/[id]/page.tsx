@@ -2,7 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import { createClient }       from '@/lib/supabase/server'
 import SeparationClient       from './client'
 
-export const metadata = { title: '이직확인서 | itda' }
+export const metadata = { title: '이직확인서' }
 
 export default async function SeparationDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient()

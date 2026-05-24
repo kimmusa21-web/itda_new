@@ -18,7 +18,7 @@ import { CompanySealEditor }         from '@/components/company/company-seal-edi
 import { cn }                        from '@/lib/utils'
 
 export async function generateMetadata({ params }: Props) {
-  return { title: '기업 상세 | itda' }
+  return { title: '기업 상세' }
 }
 
 interface Props {

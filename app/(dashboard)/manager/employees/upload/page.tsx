@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { EmployeeCsvUpload } from '@/components/employee-upload/employee-csv-upload'
 
-export const metadata = { title: '직원 CSV 대량 등록 | itda' }
+export const metadata = { title: '직원 CSV 대량 등록' }
 
 export default async function ManagerEmployeeUploadPage() {
   const supabase = createClient()

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { PayslipNoteEditor } from './payslip-note-editor'
 
-export const metadata = { title: '더보기 | itda' }
+export const metadata = { title: '더보기' }
 
 export default async function ManagerMorePage() {
   const supabase = createClient()

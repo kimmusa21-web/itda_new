@@ -161,7 +161,7 @@ export function EmploymentCertificateDoc(p: CertParams) {
         </View>
 
         <Text style={S.footer}>
-          본 문서는 itda 급여관리 서비스를 통해 발급되었습니다.
+          본 문서는 ModuHR 급여관리 서비스를 통해 발급되었습니다.
         </Text>
       </Page>
     </Document>

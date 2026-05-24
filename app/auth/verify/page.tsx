@@ -111,7 +111,7 @@ export default function EmployeeVerifyPage() {
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <KeyRound size={16} className="text-white" />
           </div>
-          <span className="text-xl font-bold text-white">itda</span>
+          <span className="text-xl font-bold text-white">ModuHR</span>
         </div>
         <h1 className="text-2xl font-bold text-white mt-4 mb-1">가입 인증</h1>
         <p className="text-slate-400 text-sm">

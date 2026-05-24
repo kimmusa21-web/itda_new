@@ -1,6 +1,6 @@
 'use client'
 /* ================================================================
-   itda — 접근 권한 없음 페이지
+   ModuHR — 접근 권한 없음 페이지
    - 인증은 됐지만 유효한 role/profile이 없는 사용자
    - 또는 잘못된 경로 접근 후 fallback
 ================================================================ */
@@ -80,7 +80,7 @@ export default function NoAccessPage() {
 
         {/* 연락처 */}
         <p className="text-xs text-slate-400">
-          문의: <a href="mailto:admin@itda.kr" className="underline hover:text-slate-600">admin@itda.kr</a>
+          문의: <a href="mailto:swkim@fithr.co.kr" className="underline hover:text-slate-600">swkim@fithr.co.kr</a>
         </p>
       </div>
     </div>

@@ -7,7 +7,7 @@ import { getWeekRange } from '@/lib/utils/work-hours'
 import { AttendanceClient } from './client'
 import type { AttendanceLog } from '@/types/attendance'
 
-export const metadata = { title: '출퇴근 | itda' }
+export const metadata = { title: '출퇴근' }
 
 export default async function EmployeeAttendancePage() {
   const supabase = createClient()

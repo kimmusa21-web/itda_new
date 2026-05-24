@@ -5,7 +5,7 @@ import { getMonthlyAttendanceSummary } from '@/lib/actions/attendance-actions'
 import { kstToday } from '@/lib/utils/kst'
 import { MonthlySummaryClient } from './client'
 
-export const metadata = { title: '월별 근로시간 | itda' }
+export const metadata = { title: '월별 근로시간' }
 
 export default async function AttendanceSummaryPage({
   searchParams,

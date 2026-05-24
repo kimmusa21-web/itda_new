@@ -1,5 +1,5 @@
 /* ================================================================
-   itda — 회사 전직원 급여내역 CSV 내보내기 Route Handler
+   ModuHR — 회사 전직원 급여내역 CSV 내보내기 Route Handler
    GET /api/payroll/company-export?companyId=N&startMonth=YYYY-MM&endMonth=YYYY-MM
    권한: admin(전체), manager(본인 회사만)
 ================================================================ */

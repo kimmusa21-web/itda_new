@@ -1,5 +1,5 @@
 /* ================================================================
-   itda — 직원별 급여내역 CSV 내보내기 Route Handler
+   ModuHR — 직원별 급여내역 CSV 내보내기 Route Handler
    GET /api/payroll/employee-export?employeeId=123
    권한: admin(전체), manager(본인 회사만)
 ================================================================ */

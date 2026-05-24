@@ -2,7 +2,7 @@ import { redirect }     from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ImpersonationPanel } from './panel'
 
-export const metadata = { title: '점검 모드 | itda' }
+export const metadata = { title: '점검 모드' }
 
 export default async function AdminImpersonationPage() {
   const supabase = createClient()

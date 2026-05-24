@@ -1,6 +1,6 @@
 'use server'
 /* ================================================================
-   itda — 급여 표준 CSV 업로드 Server Action (pay_info_v2 전체 컬럼)
+   ModuHR — 급여 표준 CSV 업로드 Server Action (pay_info_v2 전체 컬럼)
 
    처리 순서:
      1. 인증 + 권한 확인 (admin / manager)

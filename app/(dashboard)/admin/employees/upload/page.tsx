@@ -4,7 +4,7 @@ import { ArrowLeft, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { EmployeeCsvUpload } from '@/components/employee-upload/employee-csv-upload'
 
-export const metadata = { title: '직원 CSV 대량 등록 | itda' }
+export const metadata = { title: '직원 CSV 대량 등록' }
 
 export default async function AdminEmployeeUploadPage() {
   const supabase = createClient()

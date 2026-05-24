@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Upload } from 'lucide-react'
 
-export const metadata = { title: '급여업로드 | itda' }
+export const metadata = { title: '급여업로드' }
 
 export default async function ManagerPayrollUploadPage() {
   const supabase = createClient()

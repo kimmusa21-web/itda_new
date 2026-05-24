@@ -82,7 +82,7 @@ export function PayslipDetailView({ payslip }: PayslipDetailProps) {
         {/* Print watermark */}
         <div className="hidden print:flex justify-center pt-4">
           <p className="text-xs text-slate-400">
-            itda 급여관리 시스템 · {payslip.companyName}
+            ModuHR 급여관리 시스템 · {payslip.companyName}
           </p>
         </div>
       </div>

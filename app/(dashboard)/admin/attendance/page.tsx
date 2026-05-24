@@ -4,7 +4,7 @@ import { getAdminAttendanceList } from '@/lib/actions/attendance-actions'
 import { kstToday } from '@/lib/utils/kst'
 import { AdminAttendanceClient } from './client'
 
-export const metadata = { title: '근태관리 | itda' }
+export const metadata = { title: '근태관리' }
 
 export default async function AdminAttendancePage({
   searchParams,

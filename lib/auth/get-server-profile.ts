@@ -1,5 +1,5 @@
 /**
- * itda — 서버 컴포넌트/액션용 프로필 조회 유틸
+ * ModuHR — 서버 컴포넌트/액션용 프로필 조회 유틸
  *
  * 사용 위치: Server Component, Server Action, Route Handler
  * (클라이언트 컴포넌트에서는 hooks/use-auth.ts 사용)

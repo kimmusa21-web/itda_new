@@ -9,7 +9,7 @@ import { PayslipDetailView }  from '@/components/payslip/payslip-detail-v2'
 interface Props { params: { id: string } }
 
 export async function generateMetadata({ params }: Props) {
-  return { title: `급여명세서 #${params.id} | itda` }
+  return { title: `급여명세서 #${params.id}` }
 }
 
 export default async function EmployeePayslipDetailPage({ params }: Props) {

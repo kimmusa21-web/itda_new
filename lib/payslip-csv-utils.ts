@@ -1,5 +1,5 @@
 /* ================================================================
-   itda — 급여 표준 CSV 유틸 (클라이언트에서 호출)
+   ModuHR — 급여 표준 CSV 유틸 (클라이언트에서 호출)
    parse / validate / template download
    ※ 브라우저 전용 함수(downloadPayslipCsvTemplate)는
      반드시 Client Component에서만 호출할 것.

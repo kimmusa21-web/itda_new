@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link             from 'next/link'
 import { FileText, UserMinus, CalendarDays, Building2, ChevronRight, Star } from 'lucide-react'
 
-export const metadata = { title: '이직확인서 | itda' }
+export const metadata = { title: '이직확인서' }
 
 function formatDate(d: string | null) {
   if (!d) return '-'

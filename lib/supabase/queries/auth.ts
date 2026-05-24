@@ -1,5 +1,5 @@
 /**
- * itda — Auth 관련 공용 쿼리
+ * ModuHR — Auth 관련 공용 쿼리
  *
  * - getCurrentUser(): 클라이언트 컴포넌트 / Hook에서 사용
  * - signOut():       클라이언트 컴포넌트에서 로그아웃

@@ -5,7 +5,7 @@ import { getAdminEmployeePayslipDetail } from '@/lib/employee-payslips'
 import { PayslipDetailView }    from '@/components/payslip/payslip-detail-v2'
 
 export async function generateMetadata() {
-  return { title: '급여명세서 | itda' }
+  return { title: '급여명세서' }
 }
 
 interface Props {

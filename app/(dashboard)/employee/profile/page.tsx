@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEffectiveEmployeeContext } from '@/lib/impersonation/get-effective-context'
 import { ProfileClient } from './client'
 
-export const metadata = { title: '내 정보 | itda' }
+export const metadata = { title: '내 정보' }
 
 export default async function EmployeeProfilePage() {
   const supabase = createClient()

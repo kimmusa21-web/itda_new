@@ -1,5 +1,5 @@
 /* ================================================================
-   itda — impersonation 서버 전용 유틸
+   ModuHR — impersonation 서버 전용 유틸
    next/headers를 사용하므로 Server Component / Server Action 전용.
    미들웨어에서는 절대 import 금지 (Edge Runtime 에러 발생).
 ================================================================ */

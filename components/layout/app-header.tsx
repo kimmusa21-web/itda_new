@@ -44,7 +44,7 @@ export default function AppHeader({ role, name, companyName }: { role: Role; nam
             </svg>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-slate-800 leading-tight">itda</p>
+            <p className="text-sm font-bold text-slate-800 leading-tight">ModuHR</p>
             {companyName && (
               <p className="text-[10px] text-slate-400 truncate leading-tight max-w-[80px]">{companyName}</p>
             )}
@@ -53,7 +53,7 @@ export default function AppHeader({ role, name, companyName }: { role: Role; nam
 
         {/* 페이지 타이틀 */}
         <p className="flex-1 text-sm font-semibold text-slate-800 truncate">
-          {pageTitle || 'itda'}
+          {pageTitle || 'ModuHR'}
         </p>
 
         {/* manager: 탭 전환 / 그 외: 역할 뱃지 */}

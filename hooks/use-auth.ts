@@ -1,6 +1,6 @@
 'use client'
 /**
- * itda — 클라이언트 인증 상태 훅
+ * ModuHR — 클라이언트 인증 상태 훅
  *
  * 클라이언트 컴포넌트에서 로그인 사용자 정보가 필요할 때 사용합니다.
  * 서버 컴포넌트에서는 lib/auth/get-server-profile.ts 를 사용하세요.

@@ -1,5 +1,5 @@
 /* ================================================================
-   itda — 빙의(impersonation) 컨텍스트 타입 정의
+   ModuHR — 빙의(impersonation) 컨텍스트 타입 정의
 ================================================================ */
 
 export type ImpersonationType = 'company_manager' | 'employee'

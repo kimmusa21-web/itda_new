@@ -1,6 +1,6 @@
 'use server'
 /* ================================================================
-   itda — 급여 CSV 업로드 Server Actions
+   ModuHR — 급여 CSV 업로드 Server Actions
    실제 테이블: pay_info_v2 (earnings/deductions JSONB)
 ================================================================ */
 

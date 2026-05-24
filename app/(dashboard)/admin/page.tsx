@@ -6,7 +6,7 @@ import { getAllEmployees }    from '@/lib/supabase/queries/employee'
 import { getPendingResignees, getMissingPayrollEmployees } from '@/lib/actions/admin-hr-alerts'
 import AdminDashboardTabbed from './dashboard-client'
 
-export const metadata = { title: '대시보드/알림 | itda' }
+export const metadata = { title: '대시보드/알림' }
 
 interface Props {
   searchParams: { tab?: string }

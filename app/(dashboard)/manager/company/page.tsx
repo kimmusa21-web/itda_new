@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { CompanyForm } from '@/components/company/company-form'
 
-export const metadata = { title: '기업관리 | itda' }
+export const metadata = { title: '기업관리' }
 
 export default async function ManagerCompanyPage() {
   const supabase = createClient()

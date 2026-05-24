@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { StaffProfileClient } from '@/components/profile/staff-profile-client'
 
-export const metadata = { title: '내 정보 | itda' }
+export const metadata = { title: '내 정보' }
 
 export default async function AdminProfilePage() {
   const supabase = createClient()

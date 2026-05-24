@@ -1,6 +1,6 @@
 'use server'
 /* ================================================================
-   itda — 급여명세서 이메일 발송 Server Action
+   ModuHR — 급여명세서 이메일 발송 Server Action
    처리 순서:
      1. 인증 + 권한 확인
      2. manager: company_id 일치 검증

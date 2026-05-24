@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ArrowLeft, Building2, Calendar } from 'lucide-react'
 import { WithdrawnDownloadButtons } from './download-buttons'
 
-export const metadata = { title: '탈퇴 기업 | itda' }
+export const metadata = { title: '탈퇴 기업' }
 
 export default async function WithdrawnCompaniesPage() {
   const supabase = createClient()

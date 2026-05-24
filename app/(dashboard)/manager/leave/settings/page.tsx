@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { LeaveSettingsClient } from './client'
 
-export const metadata = { title: '연차 정책 설정 | itda' }
+export const metadata = { title: '연차 정책 설정' }
 
 export default async function LeaveSettingsPage() {
   const supabase = createClient()

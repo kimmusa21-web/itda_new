@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { GuideClient } from './client'
 
-export const metadata = { title: '사용 설명서 | itda' }
+export const metadata = { title: '사용 설명서' }
 
 export default async function GuidePage() {
   const supabase = createClient()

@@ -37,7 +37,7 @@ function ErrorScreen({
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <KeyRound size={16} className="text-white" />
           </div>
-          <span className="text-xl font-bold text-white">itda</span>
+          <span className="text-xl font-bold text-white">ModuHR</span>
         </div>
       </div>
       <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center shadow-xl">

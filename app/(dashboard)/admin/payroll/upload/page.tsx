@@ -3,7 +3,7 @@ import { createClient }       from '@/lib/supabase/server'
 import { getCompanies }       from '@/lib/payroll-upload'
 import { AdminUploadTabs }    from './upload-tabs'
 
-export const metadata = { title: '급여업로드 | itda' }
+export const metadata = { title: '급여업로드' }
 
 export default async function AdminPayrollUploadPage() {
   const supabase = createClient()

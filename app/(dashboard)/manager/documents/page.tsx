@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { ManagerDocumentsClient } from './client'
 
-export const metadata = { title: '서류관리 | itda' }
+export const metadata = { title: '서류관리' }
 
 export default async function ManagerDocumentsPage() {
   const supabase = createClient()

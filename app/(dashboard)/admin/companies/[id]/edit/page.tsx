@@ -2,7 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { CompanyForm } from '@/components/company/company-form'
 
-export const metadata = { title: '회사 수정 | itda' }
+export const metadata = { title: '회사 수정' }
 
 interface Props {
   params: { id: string }

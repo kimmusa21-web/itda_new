@@ -1,6 +1,6 @@
 'use server'
 /* ================================================================
-   itda — 빙의 Server Actions
+   ModuHR — 빙의 Server Actions
    start/stop impersonation, DB 로그 기록
    admin 전용: role !== 'admin' 이면 즉시 에러 반환
 ================================================================ */

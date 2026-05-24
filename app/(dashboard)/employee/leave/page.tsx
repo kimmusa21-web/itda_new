@@ -5,7 +5,7 @@ import { EmployeeLeaveClient } from './client'
 import { DocumentsClient }    from '../documents/client'
 import { LeaveTabs }          from './tabs'
 
-export const metadata = { title: '연차/서류 | itda' }
+export const metadata = { title: '연차/서류' }
 
 export default async function EmployeeLeavePage({
   searchParams,

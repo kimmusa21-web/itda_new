@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEffectiveEmployeeContext } from '@/lib/impersonation/get-effective-context'
 import { DocumentsClient } from './client'
 
-export const metadata = { title: '서류신청 | itda' }
+export const metadata = { title: '서류신청' }
 
 export default async function EmployeeDocumentsPage() {
   const supabase = createClient()

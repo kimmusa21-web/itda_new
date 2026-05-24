@@ -1,6 +1,6 @@
 'use server'
 /* ================================================================
-   itda — 직원 CSV 대량 등록 Server Action
+   ModuHR — 직원 CSV 대량 등록 Server Action
    처리 순서:
      1. 인증 + 권한 확인
      2. manager면 company_id 일치 확인

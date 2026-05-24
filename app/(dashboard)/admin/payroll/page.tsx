@@ -3,7 +3,7 @@ import { createClient }                      from '@/lib/supabase/server'
 import { getAdminPayrollListV2, getAdminAvailableMonthsV2 } from '@/lib/supabase/queries/payslip-v2'
 import AdminPayrollClient                    from './client'
 
-export const metadata = { title: '급여 조회 | itda' }
+export const metadata = { title: '급여 조회' }
 
 interface Props {
   searchParams: { company?: string; month?: string; q?: string }

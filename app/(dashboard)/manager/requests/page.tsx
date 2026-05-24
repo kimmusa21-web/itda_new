@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { InviteList } from '@/components/manager-request/invite-list'
 
-export const metadata = { title: '초대 내역 | itda' }
+export const metadata = { title: '초대 내역' }
 
 export default async function ManagerRequestsPage() {
   const supabase = createClient()

@@ -20,7 +20,7 @@ export function PayslipActionBar({
 
   function handlePdf() {
     if (onDownloadPdf) { onDownloadPdf(); return }
-    console.log('[itda] PDF download — 추후 구현 예정')
+    console.log('[ModuHR] PDF download — 추후 구현 예정')
     alert('PDF 다운로드 기능은 준비 중입니다.')
   }
 
@@ -49,7 +49,7 @@ export function PayslipActionBar({
 
       {/* Print-only footer */}
       <div className="hidden print:block mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-400">
-        본 명세서는 itda 급여관리 시스템에서 출력되었습니다.
+        본 명세서는 ModuHR 급여관리 시스템에서 출력되었습니다.
       </div>
     </>
   )

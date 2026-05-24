@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { CompanyForm } from '@/components/company/company-form'
 
-export const metadata = { title: '회사 등록 | itda' }
+export const metadata = { title: '회사 등록' }
 
 export default async function AdminCompanyNewPage() {
   const supabase = createClient()

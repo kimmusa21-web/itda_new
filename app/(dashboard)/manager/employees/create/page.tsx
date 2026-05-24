@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { EmployeeForm } from '@/components/employee/employee-form'
 
-export const metadata = { title: '직원 등록 | itda' }
+export const metadata = { title: '직원 등록' }
 
 export default async function ManagerEmployeeCreatePage() {
   const supabase = createClient()

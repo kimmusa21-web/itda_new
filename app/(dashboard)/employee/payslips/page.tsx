@@ -8,7 +8,7 @@ import {
 import { PayslipCurrentCard } from '@/components/payslip/payslip-current-card'
 import { PayslipListItem }   from '@/components/payslip/payslip-list-item'
 
-export const metadata = { title: '내 급여 | itda' }
+export const metadata = { title: '내 급여' }
 
 export default async function EmployeePayslipsPage() {
   const supabase = createClient()

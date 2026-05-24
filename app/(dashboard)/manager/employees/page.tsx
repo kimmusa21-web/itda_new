@@ -7,7 +7,7 @@ import { getCompanyEmployees } from '@/lib/supabase/queries/employee'
 import { ManagerEmployeesClient } from './client'
 import EmployeeExportButton from '@/components/employees/employee-export-button'
 
-export const metadata = { title: '직원관리 | itda' }
+export const metadata = { title: '직원관리' }
 
 export default async function ManagerEmployeesPage() {
   const supabase = createClient()

@@ -2,7 +2,7 @@ import { redirect }        from 'next/navigation'
 import { createClient }    from '@/lib/supabase/server'
 import SeveranceClient     from './client'
 
-export const metadata = { title: '퇴직금 산정 | itda' }
+export const metadata = { title: '퇴직금 산정' }
 
 export default async function SeverancePage() {
   const supabase = createClient()

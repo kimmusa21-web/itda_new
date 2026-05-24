@@ -4,7 +4,7 @@ import { createClient }                from '@/lib/supabase/server'
 import { getAppSetting }               from '@/lib/supabase/queries/app-settings'
 import { DefaultPayslipNoteEditor }    from '@/components/admin/default-payslip-note-editor'
 
-export const metadata = { title: '시스템 설정 | itda' }
+export const metadata = { title: '시스템 설정' }
 
 export default async function AdminSettingsPage() {
   const supabase = createClient()

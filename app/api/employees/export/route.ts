@@ -1,5 +1,5 @@
 /* ================================================================
-   itda — 직원 정보 CSV 내보내기 Route Handler
+   ModuHR — 직원 정보 CSV 내보내기 Route Handler
    GET /api/employees/export?companyId=N&status=active|inactive|all
    권한: admin(전체 또는 회사별), manager(본인 회사만)
 ================================================================ */

@@ -1,5 +1,5 @@
 /* ================================================================
-   itda — CSV 업로드 유틸리티 (MVP, pay_info_v2 JSON 구조)
+   ModuHR — CSV 업로드 유틸리티 (MVP, pay_info_v2 JSON 구조)
 ================================================================ */
 
 import type { CsvRow, ParsedRow, ColumnMapping } from '@/types'

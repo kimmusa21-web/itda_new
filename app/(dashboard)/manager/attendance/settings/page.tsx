@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { AttendanceSettingsClient } from './client'
 
-export const metadata = { title: '출퇴근 설정 | itda' }
+export const metadata = { title: '출퇴근 설정' }
 
 export default async function AttendanceSettingsPage() {
   const supabase = createClient()

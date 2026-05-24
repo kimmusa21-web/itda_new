@@ -5,7 +5,7 @@ import { ManagerLeaveClient }     from './client'
 import { ManagerDocumentsClient } from '../documents/client'
 import { ManagerLeaveTabs }       from './tabs'
 
-export const metadata = { title: '연차/서류 | itda' }
+export const metadata = { title: '연차/서류' }
 
 export default async function ManagerLeavePage({
   searchParams,

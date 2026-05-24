@@ -1,6 +1,6 @@
 'use server'
 /* ================================================================
-   itda — 매니저 직접 초대 플로우
+   ModuHR — 매니저 직접 초대 플로우
    기존 employee_requests 승인 플로우와 병렬 동작
 
    createEmployeeWithInvite: 직원 생성 + 즉시 초대 이메일 발송

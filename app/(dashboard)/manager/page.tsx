@@ -9,7 +9,7 @@ import { getAvailableMonthsV2 } from '@/lib/supabase/queries/payslip-v2'
 import { formatMonth } from '@/lib/utils'
 import EmptyState from '@/components/common/empty-state'
 
-export const metadata = { title: '대시보드 | itda' }
+export const metadata = { title: '대시보드' }
 
 const leaveTypeLabel: Record<string, string> = {
   full_day: '연차', half_day_am: '오전반차', half_day_pm: '오후반차', hourly: '시간연차',
