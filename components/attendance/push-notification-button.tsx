@@ -6,7 +6,14 @@ import { usePushNotification }    from '@/hooks/use-push-notification'
 export function PushNotificationButton() {
   const { permission, loading, subscribe, unsubscribe } = usePushNotification()
 
-  if (permission === 'unsupported') return null
+  if (permission === 'unsupported') {
+    return (
+      <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-100 rounded-xl px-3 py-2">
+        <BellOff size={13} />
+        <span>이 브라우저는 알림을 지원하지 않습니다</span>
+      </div>
+    )
+  }
 
   if (permission === 'denied') {
     return (
