@@ -16,7 +16,7 @@
     },
     {
       "path": "/api/cron/attendance-checkin-remind",
-      "schedule": "50 23 * * 0-4"
+      "schedule": "55 23 * * 0-4"
     },
     {
       "path": "/api/cron/attendance-checkout-remind",

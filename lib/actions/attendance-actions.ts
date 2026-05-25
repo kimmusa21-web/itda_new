@@ -640,6 +640,24 @@ export async function getMissingAttendanceDays(): Promise<string[]> {
   return workdays.filter(d => !recorded.has(d))
 }
 
+/* ── 회사 출근시간 저장 ────────────────────────────────────── */
+export async function saveCheckinTime(
+  checkin_time: string,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createClient()
+  const ctx = await getEffectiveManagerContext()
+  if (!ctx) return { success: false, error: '권한이 없습니다.' }
+
+  const { error } = await supabase
+    .from('companies')
+    .update({ checkin_time })
+    .eq('id', ctx.companyId)
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/manager/attendance/settings')
+  return { success: true }
+}
+
 /* ── 회사 위치 저장 ───────────────────────────────────────── */
 export async function saveCompanyLocation(data: {
   latitude:         number

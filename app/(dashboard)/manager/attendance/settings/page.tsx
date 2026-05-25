@@ -23,7 +23,7 @@ export default async function AttendanceSettingsPage() {
       .maybeSingle(),
     supabase
       .from('companies')
-      .select('latitude, longitude, allowed_radius_m, address')
+      .select('latitude, longitude, allowed_radius_m, address, checkin_time')
       .eq('id', ctx.companyId)
       .single(),
   ])
@@ -33,6 +33,7 @@ export default async function AttendanceSettingsPage() {
       settings={settings ?? null}
       company={company ?? null}
       companyAddress={company?.address ?? null}
+      checkinTime={(company as any)?.checkin_time ?? '09:00'}
     />
   )
 }

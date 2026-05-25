@@ -1,29 +1,33 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { MapPin, Bell, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
-import { saveCompanyLocation, saveAttendanceSettings } from '@/lib/actions/attendance-actions'
+import { MapPin, Bell, Clock, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { saveCompanyLocation, saveAttendanceSettings, saveCheckinTime } from '@/lib/actions/attendance-actions'
 import type { AttendanceSettings } from '@/types/attendance'
 
 interface Props {
   settings:       AttendanceSettings | null
   company:        { latitude: number | null; longitude: number | null; allowed_radius_m: number | null } | null
   companyAddress: string | null
+  checkinTime:    string
 }
 
-export function AttendanceSettingsClient({ settings, company, companyAddress }: Props) {
+export function AttendanceSettingsClient({ settings, company, companyAddress, checkinTime: initialCheckinTime }: Props) {
   const [lat,    setLat]    = useState(String(company?.latitude          ?? ''))
   const [lng,    setLng]    = useState(String(company?.longitude         ?? ''))
   const [radius, setRadius] = useState(String(company?.allowed_radius_m  ?? 100))
   const [notifyEntry,    setNotifyEntry]    = useState(settings?.notify_late_entry    ?? true)
   const [notifyModified, setNotifyModified] = useState(settings?.notify_late_modified ?? false)
-  const [locError,  setLocError]  = useState<string | null>(null)
-  const [notifError, setNotifError] = useState<string | null>(null)
+  const [checkinTime,    setCheckinTime]    = useState(initialCheckinTime)
+  const [locError,    setLocError]    = useState<string | null>(null)
+  const [notifError,  setNotifError]  = useState<string | null>(null)
+  const [checkinError, setCheckinError] = useState<string | null>(null)
   const [toast,    setToast]    = useState<string | null>(null)
   const [isGps,   setIsGps]   = useState(false)
   const [isGeocoding,    setIsGeocoding]    = useState(false)
-  const [isPendingLoc,   startLoc]   = useTransition()
-  const [isPendingNotif, startNotif] = useTransition()
+  const [isPendingLoc,    startLoc]     = useTransition()
+  const [isPendingNotif,  startNotif]   = useTransition()
+  const [isPendingCheckin, startCheckin] = useTransition()
 
   function showToast(msg: string) {
     setToast(msg)
@@ -78,6 +82,16 @@ export function AttendanceSettingsClient({ settings, company, companyAddress }: 
       const res = await saveCompanyLocation({ latitude: latN, longitude: lngN, allowed_radius_m: radN })
       if (!res.success) { setLocError(res.error ?? '저장 실패'); return }
       showToast('회사 위치가 저장되었습니다.')
+    })
+  }
+
+  function handleSaveCheckin() {
+    setCheckinError(null)
+    if (!/^\d{2}:\d{2}$/.test(checkinTime)) { setCheckinError('HH:MM 형식으로 입력해주세요.'); return }
+    startCheckin(async () => {
+      const res = await saveCheckinTime(checkinTime)
+      if (!res.success) { setCheckinError(res.error ?? '저장 실패'); return }
+      showToast('출근 시간이 저장되었습니다.')
     })
   }
 
@@ -161,6 +175,42 @@ export function AttendanceSettingsClient({ settings, company, companyAddress }: 
         >
           {isPendingLoc ? <Loader2 size={14} className="animate-spin" /> : null}
           위치 저장
+        </button>
+      </div>
+
+      {/* 출근 시간 설정 */}
+      <div className="card px-5 py-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Clock size={16} className="text-indigo-600" />
+          <h2 className="text-sm font-semibold text-slate-800">출근 시간 설정</h2>
+        </div>
+        <p className="text-xs text-slate-500">설정한 출근 시간 5분 전에 직원에게 출근 등록 알림이 발송됩니다.</p>
+
+        <div>
+          <label className="text-xs text-slate-500 font-medium mb-1 block">출근 시간</label>
+          <input
+            type="time"
+            value={checkinTime}
+            onChange={e => setCheckinTime(e.target.value)}
+            className="input w-40 text-sm"
+          />
+          <p className="text-xs text-slate-400 mt-1">기본값: 09:00</p>
+        </div>
+
+        {checkinError && (
+          <div className="flex items-center gap-2 bg-red-50 rounded-lg px-3 py-2">
+            <AlertCircle size={13} className="text-red-500 flex-shrink-0" />
+            <p className="text-xs text-red-600">{checkinError}</p>
+          </div>
+        )}
+
+        <button
+          onClick={handleSaveCheckin}
+          disabled={isPendingCheckin}
+          className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {isPendingCheckin ? <Loader2 size={14} className="animate-spin" /> : null}
+          출근 시간 저장
         </button>
       </div>
 
