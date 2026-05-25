@@ -20,7 +20,7 @@
     },
     {
       "path": "/api/cron/attendance-checkout-remind",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 10 * * 1-5"
     }
   ]
 }
