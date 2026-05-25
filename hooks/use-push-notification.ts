@@ -9,11 +9,18 @@ export function usePushNotification() {
   const [loading,    setLoading]    = useState(false)
 
   useEffect(() => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+        console.log('[push] unsupported: sw=', 'serviceWorker' in navigator, 'push=', 'PushManager' in window, 'notif=', 'Notification' in window)
+        setPermission('unsupported')
+        return
+      }
+      console.log('[push] Notification.permission =', Notification.permission)
+      setPermission(Notification.permission as PermissionState)
+    } catch (e) {
+      console.error('[push] useEffect error:', e)
       setPermission('unsupported')
-      return
     }
-    setPermission(Notification.permission as PermissionState)
   }, [])
 
   async function subscribe() {
