@@ -552,17 +552,23 @@ function M_AttendanceDocs() {
           <SectionHead>9. 근태 관리</SectionHead>
           <View style={S.sub}>
             <SubHead>근태 현황 조회</SubHead>
-            <Step n={1}>사이드바에서 [근태 관리]를 클릭합니다.</Step>
+            <Step n={1}>사이드바에서 [근태관리]를 클릭합니다.</Step>
             <Step n={2}>날짜 범위를 설정하고 직원별 출퇴근 기록을 확인합니다.</Step>
             <Step n={3}>[근태 요약] 탭에서 부서별·기간별 통계를 조회합니다.</Step>
           </View>
           <View style={S.sub}>
-            <SubHead>근태 설정</SubHead>
-            <Step n={1}>[근태 관리] → [설정] 탭을 클릭합니다.</Step>
-            <Step n={2}>출근 기준 시각, 지각 기준 등을 설정합니다.</Step>
-            <Step n={3}>[저장]하면 이후 기록에 자동 적용됩니다.</Step>
+            <SubHead>출근 시간 설정</SubHead>
+            <Step n={1}>[근태관리] → [설정] 탭을 클릭합니다.</Step>
+            <Step n={2}>[출근 시간 설정] 섹션에서 회사 출근 시각을 입력합니다 (기본값 09:00).</Step>
+            <Step n={3}>[출근 시간 저장]을 클릭하면 즉시 적용됩니다.</Step>
+            <Step n={4}>설정된 출근 시간 5분 전에 직원에게 자동 알림이 발송됩니다.</Step>
           </View>
-          <InfoBox>근태 기록은 직원이 앱에서 직접 출·퇴근 버튼을 누를 때 저장됩니다.</InfoBox>
+          <View style={S.sub}>
+            <SubHead>회사 위치 및 알림 설정</SubHead>
+            <Step n={1}>GPS 출근 허용 반경을 설정합니다 (기본 100m).</Step>
+            <Step n={2}>소급 입력 알림 수신 여부를 토글로 설정합니다.</Step>
+          </View>
+          <InfoBox>출근 알림은 평일(공휴일 제외)에만 발송됩니다. 출근 후 9시간 경과 시 퇴근 알림도 자동 발송됩니다.</InfoBox>
         </View>
 
         <View style={S.colDivider} />
@@ -722,12 +728,18 @@ function E_AttendanceDocs() {
         <View style={S.colLeft}>
           <SectionHead>5. 근태 기록</SectionHead>
           <View style={S.sub}>
-            <SubHead green>근태 기록 확인</SubHead>
+            <SubHead green>출퇴근 알림 구독</SubHead>
             <Step n={1} green>사이드바에서 [근태]를 클릭합니다.</Step>
-            <Step n={2} green>본인의 출퇴근 기록을 날짜별로 확인합니다.</Step>
-            <Step n={3} green>출근 시각, 퇴근 시각, 근무 시간이 표시됩니다.</Step>
+            <Step n={2} green>상단의 [출퇴근 알림 받기] 버튼을 클릭합니다.</Step>
+            <Step n={3} green>브라우저 알림 허용 팝업에서 [허용]을 선택합니다.</Step>
+            <Step n={4} green>출근 시간 5분 전과 퇴근 예상 시간에 자동 알림이 옵니다.</Step>
           </View>
-          <InfoBox>근태 기록은 매니저가 설정한 기준에 따라 정상/지각 여부가 표시됩니다.</InfoBox>
+          <View style={S.sub}>
+            <SubHead green>출퇴근 기록 확인</SubHead>
+            <Step n={1} green>본인의 출퇴근 기록을 날짜별로 확인합니다.</Step>
+            <Step n={2} green>출근 시각, 퇴근 시각, 근무 시간이 표시됩니다.</Step>
+          </View>
+          <InfoBox>출퇴근 알림은 평일(공휴일 제외)에만 발송됩니다. 출근 후 9시간 경과 시 퇴근 알림도 자동 발송됩니다.</InfoBox>
 
           <SectionHead style={{ marginTop: 12 }}>6. 서류 발급 신청</SectionHead>
           <View style={S.sub}>
