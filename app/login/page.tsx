@@ -155,6 +155,12 @@ function LoginPageInner() {
       <p className="text-slate-700 text-xs mt-6">
         운영 문의: swkim@fithr.co.kr
       </p>
+
+      {/* 회사 정보 */}
+      <div className="fixed bottom-4 left-5 text-white/50 text-[11px] leading-relaxed">
+        <p>FitHR(핏에이치알) ㅣ 사업자등록번호 : 319-18-01719</p>
+        <p>대표 : 김상완 ㅣ 주소 : 서울시 강남구 테헤란로70길 12, 402-240A호 (대치동, H타워)</p>
+      </div>
     </div>
   )
 }
