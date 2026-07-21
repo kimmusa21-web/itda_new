@@ -38,14 +38,14 @@ export function AttendanceSettingsClient({ settings, company, companyAddress, ch
     if (!companyAddress) return
     setIsGeocoding(true); setLocError(null)
     try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(companyAddress)}&format=json&limit=1`,
-        { headers: { 'Accept-Language': 'ko', 'User-Agent': 'itda-payroll-app' } },
-      )
+      const res  = await fetch(`/api/geocode?query=${encodeURIComponent(companyAddress)}`)
       const data = await res.json()
-      if (!data[0]) { setLocError('주소로 좌표를 찾을 수 없습니다. 직접 입력해주세요.'); return }
-      setLat(String(parseFloat(data[0].lat).toFixed(6)))
-      setLng(String(parseFloat(data[0].lon).toFixed(6)))
+      if (!res.ok) {
+        setLocError(`${data?.error ?? '좌표를 찾을 수 없습니다'}. 직접 입력해주세요.`)
+        return
+      }
+      setLat(data.lat.toFixed(6))
+      setLng(data.lng.toFixed(6))
     } catch {
       setLocError('좌표 조회에 실패했습니다. 직접 입력해주세요.')
     } finally {

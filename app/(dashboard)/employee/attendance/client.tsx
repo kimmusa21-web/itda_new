@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { MapPin, Clock, CheckCircle, LogOut, LogIn, AlertCircle, Loader2, ChevronDown, ChevronUp, Edit2, Map, ChevronRight, TriangleAlert } from 'lucide-react'
-import { KakaoMap }                from '@/components/attendance/kakao-map'
+import { NaverMap }                from '@/components/attendance/naver-map'
 import dynamic                    from 'next/dynamic'
 
 const PushNotificationButton = dynamic(
@@ -458,7 +458,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
             <>
               {previewPos ? (
                 <div className="space-y-2">
-                  <KakaoMap
+                  <NaverMap
                     userLat={previewPos.lat}
                     userLng={previewPos.lng}
                     companyLat={company?.latitude}
@@ -524,7 +524,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
           </div>
 
           {log.check_in_latitude && log.check_in_longitude && (
-            <KakaoMap
+            <NaverMap
               userLat={log.check_in_latitude}
               userLng={log.check_in_longitude}
               companyLat={company?.latitude}
@@ -594,7 +594,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
             {log.is_impersonated && <Row label="입력자" value="관리자" badge />}
           </div>
           {log.check_in_latitude && log.check_in_longitude && (
-            <KakaoMap
+            <NaverMap
               userLat={log.check_in_latitude}
               userLng={log.check_in_longitude}
               companyLat={company?.latitude}
