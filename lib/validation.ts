@@ -57,7 +57,7 @@ export function formatPhone(value: string): string {
 /* ─── 금액 포맷팅 ─────────────────────────────────────── */
 export function formatSalaryDisplay(value: number | ''): string {
   if (value === '' || value === 0) return ''
-  return Number(value).toLocaleString('ko-KR')
+  return Math.round(Number(value)).toLocaleString('ko-KR')
 }
 
 export function parseSalaryInput(raw: string): number | '' {

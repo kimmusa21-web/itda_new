@@ -335,25 +335,25 @@ export function PayslipCsvUpload({ role, defaultCompanyId, companies = [] }: Pro
                         </td>
                         <td className="px-3 py-2 text-right text-slate-600">
                           {row.base_salary
-                            ? Number(row.base_salary.replace(/,/g, '')).toLocaleString()
+                            ? Math.round(Number(row.base_salary.replace(/,/g, ''))).toLocaleString()
                             : <span className="text-red-400 italic">없음</span>
                           }
                         </td>
                         <td className="px-3 py-2 text-right text-slate-500">
                           {row.Total_payment
-                            ? Number(row.Total_payment.replace(/,/g, '')).toLocaleString()
+                            ? Math.round(Number(row.Total_payment.replace(/,/g, ''))).toLocaleString()
                             : <span className="text-slate-300">자동계산</span>
                           }
                         </td>
                         <td className="px-3 py-2 text-right text-slate-500">
                           {row.Total_deductible
-                            ? Number(row.Total_deductible.replace(/,/g, '')).toLocaleString()
+                            ? Math.round(Number(row.Total_deductible.replace(/,/g, ''))).toLocaleString()
                             : <span className="text-slate-300">자동계산</span>
                           }
                         </td>
                         <td className="px-3 py-2 text-right text-slate-500">
                           {row.net_pay
-                            ? Number(row.net_pay.replace(/,/g, '')).toLocaleString()
+                            ? Math.round(Number(row.net_pay.replace(/,/g, ''))).toLocaleString()
                             : <span className="text-slate-300">자동계산</span>
                           }
                         </td>

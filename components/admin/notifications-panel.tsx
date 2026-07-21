@@ -164,14 +164,14 @@ function DetailPanel({
                 <p className="text-[10px] font-semibold text-slate-400 mb-2 uppercase tracking-wide">급여 정보</p>
                 <Row label="급여 유형"  value={salaryLabel(detail.salary_type)} />
                 <Row label="지급 기준"  value={detail.salary_basis === 'gross' ? '세전' : detail.salary_basis === 'net' ? '세후' : null} />
-                <Row label="급여 금액"  value={detail.salary_amount ? `${Number(detail.salary_amount).toLocaleString('ko-KR')}원` : null} />
+                <Row label="급여 금액"  value={detail.salary_amount ? `${Math.round(Number(detail.salary_amount)).toLocaleString('ko-KR')}원` : null} />
                 {Array.isArray(detail.non_taxable_items) && detail.non_taxable_items.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-slate-200">
                     <p className="text-[10px] text-slate-400 mb-1">비과세 항목</p>
                     {detail.non_taxable_items.map((item: any, i: number) => (
-                      <Row key={i} label={item.name} value={`${Number(item.amount).toLocaleString('ko-KR')}원`} />
+                      <Row key={i} label={item.name} value={`${Math.round(Number(item.amount)).toLocaleString('ko-KR')}원`} />
                     ))}
-                    <Row label="과세총액" value={detail.taxable_total ? `${Number(detail.taxable_total).toLocaleString('ko-KR')}원` : null} />
+                    <Row label="과세총액" value={detail.taxable_total ? `${Math.round(Number(detail.taxable_total)).toLocaleString('ko-KR')}원` : null} />
                   </div>
                 )}
               </div>
@@ -218,7 +218,7 @@ function DetailPanel({
               <div className="bg-slate-50 rounded-xl p-4">
                 <p className="text-[10px] font-semibold text-slate-400 mb-2 uppercase tracking-wide">급여 정보</p>
                 <Row label="급여 유형"  value={salaryLabel(detail.salary_type)} />
-                <Row label="급여 금액"  value={detail.salary_amount ? `${Number(detail.salary_amount).toLocaleString('ko-KR')}원` : null} />
+                <Row label="급여 금액"  value={detail.salary_amount ? `${Math.round(Number(detail.salary_amount)).toLocaleString('ko-KR')}원` : null} />
               </div>
             </div>
           )}

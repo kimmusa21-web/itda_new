@@ -99,10 +99,10 @@ export function formatPhone(value: string): string {
   return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`
 }
 
-/** 급여 표시용 입력값 포맷 */
+/** 급여 표시용 입력값 포맷 (원 단위 반올림) */
 export function formatSalaryDisplay(value: number | ''): string {
   if (value === '' || value === 0) return ''
-  return Number(value).toLocaleString('ko-KR')
+  return Math.round(Number(value)).toLocaleString('ko-KR')
 }
 
 export function parseSalaryInput(raw: string): number | '' {

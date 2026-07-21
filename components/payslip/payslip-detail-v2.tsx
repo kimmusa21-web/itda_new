@@ -219,7 +219,7 @@ export function PayslipDetailView({ detail: d, backHref = '/employee/payslips', 
               {d.hourlyRate != null && (
                 <PayInfoCell
                   label="통상시급"
-                  value={`${d.hourlyRate.toLocaleString('ko-KR')}원`}
+                  value={`${Math.round(d.hourlyRate).toLocaleString('ko-KR')}원`}
                 />
               )}
             </div>

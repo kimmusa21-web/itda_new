@@ -21,7 +21,8 @@ function esc(value: unknown): string {
 function num(v: unknown): string {
   if (v == null) return ''
   const n = typeof v === 'number' ? v : Number(v)
-  return isNaN(n) ? '' : String(n)
+  // 급여대장 계산값은 소수점이 붙어 있으므로 원 단위로 반올림해 내보낸다
+  return isNaN(n) ? '' : String(Math.round(n))
 }
 
 /* ── CSV 헤더 ── */

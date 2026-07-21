@@ -48,7 +48,7 @@ function urgencyClass(days: number | null): string {
 
 function formatMoney(v: number | null | undefined): string {
   if (v == null) return '-'
-  return v.toLocaleString('ko-KR') + '원'
+  return Math.round(v).toLocaleString('ko-KR') + '원'
 }
 
 const SALARY_TYPE_LABEL = { annual: '연봉', monthly: '월급', hourly: '시급' }

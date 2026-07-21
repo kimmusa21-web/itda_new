@@ -423,7 +423,7 @@ function ResignedEmployeeDetail({
           <div className="bg-slate-50 rounded-xl p-4">
             <p className="text-[10px] font-semibold text-slate-400 mb-2 uppercase tracking-wide">급여 정보</p>
             <Row label="급여 유형"  value={salaryLabel(employee.salary_type)} />
-            <Row label="급여 금액"  value={employee.salary_amount ? `${Number(employee.salary_amount).toLocaleString('ko-KR')}원` : null} />
+            <Row label="급여 금액"  value={employee.salary_amount ? `${Math.round(Number(employee.salary_amount)).toLocaleString('ko-KR')}원` : null} />
           </div>
         </div>
 

@@ -24,7 +24,7 @@ interface Props {
 type Step = 'idle' | 'preview' | 'uploading' | 'done'
 
 function fmt(n: number) {
-  return n.toLocaleString('ko-KR')
+  return Math.round(n).toLocaleString('ko-KR')
 }
 
 export function PayrollLedgerUpload({ role, defaultCompanyId, companies = [] }: Props) {
