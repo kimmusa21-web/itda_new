@@ -62,6 +62,8 @@ export const LEDGER_COLUMN_MAP: Record<string, string> = {
   '지급합계':        'Total_payment',
   '총지급액':        'Total_payment',
   '지급액합계':      'Total_payment',
+  '과세총액':        'Total_tax_salary',
+  '과세급여합계':    'Total_tax_salary',
 
   // 공제 항목
   '국민연금':          'national_pension',
@@ -161,6 +163,7 @@ export interface ParsedLedgerRow {
   Other_allowances2:       number
   Holiday_bonus:           number
   Total_payment:           number
+  Total_tax_salary:        number
   // 공제 항목
   national_pension:           number
   health_insurance:           number
@@ -222,6 +225,7 @@ export function parseLedgerRows(
       Other_allowances2:        toNumber(mapped['Other_allowances2']),
       Holiday_bonus:            toNumber(mapped['Holiday_bonus']),
       Total_payment:            toNumber(mapped['Total_payment']),
+      Total_tax_salary:         toNumber(mapped['Total_tax_salary']),
       // 공제
       national_pension:           toNumber(mapped['national_pension']),
       health_insurance:           toNumber(mapped['health_insurance']),
@@ -266,7 +270,7 @@ export function isMultiRowLedgerFormat(arrayRows: unknown[][]): boolean {
 //        7=식대 8=국민연금 9=건강보험료 10=고용보험료 11=소득세 12=주민세
 //   행2: 2=인센티브 3=연차수당 4=기타수당 5=기타수당2 6=명절상여
 //        8=건강보험정산 9=장기요양보험료 10=학자금대출 11=소득세환급 12=주민세환급
-//   행3: 7=지급합계 8=기타공제 11=공제합계 12=차인지급액
+//   행3: 6=과세총액 7=지급합계 8=기타공제 11=공제합계 12=차인지급액
 export function parseMultiRowLedger(arrayRows: unknown[][]): ParsedLedgerRow[] {
   const results: ParsedLedgerRow[] = []
   const data = arrayRows.slice(3)   // 헤더 3행 스킵
@@ -328,6 +332,7 @@ export function parseMultiRowLedger(arrayRows: unknown[][]): ParsedLedgerRow[] {
       resident_tax_refund:         toNumber(r2[12]),
 
       // 행3 합계
+      Total_tax_salary: toNumber(r3[6]),
       Total_payment:    toNumber(r3[7]),
       Other_deductions: toNumber(r3[8]),
       Total_deductible: toNumber(r3[11]),
@@ -345,7 +350,7 @@ const MULTI_ROW_HEADERS = [
   '야간근로수당', '식대', '국민연금', '건강보험료', '고용보험료', '소득세', '주민세',
   '인센티브', '연차수당', '기타수당', '기타수당2', '명절상여',
   '건강보험정산', '장기요양보험료', '학자금대출', '소득세환급', '주민세환급',
-  '지급합계', '기타공제', '공제합계', '차인지급액',
+  '과세총액', '지급합계', '기타공제', '공제합계', '차인지급액',
 ]
 
 // ── 클라이언트 사이드 Excel/CSV 파싱 (xlsx 동적 import) ───────

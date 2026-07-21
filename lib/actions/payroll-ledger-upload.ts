@@ -193,6 +193,7 @@ export async function uploadPayrollLedger(params: {
       Other_allowances2:        nvl(row.Other_allowances2),
       Holiday_bonus:            nvl(row.Holiday_bonus),
       Total_payment:            totalEarnings || null,
+      Total_tax_salary:         nvl(row.Total_tax_salary),
       // 공제 개별 컬럼
       national_pension:           nvl(row.national_pension),
       health_insurance:           nvl(row.health_insurance),
