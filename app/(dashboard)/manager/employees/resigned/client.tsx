@@ -252,7 +252,7 @@ export default function ManagerResignedClient({ initialEmployees, companyName }:
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-semibold text-slate-900">{emp.name}</p>
-                    <p className="text-xs text-slate-600 font-mono mt-0.5">#{emp.employee_number ?? '-'}</p>
+                    <p className="text-xs text-slate-600 font-mono mt-0.5">{emp.employee_number ?? '-'}</p>
                     <p className="text-xs text-slate-400">{emp.email}</p>
                   </div>
                   <div className="flex items-center gap-2">

@@ -313,7 +313,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-900">{emp.name}</p>
                       <p className="text-xs text-slate-500 font-mono mt-0.5">
-                        #{emp.employee_number ?? '-'}
+                        {emp.employee_number ?? '-'}
                       </p>
                       <p className="text-xs text-slate-400">{emp.email}</p>
                     </td>
@@ -398,7 +398,7 @@ export default function AdminEmployeesClient({ initialEmployees, companies }: Pr
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-900 truncate">{emp.name}</p>
-                    <p className="text-xs text-slate-500 font-mono mt-0.5">#{emp.employee_number ?? '-'}</p>
+                    <p className="text-xs text-slate-500 font-mono mt-0.5">{emp.employee_number ?? '-'}</p>
                     <p className="text-xs text-slate-400 truncate">{emp.email}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
