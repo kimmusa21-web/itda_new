@@ -273,7 +273,16 @@ export function isMultiRowLedgerFormat(arrayRows: unknown[][]): boolean {
 //   행3: 6=과세총액 7=지급합계 8=기타공제 11=공제합계 12=차인지급액
 export function parseMultiRowLedger(arrayRows: unknown[][]): ParsedLedgerRow[] {
   const results: ParsedLedgerRow[] = []
-  const data = arrayRows.slice(3)   // 헤더 3행 스킵
+  const all = arrayRows.slice(3)   // 헤더 3행 스킵
+
+  // '총 계' 행 아래에는 합계 블록과 일할계산 보조표가 이어지는데,
+  // 보조표에도 직원 이름과 금액이 있어 그대로 두면 가짜 행으로 잡힌다.
+  // 따라서 총계 행을 만나면 그 위까지만 직원 데이터로 본다.
+  const totalIdx = all.findIndex(r => {
+    const row = (r ?? []) as unknown[]
+    return norm(row[0]).includes('총') || norm(row[1]).includes('총')
+  })
+  const data = totalIdx >= 0 ? all.slice(0, totalIdx) : all
 
   let i = 0
   while (i < data.length) {
@@ -281,7 +290,8 @@ export function parseMultiRowLedger(arrayRows: unknown[][]): ParsedLedgerRow[] {
     const r2 = (data[i + 1] ?? []) as unknown[]
     const r3 = (data[i + 2] ?? []) as unknown[]
 
-    const empNum  = norm(r1[0])
+    // 사번은 급여대장에 '#135260420ha' 처럼 # 접두사가 붙는 경우가 있어 제거한다
+    const empNum  = norm(r1[0]).replace(/^#/, '')
     const empName = norm(r1[1])
 
     // 빈 행·합계 행·자리표시 행 스킵
@@ -290,7 +300,10 @@ export function parseMultiRowLedger(arrayRows: unknown[][]): ParsedLedgerRow[] {
     const isPlaceholder = empName === '.' || empName === ''
 
     if (isEmptyRow || isTotalRow) { i++; continue }
-    if (isPlaceholder || !/^\d+$/.test(empNum)) { i++; continue }
+    // 이름이 있으면 데이터 행으로 본다.
+    // (과거에는 사번이 숫자인지로 판별했으나, 실제 사번은 '135260420ha' 처럼
+    //  숫자+영문 조합이라 정상 사번이 전부 걸러지는 문제가 있었다)
+    if (isPlaceholder) { i++; continue }
 
     const csvRow = 4 + i   // CSV 행 번호 (헤더 3행 + 1-indexed)
 
