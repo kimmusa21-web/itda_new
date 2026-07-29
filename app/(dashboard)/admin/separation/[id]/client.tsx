@@ -150,13 +150,21 @@ function PrintRow({ label, value, mono = false }: { label: string; value: string
   )
 }
 
+/* 마지막 근무일 → 이직일(다음날) 변환 */
+function toSeparationDate(lastWorkDate: string | null): string {
+  if (!lastWorkDate) return ''
+  const d = new Date(lastWorkDate)
+  d.setDate(d.getDate() + 1)
+  return d.toISOString().slice(0, 10)
+}
+
 /* ── 메인 컴포넌트 ──────────────────────────────────────────── */
 export default function SeparationClient({ employee: emp }: Props) {
   const supabase = createClient()
   const company  = emp.companies
 
   /* 편집 가능한 필드 */
-  const [quitDate,         setQuitDate]         = useState(emp.quit_date ?? '')
+  const [quitDate,         setQuitDate]         = useState(toSeparationDate(emp.quit_date))
   const [quitReason,       setQuitReason]        = useState(emp.quit_reason ?? '')
   const [unemploymentCode, setUnemploymentCode]  = useState(emp.unemployment_code ?? '')
   const [regNumber,        setRegNumber]         = useState(emp.registration_number ?? '')
@@ -219,7 +227,8 @@ export default function SeparationClient({ employee: emp }: Props) {
 
   /* 마운트 시 초기 조회 */
   useEffect(() => {
-    if (emp.quit_date) fetchAvgWageData(emp.quit_date)
+    const sep = toSeparationDate(emp.quit_date)
+    if (sep) fetchAvgWageData(sep)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const avgResult = useMemo<SeveranceResult | null>(() => {
@@ -318,7 +327,7 @@ export default function SeparationClient({ employee: emp }: Props) {
               <tbody>
                 <PrintRow label="입사일 (취득일)" value={formatDate(emp.Date_of_joining)} />
                 <tr className="border-b border-slate-200">
-                  <td className="p-2 bg-slate-50 font-medium text-slate-600 w-40 text-xs whitespace-nowrap">이직일 (마지막 근무일)</td>
+                  <td className="p-2 bg-slate-50 font-medium text-slate-600 w-40 text-xs whitespace-nowrap">이직일 (마지막 근무일 다음날)</td>
                   <td className="p-2">
                     <input
                       type="date"
