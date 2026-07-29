@@ -26,6 +26,8 @@ export interface AttendanceLog {
   check_in_longitude:   number | null
   check_out_latitude:   number | null
   check_out_longitude:  number | null
+  check_in_address:     string | null
+  check_out_address:    string | null
   check_in_distance_m:  number | null
   check_out_distance_m: number | null
   check_in_accuracy_m:  number | null
@@ -52,6 +54,7 @@ export interface CheckInInput {
   latitude:         number
   longitude:        number
   accuracy_m:       number
+  address?:         string   // 외근/재택 위치 주소 (역지오코딩)
   late_entry_note?: string
 }
 
@@ -60,6 +63,7 @@ export interface CheckOutInput {
   latitude:   number
   longitude:  number
   accuracy_m: number
+  address?:   string
 }
 
 export interface ManualAttendanceInput {

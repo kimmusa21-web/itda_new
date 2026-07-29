@@ -112,7 +112,7 @@ export function ManagerAttendanceClient({ date, rows, employees: _ }: Props) {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-xs text-slate-500">
                 <tr>
-                  {['직원', '사번', '부서', '유형', '출근', '퇴근', '상태', '출근거리', '퇴근거리', '사유'].map(h => (
+                  {['직원', '사번', '부서', '유형', '출근', '퇴근', '상태', '출근거리', '퇴근거리', '위치', '사유'].map(h => (
                     <th key={h} className="text-left px-3 py-3 font-medium whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -148,6 +148,11 @@ export function ManagerAttendanceClient({ date, rows, employees: _ }: Props) {
                     </td>
                     <td className="px-3 py-3 text-slate-500 text-xs">
                       {row.check_out_distance_m != null ? `${row.check_out_distance_m}m` : '—'}
+                    </td>
+                    <td className="px-3 py-3 text-slate-500 text-xs max-w-[180px]">
+                      {(row.work_type === 'field' || row.work_type === 'remote') && row.check_in_address
+                        ? <span className="block truncate" title={row.check_in_address}>{row.check_in_address}</span>
+                        : '—'}
                     </td>
                     <td className="px-3 py-3 text-slate-500 text-xs max-w-[140px] truncate">
                       {row.work_note ?? '—'}

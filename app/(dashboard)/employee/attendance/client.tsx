@@ -52,6 +52,22 @@ function getCurrentPosition(): Promise<GeolocationPosition> {
   })
 }
 
+/** 좌표 → 주소 (외근/재택 위치 기록용). 실패해도 출퇴근은 진행되도록 null 반환. */
+async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  try {
+    const res = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`)
+    if (!res.ok) return null
+    const data = await res.json()
+    return typeof data.address === 'string' ? data.address : null
+  } catch {
+    return null
+  }
+}
+
+function isAway(t: WorkType): boolean {
+  return t === 'field' || t === 'remote'
+}
+
 function fmtTime(iso: string | null) {
   if (!iso) return '—'
   return new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
@@ -84,6 +100,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
   const [editNote,     setEditNote]     = useState('')
   const [toast,        setToast]        = useState<string | null>(null)
   const [previewPos,   setPreviewPos]   = useState<{ lat: number; lng: number } | null>(null)
+  const [previewAddr,  setPreviewAddr]  = useState<string | null>(null)
   const [isPreviewGps, setIsPreviewGps] = useState(false)
   const [isPending,    startTransition] = useTransition()
   const [missingDays,  setMissingDays]  = useState<string[]>(initialMissingDays)
@@ -125,16 +142,30 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
     setTimeout(() => setToast(null), 3000)
   }
 
-  async function handlePreviewLocation() {
-    setGpsErr(null); setIsPreviewGps(true)
+  async function handlePreviewLocation(wt: WorkType = workType) {
+    setGpsErr(null); setIsPreviewGps(true); setPreviewAddr(null)
     try {
       const pos = await getCurrentPosition()
       setPreviewPos({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+      // 외근/재택은 현재 위치 주소를 함께 표시
+      if (isAway(wt)) {
+        const addr = await reverseGeocode(pos.coords.latitude, pos.coords.longitude)
+        setPreviewAddr(addr)
+      }
     } catch (e) {
       if (e instanceof GeolocationPositionError) setGpsErr(gpsErrorMessage(e))
       else setGpsErr((e as Error).message)
     } finally {
       setIsPreviewGps(false)
+    }
+  }
+
+  // 출근 유형 선택: 외근/재택이면 현재 위치를 자동으로 표시
+  function handleSelectWorkType(t: WorkType) {
+    setWorkType(t)
+    setPreviewAddr(null)
+    if (isAway(t) && !isLateEntry) {
+      handlePreviewLocation(t)
     }
   }
 
@@ -179,6 +210,12 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
     }
     setIsGps(false)
 
+    // 외근/재택: 현재 위치 주소를 함께 저장 (미리보기에서 이미 조회했으면 재사용)
+    let address: string | undefined
+    if (isAway(workType)) {
+      address = (previewAddr ?? await reverseGeocode(pos.coords.latitude, pos.coords.longitude)) ?? undefined
+    }
+
     startTransition(async () => {
       const res = await checkIn({
         work_date:       workDate,
@@ -187,6 +224,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
         latitude:        pos.coords.latitude,
         longitude:       pos.coords.longitude,
         accuracy_m:      pos.coords.accuracy,
+        address,
         late_entry_note: lateNote || undefined,
       })
       if (!res.success) { setError(res.error ?? '오류가 발생했습니다.'); return }
@@ -211,12 +249,19 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
     }
     setIsGps(false)
 
+    // 외근/재택 근무였다면 퇴근 위치 주소도 함께 저장
+    let address: string | undefined
+    if (log && isAway(log.work_type)) {
+      address = (await reverseGeocode(pos.coords.latitude, pos.coords.longitude)) ?? undefined
+    }
+
     startTransition(async () => {
       const res = await checkOut({
         work_date:  workDate,
         latitude:   pos.coords.latitude,
         longitude:  pos.coords.longitude,
         accuracy_m: pos.coords.accuracy,
+        address,
       })
       if (!res.success) { setError(res.error ?? '오류가 발생했습니다.'); return }
       showToast('퇴근이 기록되었습니다.')
@@ -363,7 +408,7 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
               {(['office', 'field', 'remote'] as WorkType[]).map(t => (
                 <button
                   key={t}
-                  onClick={() => setWorkType(t)}
+                  onClick={() => handleSelectWorkType(t)}
                   className={cn(
                     'py-3 rounded-xl text-sm font-medium border-2 transition-colors',
                     workType === t
@@ -461,21 +506,32 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
                   <NaverMap
                     userLat={previewPos.lat}
                     userLng={previewPos.lng}
-                    companyLat={company?.latitude}
-                    companyLng={company?.longitude}
-                    radiusM={company?.allowed_radius_m}
+                    companyLat={isAway(workType) ? null : company?.latitude}
+                    companyLng={isAway(workType) ? null : company?.longitude}
+                    radiusM={isAway(workType) ? null : company?.allowed_radius_m}
                     className="w-full h-48"
                   />
-                  <p className="text-xs text-slate-400 text-center">파란 마커: 현재 위치 · 빨간 마커: 회사 · 빨간 원: 허용 반경</p>
+                  {isAway(workType) ? (
+                    <div className="flex items-start gap-1.5 justify-center text-xs text-slate-600 px-2">
+                      <MapPin size={12} className="text-[#003366] mt-0.5 flex-shrink-0" />
+                      <span className="text-center">
+                        현재 위치: {isPreviewGps ? '주소 확인 중…' : (previewAddr ?? '주소를 확인할 수 없습니다')}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 text-center">파란 마커: 현재 위치 · 빨간 마커: 회사 · 빨간 원: 허용 반경</p>
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center justify-between gap-2 bg-slate-50 rounded-xl px-3 py-2.5">
                   <div className="flex items-start gap-2">
                     <MapPin size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-slate-500">출근 시 현재 위치를 확인합니다.</p>
+                    <p className="text-xs text-slate-500">
+                      {isAway(workType) ? '외근·재택 위치를 기록합니다.' : '출근 시 현재 위치를 확인합니다.'}
+                    </p>
                   </div>
                   <button
-                    onClick={handlePreviewLocation}
+                    onClick={() => handlePreviewLocation()}
                     disabled={isPreviewGps}
                     className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-50 flex-shrink-0"
                   >
@@ -514,9 +570,15 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
               <p className="text-sm font-semibold text-[#003366]">출근 완료</p>
               <p className="text-xs text-[#0055aa]">{fmtTime(log.check_in_at)} · {WORK_TYPE_LABELS[log.work_type]}</p>
               {log.work_note && <p className="text-xs text-[#0055aa] mt-0.5">{log.work_note}</p>}
-              {log.check_in_distance_m != null && (
-                <p className="text-xs text-[#5588bb]">회사로부터 {log.check_in_distance_m}m</p>
-              )}
+              {isAway(log.work_type)
+                ? (log.check_in_address && (
+                    <p className="text-xs text-[#5588bb] flex items-start gap-0.5 mt-0.5">
+                      <MapPin size={11} className="mt-0.5 flex-shrink-0" />{log.check_in_address}
+                    </p>
+                  ))
+                : (log.check_in_distance_m != null && (
+                    <p className="text-xs text-[#5588bb]">회사로부터 {log.check_in_distance_m}m</p>
+                  ))}
               {log.is_impersonated && (
                 <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full mt-1 inline-block">관리자 입력</span>
               )}
@@ -527,9 +589,9 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
             <NaverMap
               userLat={log.check_in_latitude}
               userLng={log.check_in_longitude}
-              companyLat={company?.latitude}
-              companyLng={company?.longitude}
-              radiusM={company?.allowed_radius_m}
+              companyLat={isAway(log.work_type) ? null : company?.latitude}
+              companyLng={isAway(log.work_type) ? null : company?.longitude}
+              radiusM={isAway(log.work_type) ? null : company?.allowed_radius_m}
               className="w-full h-44"
             />
           )}
@@ -589,17 +651,26 @@ export function AttendanceClient({ today, todayLog: initialLog, company, isImper
               )
             })()}
             {log.work_note && <Row label="사유" value={log.work_note} />}
-            {log.check_in_distance_m  != null && <Row label="출근거리" value={`${log.check_in_distance_m}m`} />}
-            {log.check_out_distance_m != null && <Row label="퇴근거리" value={`${log.check_out_distance_m}m`} />}
+            {isAway(log.work_type) ? (
+              <>
+                {log.check_in_address  && <Row label="출근위치" value={log.check_in_address} />}
+                {log.check_out_address && <Row label="퇴근위치" value={log.check_out_address} />}
+              </>
+            ) : (
+              <>
+                {log.check_in_distance_m  != null && <Row label="출근거리" value={`${log.check_in_distance_m}m`} />}
+                {log.check_out_distance_m != null && <Row label="퇴근거리" value={`${log.check_out_distance_m}m`} />}
+              </>
+            )}
             {log.is_impersonated && <Row label="입력자" value="관리자" badge />}
           </div>
           {log.check_in_latitude && log.check_in_longitude && (
             <NaverMap
               userLat={log.check_in_latitude}
               userLng={log.check_in_longitude}
-              companyLat={company?.latitude}
-              companyLng={company?.longitude}
-              radiusM={company?.allowed_radius_m}
+              companyLat={isAway(log.work_type) ? null : company?.latitude}
+              companyLng={isAway(log.work_type) ? null : company?.longitude}
+              radiusM={isAway(log.work_type) ? null : company?.allowed_radius_m}
               className="w-full h-44"
             />
           )}
