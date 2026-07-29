@@ -169,6 +169,7 @@ export default function Sidebar({
             <Link
               key={item.href}
               href={item.href}
+              data-tour={`nav:${item.href}`}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all',
                 active

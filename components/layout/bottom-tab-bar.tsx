@@ -40,6 +40,7 @@ export default function BottomTabBar({ role, features = null }: { role: Role; fe
             <Link
               key={item.href}
               href={item.href}
+              data-tour={`nav:${item.href}`}
               className={cn(
                 'flex-1 flex flex-col items-center justify-center gap-0.5',
                 'text-[10px] font-medium transition-colors min-h-[44px]',

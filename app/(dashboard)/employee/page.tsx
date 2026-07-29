@@ -6,6 +6,7 @@ import { getEffectiveEmployeeContext } from '@/lib/impersonation/get-effective-c
 import { getEmployeePayslips } from '@/lib/employee-payslips'
 import { formatAccrualMonth }  from '@/lib/payslip-utils'
 import NoticeCard              from '@/components/common/notice-card'
+import { CoachTour }           from '@/components/guide/coach-tour'
 import { notices as mockNotices } from '@/lib/mock-data'
 import { DOCUMENT_TYPE_LABELS, type DocumentType } from '@/lib/document-types'
 import { kstToday } from '@/lib/utils/kst'
@@ -95,6 +96,9 @@ export default async function EmployeeDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* 첫 로그인 화면 안내 (코치마크) — 직원 계정에만 표시 */}
+      {role === 'employee' && <CoachTour role="employee" userId={user.id} />}
+
       <div>
         <p className="text-xs text-slate-500">{companyName}</p>
         <h1 className="text-xl font-semibold text-slate-900 mt-0.5">
@@ -103,7 +107,7 @@ export default async function EmployeeDashboard() {
       </div>
 
       {/* 출퇴근 위젯 */}
-      <section>
+      <section data-tour="employee-attendance">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-slate-700">출퇴근</h2>
           <Link href="/employee/attendance" className="text-xs text-slate-400 hover:text-slate-600">
@@ -161,7 +165,7 @@ export default async function EmployeeDashboard() {
       </section>
 
       {/* 알림 */}
-      <section>
+      <section data-tour="employee-notices">
         <h2 className="text-sm font-semibold text-slate-700 mb-3">알림</h2>
         <div className="space-y-2.5">
           {missingDays.length > 0 && (
@@ -252,6 +256,7 @@ export default async function EmployeeDashboard() {
       {/* 사용 설명서 */}
       <Link
         href="/guide"
+        data-tour="guide-entry"
         className="flex items-center gap-3 card px-4 py-3.5 hover:bg-slate-50 transition-colors"
       >
         <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
@@ -259,7 +264,7 @@ export default async function EmployeeDashboard() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-slate-800">서비스 사용 설명서</p>
-          <p className="text-xs text-slate-400 mt-0.5">매니저·직원 기능 안내 보기</p>
+          <p className="text-xs text-slate-400 mt-0.5">화면 그림으로 보는 직원 기능 안내</p>
         </div>
         <ChevronRight size={16} className="text-slate-300 flex-shrink-0" />
       </Link>

@@ -45,18 +45,11 @@ export default async function ManagerMorePage() {
           <BookOpen size={17} className="text-blue-600 flex-shrink-0" />
           <div>
             <p className="text-sm font-semibold text-slate-800">서비스 사용 설명서</p>
-            <p className="text-xs text-slate-400 mt-0.5">매니저·직원 기능 안내</p>
+            <p className="text-xs text-slate-400 mt-0.5">화면 그림으로 보는 기업담당자 기능 안내</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <a
-            href="/ModuHR_사용설명서.pdf"
-            download="ModuHR_사용설명서.pdf"
-            className="text-xs text-slate-500 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition-colors"
-          >
-            PDF
-          </a>
-          <Link href="/guide" className="btn-primary text-xs px-3 py-1.5">
+          <Link href="/guide" data-tour="guide-entry" className="btn-primary text-xs px-3 py-1.5">
             보기
           </Link>
         </div>

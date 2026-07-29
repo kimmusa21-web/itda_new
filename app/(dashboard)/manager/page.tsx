@@ -2,6 +2,7 @@ import { redirect }   from 'next/navigation'
 import Link           from 'next/link'
 import { Plus, Users, CalendarDays, FolderOpen, UserPlus, ChevronRight, CalendarX, BookOpen } from 'lucide-react'
 import { ManagerViewToggle } from '@/components/layout/ManagerViewToggle'
+import { CoachTour } from '@/components/guide/coach-tour'
 import { createClient } from '@/lib/supabase/server'
 import { getEffectiveManagerContext } from '@/lib/impersonation/get-effective-context'
 import { getCompanyEmployees }  from '@/lib/supabase/queries/employee'
@@ -70,8 +71,13 @@ export default async function ManagerDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* 첫 로그인 화면 안내 (코치마크) */}
+      <CoachTour role="manager" userId={user.id} />
+
       {/* 관리자 / 직원 화면 전환 탭 */}
-      <ManagerViewToggle currentMode="manager" />
+      <div data-tour="manager-view-toggle">
+        <ManagerViewToggle currentMode="manager" />
+      </div>
 
       {/* 헤더 */}
       <div className="flex items-start justify-between gap-4">
@@ -80,14 +86,14 @@ export default async function ManagerDashboard() {
           <h1 className="text-xl font-semibold text-slate-900 mt-0.5">대시보드</h1>
           <p className="text-sm text-slate-400 mt-0.5">안녕하세요, {profile?.name}님</p>
         </div>
-        <Link href="/manager/employees/create" className="btn-primary flex-shrink-0">
+        <Link href="/manager/employees/create" data-tour="manager-create-employee" className="btn-primary flex-shrink-0">
           <Plus size={16} />
           직원 등록
         </Link>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3" data-tour="manager-stats">
         <Link href="/manager/employees" className="stat-card rounded-xl hover:bg-white hover:border hover:border-slate-200 transition-all">
           <p className="stat-label">재직 직원</p>
           <p className="stat-value">{activeEmployees.length}<span className="text-base font-normal text-slate-400 ml-1">명</span></p>
@@ -102,7 +108,7 @@ export default async function ManagerDashboard() {
 
 
       {/* ── 신청 현황 (통합) ───────────────────────────────────── */}
-      <section>
+      <section data-tour="manager-requests">
         <div className="section-header">
           <div className="flex items-center gap-2">
             <h2 className="section-title">신청 현황</h2>
@@ -303,9 +309,9 @@ export default async function ManagerDashboard() {
       </section>
 
       {/* 사용 설명서 */}
-      <a
-        href="/ModuHR_사용설명서.pdf"
-        download="ModuHR_사용설명서.pdf"
+      <Link
+        href="/guide"
+        data-tour="guide-entry"
         className="flex items-center gap-3 card px-4 py-3.5 hover:bg-slate-50 transition-colors"
       >
         <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
@@ -313,13 +319,13 @@ export default async function ManagerDashboard() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-slate-800">서비스 사용 설명서</p>
-          <p className="text-xs text-slate-400 mt-0.5">매니저·직원 기능 안내 PDF 다운로드</p>
+          <p className="text-xs text-slate-400 mt-0.5">화면 그림으로 보는 기업담당자 기능 안내</p>
         </div>
         <ChevronRight size={16} className="text-slate-300 flex-shrink-0" />
-      </a>
+      </Link>
 
       {/* 재직 직원 */}
-      <section>
+      <section data-tour="manager-employee-list">
         <div className="section-header">
           <h2 className="section-title">
             재직 직원
