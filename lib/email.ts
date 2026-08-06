@@ -4,6 +4,8 @@
    교체 방법: sendRawEmail() 내부만 Resend / SMTP / Supabase SMTP로 교체
 ================================================================ */
 
+import { getAppUrl } from './app-url'
+
 export interface EmailPayload {
   to: string
   subject: string
@@ -62,7 +64,7 @@ export async function sendVerificationEmail(
   code: string,
   expiresInMinutes = 30,
 ): Promise<{ success: boolean; error?: string }> {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl = getAppUrl()
 
   return sendRawEmail({
     to,
@@ -201,7 +203,7 @@ export async function sendInviteEmail(
   token: string,
   expiresInHours = 24,
 ): Promise<{ success: boolean; error?: string }> {
-  const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl    = getAppUrl()
   const inviteUrl = `${appUrl}/auth/invite?token=${encodeURIComponent(token)}`
 
   return sendRawEmail({
@@ -633,7 +635,7 @@ export async function sendLeaveRequestNotification(
     full_day: '연차(1일)', half_day_am: '오전 반차', half_day_pm: '오후 반차', hourly: '시간 연차',
   }
   const label    = typeLabel[leaveType] ?? leaveType
-  const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl   = getAppUrl()
   const fmtDate  = (d: string) => new Date(d).toLocaleDateString('ko-KR')
 
   return sendRawEmail({
@@ -752,7 +754,7 @@ export async function sendLeaveCancellationNotification(
     full_day: '연차(1일)', half_day_am: '오전 반차', half_day_pm: '오후 반차', hourly: '시간 연차',
   }
   const label    = typeLabel[leaveType] ?? leaveType
-  const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl   = getAppUrl()
   const fmtDate  = (d: string) => new Date(d).toLocaleDateString('ko-KR')
 
   return sendRawEmail({

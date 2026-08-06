@@ -12,6 +12,7 @@
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { sendPayslipNotificationEmail }       from '@/lib/email'
 import { toAccrualDate }                      from '@/lib/payslip-utils'
+import { getAppUrl }                          from '@/lib/app-url'
 
 export interface SendPayslipResult {
   sentCount:    number
@@ -86,7 +87,7 @@ export async function sendPayslipEmails(params: {
     return { ...empty, authError: '해당 월의 급여 데이터가 없습니다.' }
   }
 
-  const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl   = getAppUrl()
   const details  = []
   let sentCount  = 0
   let failedCount  = 0

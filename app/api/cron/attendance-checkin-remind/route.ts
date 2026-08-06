@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient }       from '@/lib/supabase/service'
 import { sendPushNotification }      from '@/lib/web-push'
 import { isWorkday }                 from '@/lib/utils/korean-holidays'
+import { getAppUrl }                 from '@/lib/app-url'
 
 // Vercel Cron: 매일 08:55 KST (23:55 UTC 전날) 실행
 // 회사별 출근 시간 기준 5분 전에 직원에게 출근 등록 알림 발송
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
   const nowMin = kstNow.getUTCHours() * 60 + kstNow.getUTCMinutes()
 
   const service = createServiceClient()
-  const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? 'https://moduhr.kr'
+  const appUrl  = getAppUrl()
   let sent = 0, expired = 0
 
   // 근태 활성화된 회사 목록 + checkin_time 조회

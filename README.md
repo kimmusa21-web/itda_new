@@ -94,7 +94,14 @@ Vercel 대시보드 → 프로젝트 → Settings → Environment Variables에 �
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://xxx.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJhbG...` |
 | `SUPABASE_SERVICE_ROLE_KEY` | `eyJhbG...` |
-| `NEXT_PUBLIC_APP_URL` | `https://your-app.vercel.app` |
+| `NEXT_PUBLIC_APP_URL` | `https://moduhr.kr` |
+
+> ⚠️ `NEXT_PUBLIC_APP_URL`에는 **반드시 커스텀 도메인**(`https://moduhr.kr`)을 넣으세요.
+> `*.vercel.app` 배포 URL을 넣으면 초대·비밀번호 재설정 메일의 링크가
+> Vercel Deployment Protection에 걸려 **우리 사이트 가입 화면이 아니라
+> Vercel 로그인/가입 화면**으로 연결됩니다.
+> (`lib/app-url.ts`가 `*.vercel.app` 값은 무시하고 실제 요청 호스트로 대체하지만,
+> cron에서 발송되는 메일은 이 환경변수를 그대로 쓰므로 올바르게 설정해야 합니다.)
 
 ---
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient }       from '@/lib/supabase/service'
 import { sendPushNotification }      from '@/lib/web-push'
+import { getAppUrl }                 from '@/lib/app-url'
 
 // Vercel Cron: 매 5분마다 실행
 // 출근 후 9시간이 지났고 아직 퇴근 미등록 + 알림 미발송인 직원에게 발송
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   if (!logs?.length) return NextResponse.json({ sent: 0 })
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://moduhr.kr'
+  const appUrl = getAppUrl()
   let sent = 0
 
   for (const log of logs) {
